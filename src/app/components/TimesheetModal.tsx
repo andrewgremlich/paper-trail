@@ -6,7 +6,7 @@ import {
 	generateInvoice,
 	getTimesheetById,
 } from "../lib/dbClient";
-import { useSimpletimesheetStore } from "../lib/store";
+import { usePaperTrailStore } from "../lib/store";
 import { getInvoice, markInvoiceAsPaid } from "../lib/stripeHttpClient";
 import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
@@ -17,7 +17,7 @@ import { TimesheetTable } from "./TimesheetTable";
 export const TimesheetModal = () => {
 	const queryClient = useQueryClient();
 	const { timesheetModalActive, toggleTimesheetModal, activeTimesheetId } =
-		useSimpletimesheetStore();
+		usePaperTrailStore();
 	const { data: timesheet } = useQuery({
 		queryKey: ["timesheet", activeTimesheetId],
 		queryFn: () =>
@@ -159,7 +159,7 @@ export const TimesheetModal = () => {
 							<CreateTimesheetRecord
 								closed={timesheet.closed}
 								timesheetId={timesheet.id}
-								rate={timesheet.projectRate ?? 25}
+								projectRate={timesheet.projectRate ?? 25}
 							/>
 							<TimesheetTable
 								entries={timesheet.records || []}

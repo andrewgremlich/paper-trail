@@ -8,7 +8,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 pub fn run() {
     let migrations = vec![Migration {
         version: 1,
-        description: "Create project table",
+        description: "First simple seed for paper trail",
         kind: MigrationKind::Up,
         sql: include_str!("../db/seed.sql"),
     }];

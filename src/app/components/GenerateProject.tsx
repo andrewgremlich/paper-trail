@@ -2,13 +2,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 // import { generateProject } from "@/lib/actions";
 import { generateProject } from "../lib/dbClient";
-import { useSimpletimesheetStore } from "../lib/store";
+import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Label } from "./Label";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
-	const { addProject, addTimesheet } = useSimpletimesheetStore();
+	const { addProject, addTimesheet } = usePaperTrailStore();
 	const { mutate } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			return generateProject(formData);

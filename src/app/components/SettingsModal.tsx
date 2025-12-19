@@ -1,13 +1,12 @@
 import { X } from "lucide-react";
 import { useId, useRef } from "react";
-import { useSimpletimesheetStore } from "../lib/store";
+import { usePaperTrailStore } from "../lib/store";
 import { Dialog } from "./Dialog";
 import { H2, P } from "./HtmlElements";
 import { StripeSecretSection } from "./StripeSecretSection";
 
 export const SettingsModal = () => {
-	const { settingsModalActive, toggleSettingsModal } =
-		useSimpletimesheetStore();
+	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
 	const headingId = useId();
 	const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 

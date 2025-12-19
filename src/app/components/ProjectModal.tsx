@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
 import { generateTimesheet, getProjectById } from "../lib/dbClient";
-import { useSimpletimesheetStore } from "../lib/store";
+import { usePaperTrailStore } from "../lib/store";
 import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
 import { Dialog } from "./Dialog";
@@ -34,7 +34,7 @@ export const ProjectModal = () => {
 		toggleProjectModal,
 		toggleTimesheetModal,
 		activeProjectId,
-	} = useSimpletimesheetStore();
+	} = usePaperTrailStore();
 	const { data: project } = useQuery({
 		queryKey: ["project", activeProjectId],
 		queryFn: () => {
@@ -110,13 +110,23 @@ export const ProjectModal = () => {
 										required
 										className="flex h-10 rounded-md border border-input bg-white px-3 text-sm placeholder:text-slate-500 text-slate-900"
 										value={form.name}
-										onChange={(e) => dispatch({ type: "set", field: "name", value: e.target.value })}
+										onChange={(e) =>
+											dispatch({
+												type: "set",
+												field: "name",
+												value: e.target.value,
+											})
+										}
 									/>
 									<button
 										type="button"
 										className="cursor-pointer ml-2 p-2 rounded hover:bg-gray-500"
 										onClick={() => {
-											dispatch({ type: "set", field: "name", value: `${new Date().toLocaleDateString()} Timesheet` });
+											dispatch({
+												type: "set",
+												field: "name",
+												value: `${new Date().toLocaleDateString()} Timesheet`,
+											});
 										}}
 									>
 										Autogen Name
@@ -131,7 +141,13 @@ export const ProjectModal = () => {
 									placeholder="Timesheet Description"
 									className="flex h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 									value={form.description}
-									onChange={(e) => dispatch({ type: "set", field: "description", value: e.target.value })}
+									onChange={(e) =>
+										dispatch({
+											type: "set",
+											field: "description",
+											value: e.target.value,
+										})
+									}
 								/>
 							</div>
 							<button

@@ -11,7 +11,7 @@ import type { Transaction } from "./lib/accounting/types";
 // A table where I can attach a file for the record, description, account, date, and category.
 // Allow for multiple tables.
 export const Accounting = () => {
-	const [data, setData] = useState<Transaction[]>([
+	const [data, _setData] = useState<Transaction[]>([
 		{
 			date: "2024-01-01",
 			description: "Sample transaction",

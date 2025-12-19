@@ -1,6 +1,6 @@
 {
 	"name": "paper-trail",
-	"description": "A simple timesheet that integrates with Stripe in order to send invoices.",
+	"description": "A Paper Trail that integrates with Stripe in order to send invoices.",
 	"version": "2.0.0",
 	"private": true,
 	"type": "module",

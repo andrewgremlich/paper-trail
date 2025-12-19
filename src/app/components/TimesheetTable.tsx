@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
-import { useSimpletimesheetStore } from "@/lib/store";
+import { usePaperTrailStore } from "@/lib/store";
 import { deleteTimesheetRecord } from "../lib/dbClient";
 import type { TimesheetRecord } from "../lib/types";
 import { formatDate } from "../lib/utils";
@@ -13,7 +13,7 @@ export const TimesheetTable = ({
 	closed: boolean;
 }) => {
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
-	const { activeTimesheetId } = useSimpletimesheetStore();
+	const { activeTimesheetId } = usePaperTrailStore();
 	const queryClient = useQueryClient();
 	const { mutate } = useMutation({
 		mutationFn: async (formData: FormData) => {

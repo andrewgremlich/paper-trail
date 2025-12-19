@@ -1,6 +1,6 @@
-# Simple Timesheet
+# Paper Trail
 
-A simple timesheet that integrates with Stripe in order to send invoices.
+A Paper Trail that integrates with Stripe in order to send invoices.
 
 ## BUGS
 

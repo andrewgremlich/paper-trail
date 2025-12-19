@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    simple_timesheet_lib::run()
+    paper_trail_lib::run()
 }

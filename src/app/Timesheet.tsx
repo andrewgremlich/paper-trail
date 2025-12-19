@@ -7,13 +7,12 @@ import { CardPreview } from "@/components/CardPreview";
 import { GenerateProject } from "@/components/GenerateProject";
 import { H1, H2, P, Section } from "@/components/HtmlElements";
 import { getAllProjects, getAllTimesheets } from "@/lib/dbClient";
-import { useSimpletimesheetStore } from "@/lib/store";
+import { usePaperTrailStore } from "@/lib/store";
 import { getAllCustomers } from "@/lib/stripeHttpClient";
 import { getStripeSecretKey } from "@/lib/stronghold";
 
 export const Timesheet = () => {
-	const { toggleProjectModal, toggleTimesheetModal } =
-		useSimpletimesheetStore();
+	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
 	const { data: dashboardData } = useQuery({
 		queryKey: ["dashboardData"],
 		queryFn: async () => {
@@ -42,7 +41,7 @@ export const Timesheet = () => {
 
 	return (
 		<>
-			<H1>Simple Timesheet</H1>
+			<H1>Paper Trail</H1>
 			{/* <input
 				onChange={(e) => setName(e.currentTarget.value)}
 				placeholder="Enter a name..."
@@ -53,8 +52,7 @@ export const Timesheet = () => {
 			<p>{greetMsg}</p> */}
 			<Section>
 				<P>
-					A simple timesheet that integrates with Stripe in order to send
-					invoices.
+					A Paper Trail that integrates with Stripe in order to send invoices.
 				</P>
 			</Section>
 

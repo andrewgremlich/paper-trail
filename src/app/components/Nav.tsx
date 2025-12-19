@@ -1,9 +1,9 @@
 import { File, Settings, Table, Timer } from "lucide-react";
 import { ProjectPageTab } from "@/lib/types";
-import { useSimpletimesheetStore } from "../lib/store";
+import { usePaperTrailStore } from "../lib/store";
 
 export const Nav = () => {
-	const { toggleSettingsModal, changeActiveTab } = useSimpletimesheetStore();
+	const { toggleSettingsModal, changeActiveTab } = usePaperTrailStore();
 
 	return (
 		<nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between p-4">

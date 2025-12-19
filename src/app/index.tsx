@@ -1,11 +1,11 @@
 import { Accounting } from "./Accounting";
 import { FileStorage } from "./FileStorage";
-import { useSimpletimesheetStore } from "./lib/store";
+import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
 import { Timesheet } from "./Timesheet";
 
 export const App = () => {
-	const { activeTab } = useSimpletimesheetStore();
+	const { activeTab } = usePaperTrailStore();
 
 	switch (activeTab) {
 		case ProjectPageTab.Timesheet:
