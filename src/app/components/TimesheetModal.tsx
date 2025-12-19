@@ -105,7 +105,7 @@ export const TimesheetModal = () => {
 								await mutateDeleteTimesheet(formData);
 							}}
 						>
-							<input type="hidden" name="id" value={timesheet?.id} />
+							<input type="hidden" name="id" defaultValue={timesheet?.id} />
 							<button
 								className="hover:cursor-pointer p-2 rounded"
 								type="submit"
@@ -135,7 +135,7 @@ export const TimesheetModal = () => {
 							<input
 								type="hidden"
 								name="invoiceId"
-								value={timesheet?.invoiceId}
+								defaultValue={timesheet?.invoiceId}
 							/>
 							<button
 								disabled={invoiceData?.status === "paid"}

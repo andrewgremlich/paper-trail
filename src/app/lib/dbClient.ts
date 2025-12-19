@@ -313,43 +313,23 @@ export const deleteTimesheetRecord = async (
 export const deleteTimesheet = async (formData: FormData): Promise<void> => {
 	const db = await getDb();
 	const id = String(formData.get("id") || "");
-	await db.execute("BEGIN TRANSACTION");
-	try {
-		await db.execute(`DELETE FROM timesheet_records WHERE timesheetId = $1`, [
-			id,
-		]);
-		await db.execute(`DELETE FROM timesheets WHERE id = $1`, [id]);
-		await db.execute("COMMIT");
-	} catch (err) {
-		await db.execute("ROLLBACK");
-		throw err;
-	}
+	await db.execute(`DELETE FROM timesheets WHERE id = $1`, [id]);
 };
 
 export const deleteProject = async (formData: FormData): Promise<void> => {
 	const db = await getDb();
-	const id = String(formData.get("id") || "");
+	const id = String(formData.get("projectId") || "");
 
 	console.log(`Deleting project and associated timesheets/records: ${id}`);
 
-	// Best-effort transaction to ensure consistency
-	await db.execute("BEGIN TRANSACTION");
 	try {
 		// Remove records for all timesheets under this project
 		await db.execute(
-			`DELETE FROM timesheet_records WHERE timesheetId IN (
-				SELECT id FROM timesheets WHERE projectId = $1
-			)`,
+			`DELETE FROM projects WHERE id = $1`,
 			[id],
 		);
-		// Remove timesheets for this project
-		await db.execute(`DELETE FROM timesheets WHERE projectId = $1`, [id]);
-		// Finally remove the project
-		await db.execute(`DELETE FROM projects WHERE id = $1`, [id]);
-		await db.execute("COMMIT");
 	} catch (err) {
-		await db.execute("ROLLBACK");
-		throw err;
+		console.error(err);
 	}
 };
 

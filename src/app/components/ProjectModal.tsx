@@ -80,7 +80,7 @@ export const ProjectModal = () => {
 							await mutateDeleteProject(formData);
 						}}
 					>
-						<input type="hidden" name="id" value={project?.id} />
+						<input type="hidden" name="projectId" defaultValue={project?.id} />
 						<button
 							className="hover:cursor-pointer p-2 rounded"
 							type="submit"
@@ -126,7 +126,7 @@ export const ProjectModal = () => {
 							dispatch({ type: "reset" });
 						}}
 					>
-						<input type="hidden" name="projectId" value={project?.id} />
+						<input type="hidden" name="projectId" defaultValue={project?.id} />
 						<div className="grid gap-4 grid-cols-3">
 							<div className="col-span-3">
 								<Label htmlFor="name">Timesheet Name</Label>

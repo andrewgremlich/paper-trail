@@ -58,11 +58,11 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 					spellCheck={false}
 					placeholder="sk_live_..."
 					defaultValue={stripeKey ?? ""}
-					className="w-full rounded border border-neutral-300 dark:border-neutral-600 bg-white text-black dark:bg-neutral-800 dark:text-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+					className="w-full rounded border border-neutral-300 dark:border-neutral-600 bg-white text-black dark:bg-neutral-800 dark:text-white px-2 py-1 text-sm"
 				/>
 				<button
 					type="submit"
-					className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+					className={`px-3 py-1.5 rounded ${isSuccess ? "bg-emerald-600 hover:bg-emerald-500" : "bg-blue-600 hover:bg-blue-500"} text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
 				>
 					{isPending ? "Saving" : isSuccess ? "Saved" : "Save"}
 				</button>
