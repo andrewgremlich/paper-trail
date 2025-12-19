@@ -1,0 +1,73 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "Simple Timesheet",
+	"version": "../package.json",
+	"identifier": "dev.gremlich.paper-trail",
+	"build": {
+		"beforeDevCommand": "npm run dev",
+		"devUrl": "http://localhost:1420",
+		"beforeBuildCommand": "npm run build",
+		"frontendDist": "../dist"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": "Simple Timesheet",
+				"width": 800,
+				"height": 1200,
+				"resizable": true,
+				"fullscreen": false
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"plugins": {
+		"updater": {
+			"active": true,
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBRENDODg0NkE3ODcwOUYKUldTZmNIaHFoTWpjV2dsUEJxMVJEbDBWZHJGc3VUcU9lenJudGtVbklUY0RscTFhSzREVHZIUkIK",
+			"endpoints": [
+				"https://github.com/andrewgremlich/paper-trail/releases/latest/download/latest.json"
+			],
+			"windows": {
+				"installMode": "passive"
+			}
+		}
+	},
+	"bundle": {
+		"createUpdaterArtifacts": true,
+		"active": true,
+		"targets": "all",
+		"windows": {
+			"webviewInstallMode": {
+				"type": "offlineInstaller"
+			}
+		},
+		"macOS": {
+			"dmg": {
+				"appPosition": {
+					"x": 180,
+					"y": 170
+				},
+				"applicationFolderPosition": {
+					"x": 480,
+					"y": 170
+				},
+				"windowSize": {
+					"height": 400,
+					"width": 660
+				}
+			},
+			"minimumSystemVersion": "10.13.6",
+			"signingIdentity": "Developer ID Application: Andrew Gremlich (7X2Y6XQ67X)"
+		},
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		]
+	}
+}

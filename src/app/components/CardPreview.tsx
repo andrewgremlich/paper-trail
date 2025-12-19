@@ -1,0 +1,22 @@
+import { Card } from "./Card";
+import { H3, P } from "./HtmlElements";
+
+export const CardPreview = ({
+	name,
+	description,
+	action,
+}: {
+	name: string;
+	description: string;
+	action: () => void;
+}) => {
+	return (
+		<Card
+			className="p-4 mb-4 transition-shadow cursor-pointer"
+			onClick={action}
+		>
+			<H3>{name}</H3>
+			<P>{description}</P>
+		</Card>
+	);
+};

@@ -1,0 +1,49 @@
+{
+	"name": "paper-trail",
+	"description": "A simple timesheet that integrates with Stripe in order to send invoices.",
+	"version": "2.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src",
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"tauri": "tauri"
+	},
+	"dependencies": {
+		"@tailwindcss/vite": "^4.1.18",
+		"@tanstack/react-query": "^5.90.12",
+		"@tanstack/react-table": "^8.21.3",
+		"@tauri-apps/api": "^2.9.1",
+		"@tauri-apps/plugin-fs": "^2.4.4",
+		"@tauri-apps/plugin-opener": "^2.5.2",
+		"@tauri-apps/plugin-sql": "^2.3.1",
+		"@tauri-apps/plugin-stronghold": "^2.3.1",
+		"@tauri-apps/plugin-updater": "^2.9.0",
+		"class-variance-authority": "^0.7.1",
+		"classnames": "^2.5.1",
+		"clsx": "^2.1.1",
+		"date-fns": "^4.1.0",
+		"lucide-react": "^0.561.0",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
+		"stripe": "^20.0.0",
+		"summit-kit": "^3.2.2",
+		"tailwind-merge": "^3.4.0",
+		"zod": "^4.2.0",
+		"zustand": "^5.0.9"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.9",
+		"@tauri-apps/cli": "^2.9.6",
+		"@types/node": "^24.10.1",
+		"@types/react": "^19.2.7",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.2",
+		"tailwindcss": "^4.1.18",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.0",
+		"vite-tsconfig-paths": "^6.0.1"
+	}
+}

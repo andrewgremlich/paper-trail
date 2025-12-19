@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+	--background: #ffffff;
+	--foreground: #171717;
+	--muted: #f1f5f9;
+	--muted-foreground: #64748b;
+	--primary: #2563eb;
+	--primary-foreground: #ffffff;
+	--secondary: #f1f5f9;
+	--secondary-foreground: #0f172a;
+	--accent: #f1f5f9;
+	--accent-foreground: #0f172a;
+	--border: #e2e8f0;
+	--input: #e2e8f0;
+	--ring: #2563eb;
+	--card: #ffffff;
+	--card-foreground: #171717;
+	--popover: #ffffff;
+	--popover-foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+		--muted: #1e293b;
+		--muted-foreground: #94a3b8;
+		--primary: #3b82f6;
+		--primary-foreground: #ffffff;
+		--secondary: #1e293b;
+		--secondary-foreground: #f8fafc;
+		--accent: #1e293b;
+		--accent-foreground: #f8fafc;
+		--border: #334155;
+		--input: #334155;
+		--card: #0a0a0a;
+		--card-foreground: #ededed;
+		--popover: #0a0a0a;
+		--popover-foreground: #ededed;
+	}
+}
+
+body {
+	background: var(--background);
+	color: var(--foreground);
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	color: var(--foreground);
+	font-weight: 600;
+}
+
+h1 {
+	font-size: 2.25rem;
+}
+
+h2 {
+	font-size: 1.875rem;
+}
+
+h3 {
+	font-size: 1.5rem;
+}
+
+h4 {
+	font-size: 1.25rem;
+}
+
+h5 {
+	font-size: 1rem;
+}
+
+h6 {
+	font-size: 0.875rem;
+}
+
+p,
+label,
+button {
+	color: var(--foreground);
+}
+
+hr {
+	border: none;
+	border-top: 1px solid var(--foreground);
+	margin: 1rem 0;
+}
