@@ -21,9 +21,5 @@ export const FileStorage = () => {
 			});
 	}, []);
 
-	return (
-		<>
-			<H1>Storage</H1>
-		</>
-	);
+	return <H1>Storage</H1>;
 };

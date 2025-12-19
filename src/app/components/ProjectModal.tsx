@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
-import { generateTimesheet, getProjectById } from "../lib/dbClient";
+import { TrashIcon } from "lucide-react";
+import { deleteProject, generateTimesheet, getProjectById } from "../lib/dbClient";
 import { usePaperTrailStore } from "../lib/store";
 import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
@@ -54,6 +55,15 @@ export const ProjectModal = () => {
 			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
 		},
 	});
+	const { mutateAsync: mutateDeleteProject } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			await deleteProject(formData);
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+			toggleProjectModal({ projectId: undefined });
+		},
+	});
 
 	return (
 		<Dialog
@@ -61,7 +71,25 @@ export const ProjectModal = () => {
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 		>
 			<CardHeader>
-				<H2>{project?.name}</H2>
+				<div className="w-full flex justify-between items-start">
+					<H2>{project?.name}</H2>
+					<form
+						onSubmit={async (evt) => {
+							evt.preventDefault();
+							const formData = new FormData(evt.currentTarget);
+							await mutateDeleteProject(formData);
+						}}
+					>
+						<input type="hidden" name="id" value={project?.id} />
+						<button
+							className="hover:cursor-pointer p-2 rounded"
+							type="submit"
+							aria-label="Delete project"
+						>
+							<TrashIcon className="w-6 h-6 hover:text-blue-500" />
+						</button>
+					</form>
+				</div>
 				<P>
 					Started:{" "}
 					{project?.createdAt

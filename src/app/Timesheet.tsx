@@ -16,8 +16,8 @@ export const Timesheet = () => {
 	const { data: dashboardData } = useQuery({
 		queryKey: ["dashboardData"],
 		queryFn: async () => {
-			const dataz = await Promise.all([getAllProjects(), getAllTimesheets()]);
-			return { projects: dataz[0], timesheets: dataz[1] };
+			const data = await Promise.all([getAllProjects(), getAllTimesheets()]);
+			return { projects: data[0], timesheets: data[1] };
 		},
 	});
 	const { data: customers } = useQuery({
@@ -25,7 +25,7 @@ export const Timesheet = () => {
 		queryFn: async () => {
 			const key = await getStripeSecretKey();
 			if (key) {
-				return getAllCustomers(key);
+				return getAllCustomers(key, 500);
 			}
 			return [];
 		},

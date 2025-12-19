@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
 import { createTimesheetRecord } from "../lib/dbClient";
-import { Label } from "./Label";
-import { Input } from "./Input";
 import { Flex } from "./Flex";
+import { Input } from "./Input";
+import { Label } from "./Label";
 
 export const CreateTimesheetRecord = ({
 	timesheetId,
@@ -36,7 +36,7 @@ export const CreateTimesheetRecord = ({
 		>
 			<input type="hidden" name="timesheetId" value={timesheetId} />
 			<input type="hidden" name="projectRate" value={projectRate} />
-			<Flex justify="between" items="center" >
+			<Flex justify="between" items="center">
 				<Flex gap={4}>
 					<Flex direction="col" gap="2">
 						<Label htmlFor="date">Date</Label>
@@ -64,11 +64,7 @@ export const CreateTimesheetRecord = ({
 					</Flex>
 					<Flex direction="col" gap="2">
 						<Label htmlFor="description">Description</Label>
-						<Input
-							name="description"
-							placeholder="Work description"
-							required
-						/>
+						<Input name="description" placeholder="Work description" required />
 					</Flex>
 				</Flex>
 				<div>

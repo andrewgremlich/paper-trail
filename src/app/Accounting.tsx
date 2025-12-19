@@ -7,18 +7,26 @@ import { useState } from "react";
 import { H1 } from "./components/HtmlElements";
 import { defaultColumns } from "./lib/accounting/tableColumns";
 import type { Transaction } from "./lib/accounting/types";
+import { upsertAccountingTransaction } from "./lib/dbClient";
+import {
+	openAttachment,
+	removeAttachment,
+	saveAttachment,
+} from "./lib/fileStorage";
 
 // A table where I can attach a file for the record, description, account, date, and category.
 // Allow for multiple tables.
 export const Accounting = () => {
-	const [data, _setData] = useState<Transaction[]>([
+	const [data, setData] = useState<Transaction[]>([
 		{
+			id: crypto.randomUUID(),
 			date: "2024-01-01",
 			description: "Sample transaction",
 			account: 1,
 			category: "Office Supplies",
 			amount: 99.99,
 			file: null,
+			filePath: null,
 		},
 	]);
 
@@ -26,6 +34,49 @@ export const Accounting = () => {
 		columns: defaultColumns,
 		data,
 		getCoreRowModel: getCoreRowModel(),
+		meta: {
+			onAttach: async (rowIndex: number, file: File) => {
+				const relPath = await saveAttachment(file);
+				setData((prev) => {
+					const updated = prev.map((t, i) =>
+						i === rowIndex ? { ...t, file: null, filePath: relPath } : t,
+					);
+					const tx = updated[rowIndex];
+					void upsertAccountingTransaction({
+						id: tx.id,
+						date: tx.date,
+						description: tx.description,
+						account: tx.account,
+						category: tx.category,
+						amount: tx.amount,
+						filePath: tx.filePath ?? null,
+					});
+					return updated;
+				});
+			},
+			onOpen: async (filePath: string) => {
+				await openAttachment(filePath);
+			},
+			onRemove: async (rowIndex: number, filePath: string) => {
+				await removeAttachment(filePath);
+				setData((prev) => {
+					const updated = prev.map((t, i) =>
+						i === rowIndex ? { ...t, filePath: null } : t,
+					);
+					const tx = updated[rowIndex];
+					void upsertAccountingTransaction({
+						id: tx.id,
+						date: tx.date,
+						description: tx.description,
+						account: tx.account,
+						category: tx.category,
+						amount: tx.amount,
+						filePath: null,
+					});
+					return updated;
+				});
+			},
+		},
 	});
 
 	return (
