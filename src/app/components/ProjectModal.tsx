@@ -8,6 +8,8 @@ import { CardPreview } from "./CardPreview";
 import { Dialog } from "./Dialog";
 import { H2, P, Section } from "./HtmlElements";
 import { Label } from "./Label";
+import { Button } from "./Button";
+import { Input } from "./Input";
 
 type FormState = { name: string; description: string };
 type FormAction =
@@ -146,9 +148,10 @@ export const ProjectModal = () => {
 											})
 										}
 									/>
-									<button
-										type="button"
-										className="cursor-pointer ml-2 p-2 rounded hover:bg-gray-500"
+									<Button
+										variant="outline"
+										size="md"
+										className="ml-2"
 										onClick={() => {
 											dispatch({
 												type: "set",
@@ -158,12 +161,12 @@ export const ProjectModal = () => {
 										}}
 									>
 										Autogen Name
-									</button>
+									</Button>
 								</div>
 							</div>
 							<div className="col-span-3">
 								<Label htmlFor="description">Timesheet Description</Label>
-								<input
+								<Input
 									type="text"
 									name="description"
 									placeholder="Timesheet Description"
@@ -178,12 +181,13 @@ export const ProjectModal = () => {
 									}
 								/>
 							</div>
-							<button
+							<Button
 								type="submit"
-								className="mt-2 p-2 bg-blue-500 text-white rounded grid-span-3 cursor-pointer"
+								variant="default"
+								size="lg"
 							>
 								Generate Timesheet
-							</button>
+							</Button>
 						</div>
 					</form>
 				</Section>

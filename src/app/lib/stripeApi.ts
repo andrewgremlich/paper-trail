@@ -6,12 +6,12 @@ import { getDb } from "./db/client";
 let stripeClient: Stripe | null = null;
 
 async function getStripeClient(): Promise<Stripe | null> {
+	if (stripeClient) return stripeClient;
+
 	const { getStripeSecretKey } = await import("./stronghold");
 	const key = await getStripeSecretKey();
 
 	if (!key) throw new Error("Stripe secret key not found. Set it in Settings.");
-
-	if (stripeClient) return stripeClient;
 
 	stripeClient = new Stripe(key);
 	return stripeClient;
@@ -84,3 +84,111 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 		[invoice.id, timesheetId],
 	);
 };
+
+interface StripeInvoiceMinimal {
+	id: string;
+	status: string | null;
+	[key: string]: unknown;
+}
+
+interface StripeCustomerMinimal {
+	id: string;
+	name: string | null;
+	email: string | null;
+}
+
+export async function getInvoice(
+	invoiceId: string,
+): Promise<{ invoice: StripeInvoiceMinimal }> {
+	const stripe = await getStripeClient();
+
+	if (!stripe) throw new Error("Stripe client not initialized");
+
+	const invoice = await stripe.invoices.retrieve(invoiceId);
+
+	const minimal: StripeInvoiceMinimal = {
+		id: invoice.id,
+		status: invoice.status ?? null,
+	};
+
+	return { invoice: minimal };
+}
+
+export async function markInvoiceAsPaid(
+	invoiceId: string,
+): Promise<{ invoice: StripeInvoiceMinimal }> {
+	const stripe = await getStripeClient();
+
+	if (!stripe) throw new Error("Stripe client not initialized");
+
+	const invoice = await stripe.invoices.pay(invoiceId, {
+		paid_out_of_band: true,
+	});
+	const minimal: StripeInvoiceMinimal = {
+		id: invoice.id,
+		status: invoice.status ?? null,
+	};
+	return { invoice: minimal };
+}
+
+export async function voidInvoice(
+	invoiceId: string,
+): Promise<{ invoice: StripeInvoiceMinimal }> {
+	const stripe = await getStripeClient();
+
+	if (!stripe) throw new Error("Stripe client not initialized");
+
+	const invoice = await stripe.invoices.voidInvoice(invoiceId);
+	const minimal: StripeInvoiceMinimal = {
+		id: invoice.id,
+		status: invoice.status ?? null,
+	};
+	return { invoice: minimal };
+}
+
+export async function getAllCustomers(
+	max?: number,
+): Promise<StripeCustomerMinimal[]> {
+	if (typeof max === "number" && max <= 0) return [];
+
+	const stripe = await getStripeClient();
+	const customers: StripeCustomerMinimal[] = [];
+
+	let startingAfter: string | undefined;
+
+	if (!stripe) throw new Error("Stripe client not initialized");
+
+	for (let page = 0; page < 50; page++) {
+		const remaining =
+			typeof max === "number" ? Math.max(0, max - customers.length) : 100;
+		const pageLimit = Math.min(100, remaining || 100);
+
+		const list = await stripe.customers.list({
+			limit: pageLimit,
+			starting_after: startingAfter,
+		});
+
+		let pageItems: StripeCustomerMinimal[] = (list.data || []).map((c) => ({
+			id: c.id,
+			name: c.name ?? null,
+			email: c.email ?? null,
+		}));
+
+		if (typeof max === "number") {
+			const remainingAfterMap = max - customers.length;
+			if (remainingAfterMap <= 0) break;
+			if (pageItems.length > remainingAfterMap) {
+				pageItems = pageItems.slice(0, remainingAfterMap);
+			}
+		}
+
+		customers.push(...pageItems);
+
+		if (!list.has_more || pageItems.length === 0) break;
+		if (typeof max === "number" && customers.length >= max) break;
+		startingAfter = pageItems[pageItems.length - 1]?.id;
+		if (!startingAfter) break;
+	}
+
+	return customers;
+}

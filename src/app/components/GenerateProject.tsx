@@ -4,6 +4,7 @@ import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Label } from "./Label";
+import { Button } from "./Button";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
@@ -54,7 +55,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<select
 					name="customerId"
 					required
-					className="flex h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
+					className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				>
 					<option value="">Select a customer</option>
 					{customers &&
@@ -74,12 +75,13 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 					className="flex h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				/>
 			</div>
-			<button
+			<Button
 				type="submit"
-				className="hover:bg-blue-300 cursor-pointer rounded-md bg-blue-500 px-4 py-2 text-white"
+				size="lg"
+				variant="default"
 			>
 				Generate Project
-			</button>
+			</Button>
 		</form>
 	);
 };

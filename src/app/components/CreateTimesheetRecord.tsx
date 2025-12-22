@@ -5,6 +5,7 @@ import { createTimesheetEntry } from "../lib/db";
 import { Flex } from "./Flex";
 import { Input } from "./Input";
 import { Label } from "./Label";
+import { Button } from "./Button";
 
 export const CreateTimesheetRecord = ({
 	timesheetId,
@@ -34,8 +35,8 @@ export const CreateTimesheetRecord = ({
 				evt.currentTarget.reset();
 			}}
 		>
-			<input type="hidden" name="timesheetId" value={timesheetId} />
-			<input type="hidden" name="projectRate" value={projectRate} />
+			<Input type="hidden" name="timesheetId" value={timesheetId} />
+			<Input type="hidden" name="projectRate" value={projectRate} />
 			<Flex justify="between" items="center">
 				<Flex gap={4}>
 					<Flex direction="col" gap="2">
@@ -69,13 +70,15 @@ export const CreateTimesheetRecord = ({
 					</Flex>
 				</Flex>
 				<div>
-					<button
+					<Button
 						type="submit"
+						variant="ghost"
+						size="icon"
 						disabled={closed}
 						className="disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0 px-3 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
 					>
 						<PlusIcon className="h-4 w-4" />
-					</button>
+					</Button>
 				</div>
 			</Flex>
 		</form>

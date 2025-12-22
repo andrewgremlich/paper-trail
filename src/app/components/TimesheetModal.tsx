@@ -2,13 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
 import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
-import { generateInvoice } from "../lib/stripeApi";
-import { getInvoice, markInvoiceAsPaid } from "../lib/stripeHttpClient";
+import {
+	generateInvoice,
+	getInvoice,
+	markInvoiceAsPaid,
+	voidInvoice,
+} from "../lib/stripeApi";
 import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { Dialog } from "./Dialog";
 import { H1, P } from "./HtmlElements";
 import { TimesheetTable } from "./TimesheetTable";
+import { Button } from "./Button";
+import { Input } from "./Input";
 
 export const TimesheetModal = () => {
 	const queryClient = useQueryClient();
@@ -72,6 +78,18 @@ export const TimesheetModal = () => {
 			});
 		},
 	});
+	const { mutate: voidInv } = useMutation({
+		mutationFn: async (invoiceId: string | undefined) => {
+			if (invoiceId) {
+				await voidInvoice(invoiceId);
+			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["invoice", timesheet?.invoiceId],
+			});
+		},
+	});
 
 	return (
 		<Dialog
@@ -105,14 +123,16 @@ export const TimesheetModal = () => {
 								await mutateDeleteTimesheet(formData);
 							}}
 						>
-							<input type="hidden" name="id" defaultValue={timesheet?.id} />
-							<button
-								className="hover:cursor-pointer p-2 rounded"
+							<Input type="hidden" name="id" defaultValue={timesheet?.id} />
+							<Button
+								variant="ghost"
+								size="icon"
+								className="ml-2"
 								type="submit"
 								aria-label="Delete timesheet"
 							>
 								<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-							</button>
+							</Button>
 						</form>
 					</div>
 					{timesheet?.description ? <P>{timesheet?.description}</P> : null}
@@ -122,39 +142,35 @@ export const TimesheetModal = () => {
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
+					<P>Invoice ID: {timesheet?.invoiceId}</P>
+					{invoiceData?.status === "paid" && (
+						<P>Invoice has been marked as paid.</P>
+					)}
+					{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
 					{timesheet?.invoiceId && (
-						// TODO: add void invoice functionality
-						<form
-							onSubmit={async (evt) => {
-								evt.preventDefault();
-								const formData = new FormData(evt.currentTarget);
-								const invoiceId = formData.get("invoiceId");
-								await markAsPaid(invoiceId?.toString());
-							}}
-						>
-							<P>Invoice ID: {timesheet?.invoiceId}</P>
-							{invoiceData?.status === "paid" && (
-								<P>Invoice has been marked as paid.</P>
-							)}
-							<input
-								type="hidden"
-								name="invoiceId"
-								defaultValue={timesheet?.invoiceId}
-							/>
-							<button
-								disabled={invoiceData?.status === "paid"}
-								type="submit"
-								className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md  ${
-									invoiceData?.status === "paid"
-										? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
-										: "cursor-pointer"
-								}`}
+						<div className="flex gap-2">
+							<Button
+								onClick={async () => {
+									if (timesheet?.invoiceId)
+										await markAsPaid(timesheet?.invoiceId);
+								}}
+								disabled={
+									["paid", "void"].includes(invoiceData?.status ?? "")
+								}
 							>
-								{invoiceData?.status === "paid"
-									? "Has been paid"
-									: "Mark as Paid"}
-							</button>
-						</form>
+								Mark as Paid
+							</Button>
+							<Button
+								onClick={async () => {
+									if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
+								}}
+								disabled={
+									["paid", "void"].includes(invoiceData?.status ?? "")
+								}
+							>
+								Void Invoice
+							</Button>
+						</div>
 					)}
 				</CardHeader>
 				<CardContent>
@@ -181,29 +197,29 @@ export const TimesheetModal = () => {
 						}}
 						className="flex gap-2"
 					>
-						<input
+						<Input
 							type="hidden"
 							name="timesheetId"
 							defaultValue={timesheet?.id}
 						/>
 						{timesheet?.customerId && (
-							<input
+							<Input
 								type="hidden"
 								name="customerId"
 								defaultValue={timesheet?.customerId}
 							/>
 						)}
-						<button
+						<Button
 							type="submit"
-							disabled={timesheet?.closed}
-							className={`shrink-0 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md cursor-pointer`}
+							variant="default"
+							disabled={timesheet?.closed || timesheet?.entries.length === 0}
 						>
 							{isPending
 								? "Generating..."
 								: !timesheet?.closed
 									? "Generate Invoice"
-									: "Invoice Closed"}
-						</button>
+									: "Invoice Generated"}
+						</Button>
 					</form>
 				</CardFooter>
 			</Card>

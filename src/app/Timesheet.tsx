@@ -8,8 +8,7 @@ import { GenerateProject } from "@/components/GenerateProject";
 import { H1, H2, P, Section } from "@/components/HtmlElements";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { getAllCustomers } from "@/lib/stripeHttpClient";
-import { getStripeSecretKey } from "@/lib/stronghold";
+import { getAllCustomers } from "@/lib/stripeApi";
 
 export const Timesheet = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
@@ -26,11 +25,7 @@ export const Timesheet = () => {
 	const { data: customers } = useQuery({
 		queryKey: ["customers"],
 		queryFn: async () => {
-			const key = await getStripeSecretKey();
-			if (key) {
-				return getAllCustomers(key, 500);
-			}
-			return [];
+			return getAllCustomers(50);
 		},
 	});
 
