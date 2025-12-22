@@ -3,8 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
-import { Label } from "./Label";
 import { Button } from "./Button";
+import { Label } from "./Label";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
@@ -75,11 +75,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 					className="flex h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				/>
 			</div>
-			<Button
-				type="submit"
-				size="lg"
-				variant="default"
-			>
+			<Button type="submit" size="lg" variant="default">
 				Generate Project
 			</Button>
 		</form>

@@ -2,6 +2,7 @@ import Stripe from "stripe";
 
 import { getTimesheetById } from "./db";
 import { getDb } from "./db/client";
+import type { StripeCustomerMinimal, StripeInvoiceMinimal } from "./types";
 
 let stripeClient: Stripe | null = null;
 
@@ -85,21 +86,9 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 	);
 };
 
-interface StripeInvoiceMinimal {
-	id: string;
-	status: string | null;
-	[key: string]: unknown;
-}
-
-interface StripeCustomerMinimal {
-	id: string;
-	name: string | null;
-	email: string | null;
-}
-
 export async function getInvoice(
 	invoiceId: string,
-): Promise<{ invoice: StripeInvoiceMinimal }> {
+): Promise<StripeInvoiceMinimal> {
 	const stripe = await getStripeClient();
 
 	if (!stripe) throw new Error("Stripe client not initialized");
@@ -109,9 +98,10 @@ export async function getInvoice(
 	const minimal: StripeInvoiceMinimal = {
 		id: invoice.id,
 		status: invoice.status ?? null,
+		pdf: invoice.invoice_pdf,
 	};
 
-	return { invoice: minimal };
+	return minimal;
 }
 
 export async function markInvoiceAsPaid(

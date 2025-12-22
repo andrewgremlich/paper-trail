@@ -8,13 +8,13 @@ import {
 	markInvoiceAsPaid,
 	voidInvoice,
 } from "../lib/stripeApi";
+import { Button } from "./Button";
 import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { Dialog } from "./Dialog";
 import { H1, P } from "./HtmlElements";
-import { TimesheetTable } from "./TimesheetTable";
-import { Button } from "./Button";
 import { Input } from "./Input";
+import { TimesheetTable } from "./TimesheetTable";
 
 export const TimesheetModal = () => {
 	const queryClient = useQueryClient();
@@ -35,9 +35,9 @@ export const TimesheetModal = () => {
 			if (!timesheet?.invoiceId) {
 				return null;
 			}
-
 			const invoiceData = await getInvoice(timesheet.invoiceId);
-			return invoiceData.invoice;
+
+			return invoiceData;
 		},
 		// TODO: re-enable when needed
 		// enabled: !!timesheet?.invoiceId,
@@ -146,6 +146,19 @@ export const TimesheetModal = () => {
 					{invoiceData?.status === "paid" && (
 						<P>Invoice has been marked as paid.</P>
 					)}
+					{invoiceData?.pdf && (
+						<P>
+							Invoice PDF is available.{" "}
+							<a
+								className="text-blue-500 underline underline-offset-4"
+								href={invoiceData.pdf}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								Download PDF
+							</a>
+						</P>
+					)}
 					{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
 					{timesheet?.invoiceId && (
 						<div className="flex gap-2">
@@ -154,9 +167,7 @@ export const TimesheetModal = () => {
 									if (timesheet?.invoiceId)
 										await markAsPaid(timesheet?.invoiceId);
 								}}
-								disabled={
-									["paid", "void"].includes(invoiceData?.status ?? "")
-								}
+								disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
 							>
 								Mark as Paid
 							</Button>
@@ -164,9 +175,7 @@ export const TimesheetModal = () => {
 								onClick={async () => {
 									if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
 								}}
-								disabled={
-									["paid", "void"].includes(invoiceData?.status ?? "")
-								}
+								disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
 							>
 								Void Invoice
 							</Button>

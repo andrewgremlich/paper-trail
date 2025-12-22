@@ -9,3 +9,16 @@ export enum ProjectPageTab {
 	FileStorage = "FileStorage",
 	Accounting = "Accounting",
 }
+
+export interface StripeInvoiceMinimal {
+	id: string;
+	status: string | null;
+	pdf?: string | null;
+	[key: string]: unknown;
+}
+
+export interface StripeCustomerMinimal {
+	id: string;
+	name: string | null;
+	email: string | null;
+}

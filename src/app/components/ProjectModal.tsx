@@ -3,13 +3,13 @@ import { TrashIcon } from "lucide-react";
 import { useReducer } from "react";
 import { deleteProject, generateTimesheet, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
+import { Button } from "./Button";
 import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
 import { Dialog } from "./Dialog";
 import { H2, P, Section } from "./HtmlElements";
-import { Label } from "./Label";
-import { Button } from "./Button";
 import { Input } from "./Input";
+import { Label } from "./Label";
 
 type FormState = { name: string; description: string };
 type FormAction =
@@ -181,11 +181,7 @@ export const ProjectModal = () => {
 									}
 								/>
 							</div>
-							<Button
-								type="submit"
-								variant="default"
-								size="lg"
-							>
+							<Button type="submit" variant="default" size="lg">
 								Generate Timesheet
 							</Button>
 						</div>
