@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
 import { usePaperTrailStore } from "@/lib/store";
-import { deleteTimesheetRecord } from "../lib/dbClient";
-import type { TimesheetRecord } from "../lib/types";
+import { deleteTimesheetRecord, type TimesheetRecord } from "../lib/db";
 import { formatDate } from "../lib/utils";
 
 export const TimesheetTable = ({

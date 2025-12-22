@@ -1,12 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
-
-import {
-	deleteTimesheet,
-	generateInvoice,
-	getTimesheetById,
-} from "../lib/dbClient";
+import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
+import { generateInvoice } from "../lib/stripeApi";
 import { getInvoice, markInvoiceAsPaid } from "../lib/stripeHttpClient";
 import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";

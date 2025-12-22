@@ -7,7 +7,7 @@ import { useState } from "react";
 import { H1 } from "./components/HtmlElements";
 import { defaultColumns } from "./lib/accounting/tableColumns";
 import type { Transaction } from "./lib/accounting/types";
-import { upsertAccountingTransaction } from "./lib/dbClient";
+import { upsertAccountingTransaction } from "./lib/db";
 import {
 	openAttachment,
 	removeAttachment,

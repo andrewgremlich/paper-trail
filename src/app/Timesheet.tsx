@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CardPreview } from "@/components/CardPreview";
 import { GenerateProject } from "@/components/GenerateProject";
 import { H1, H2, P, Section } from "@/components/HtmlElements";
-import { getAllProjects, getAllTimesheets } from "@/lib/dbClient";
+import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import { getAllCustomers } from "@/lib/stripeHttpClient";
 import { getStripeSecretKey } from "@/lib/stronghold";
@@ -16,8 +16,11 @@ export const Timesheet = () => {
 	const { data: dashboardData } = useQuery({
 		queryKey: ["dashboardData"],
 		queryFn: async () => {
-			const data = await Promise.all([getAllProjects(), getAllTimesheets()]);
-			return { projects: data[0], timesheets: data[1] };
+			const [projects, timesheets] = await Promise.all([
+				getAllProjects(),
+				getAllTimesheets(),
+			]);
+			return { projects, timesheets };
 		},
 	});
 	const { data: customers } = useQuery({

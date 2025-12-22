@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
-import { createTimesheetRecord } from "../lib/dbClient";
+import { createTimesheetRecord } from "../lib/db";
 import { Flex } from "./Flex";
 import { Input } from "./Input";
 import { Label } from "./Label";

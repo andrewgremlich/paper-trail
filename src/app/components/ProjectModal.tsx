@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer } from "react";
 import { TrashIcon } from "lucide-react";
-import { deleteProject, generateTimesheet, getProjectById } from "../lib/dbClient";
+import { useReducer } from "react";
+import { deleteProject, generateTimesheet, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
