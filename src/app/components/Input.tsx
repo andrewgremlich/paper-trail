@@ -6,7 +6,7 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const baseClasses =
-	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm";
+	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900";
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
 	({ type, step, min, placeholder, required, className, ...rest }, ref) => {

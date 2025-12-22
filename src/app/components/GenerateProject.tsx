@@ -5,6 +5,7 @@ import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Button } from "./Button";
 import { Label } from "./Label";
+import { Input } from "./Input";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
@@ -33,21 +34,21 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 		>
 			<div className="col-span-3">
 				<Label htmlFor="name">Project Name</Label>
-				<input
+				<Input
 					name="name"
 					placeholder="Enter project name"
 					required
-					className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
+					className="w-full"
 				/>
 			</div>
 			<div className="col-span-1">
 				<Label htmlFor="rate">Rate</Label>
-				<input
+				<Input
 					type="number"
 					name="rate"
 					placeholder="Enter project rate"
 					required
-					className="flex h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
+					className="w-full"
 				/>
 			</div>
 			<div className="col-span-2">
@@ -55,7 +56,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<select
 					name="customerId"
 					required
-					className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
+					className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				>
 					<option value="">Select a customer</option>
 					{customers &&
@@ -72,7 +73,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<textarea
 					name="description"
 					placeholder="Enter project description"
-					className="flex h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
+					className="h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				/>
 			</div>
 			<Button type="submit" size="lg" variant="default">
