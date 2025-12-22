@@ -155,7 +155,7 @@ export const TimesheetModal = () => {
 								<P>
 									Invoice PDF is available.{" "}
 									<a
-										className="text-blue-500 underline underline-offset-4"
+										className="text-blue-500 underline underline-offset-4 decoration-dashed"
 										href={invoiceData.pdf}
 										target="_blank"
 										rel="noopener noreferrer"
@@ -172,17 +172,17 @@ export const TimesheetModal = () => {
 											if (timesheet?.invoiceId)
 												await markAsPaid(timesheet?.invoiceId);
 										}}
-										disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
+										disabled={invoiceData?.disabled ?? false}
 									>
-										Mark as Paid
+										{invoiceData?.status === "paid" ? "Already Paid" : invoiceData?.disabled ? "Disabled" : "Mark as Paid"}
 									</Button>
 									<Button
 										onClick={async () => {
 											if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
 										}}
-										disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
+										disabled={invoiceData?.disabled ?? false}
 									>
-										Void Invoice
+										{invoiceData?.status === "void" ? "AlreadyVoided" : invoiceData?.disabled ? "Void Disabled" : "Void Invoice"}
 									</Button>
 								</Flex>
 							)}

@@ -14,6 +14,7 @@ export interface StripeInvoiceMinimal {
 	id: string;
 	status: string | null;
 	pdf?: string | null;
+	disabled?: boolean;
 	[key: string]: unknown;
 }
 

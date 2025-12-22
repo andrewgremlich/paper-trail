@@ -98,6 +98,7 @@ export async function getInvoice(
 	return {
 		id: invoice.id,
 		status: invoice.status ?? null,
+		disabled: ["paid", "void"].includes(invoice.status ?? "") ?? false,
 		pdf: invoice.invoice_pdf,
 	};
 }
