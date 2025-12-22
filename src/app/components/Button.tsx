@@ -10,7 +10,7 @@ const buttonVariants = cva(
 				default: "bg-blue-600 text-white hover:bg-blue-700",
 				secondary: "bg-gray-600 text-white hover:bg-gray-700",
 				outline: "bg-transparent",
-				ghost: "bg-transparent border-transparent",
+				ghost: "bg-transparent border-transparent hover:bg-blue-600/40",
 			},
 			size: {
 				sm: "h-8 px-3 py-1.5",
