@@ -95,18 +95,16 @@ export async function getInvoice(
 
 	const invoice = await stripe.invoices.retrieve(invoiceId);
 
-	const minimal: StripeInvoiceMinimal = {
+	return {
 		id: invoice.id,
 		status: invoice.status ?? null,
 		pdf: invoice.invoice_pdf,
 	};
-
-	return minimal;
 }
 
 export async function markInvoiceAsPaid(
 	invoiceId: string,
-): Promise<{ invoice: StripeInvoiceMinimal }> {
+): Promise<StripeInvoiceMinimal> {
 	const stripe = await getStripeClient();
 
 	if (!stripe) throw new Error("Stripe client not initialized");
@@ -114,11 +112,11 @@ export async function markInvoiceAsPaid(
 	const invoice = await stripe.invoices.pay(invoiceId, {
 		paid_out_of_band: true,
 	});
-	const minimal: StripeInvoiceMinimal = {
+
+	return {
 		id: invoice.id,
 		status: invoice.status ?? null,
 	};
-	return { invoice: minimal };
 }
 
 export async function voidInvoice(

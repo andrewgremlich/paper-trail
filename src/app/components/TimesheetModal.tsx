@@ -15,6 +15,7 @@ import { Dialog } from "./Dialog";
 import { H1, P } from "./HtmlElements";
 import { Input } from "./Input";
 import { TimesheetTable } from "./TimesheetTable";
+import { Flex } from "./Flex";
 
 export const TimesheetModal = () => {
 	const queryClient = useQueryClient();
@@ -135,52 +136,58 @@ export const TimesheetModal = () => {
 							</Button>
 						</form>
 					</div>
-					{timesheet?.description ? <P>{timesheet?.description}</P> : null}
-					{timesheet?.projectRate && (
-						<P>Project Rate: ${timesheet.projectRate}/hour</P>
-					)}
-					<P>
-						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
-					</P>
-					<P>Invoice ID: {timesheet?.invoiceId}</P>
-					{invoiceData?.status === "paid" && (
-						<P>Invoice has been marked as paid.</P>
-					)}
-					{invoiceData?.pdf && (
-						<P>
-							Invoice PDF is available.{" "}
-							<a
-								className="text-blue-500 underline underline-offset-4"
-								href={invoiceData.pdf}
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								Download PDF
-							</a>
-						</P>
-					)}
-					{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
-					{timesheet?.invoiceId && (
-						<div className="flex gap-2">
-							<Button
-								onClick={async () => {
-									if (timesheet?.invoiceId)
-										await markAsPaid(timesheet?.invoiceId);
-								}}
-								disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
-							>
-								Mark as Paid
-							</Button>
-							<Button
-								onClick={async () => {
-									if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
-								}}
-								disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
-							>
-								Void Invoice
-							</Button>
+					<Flex justify="between">
+						<div>
+							{timesheet?.description ? <P>Description: {timesheet?.description}</P> : null}
+							{timesheet?.projectRate && (
+								<P>Project Rate: ${timesheet.projectRate}/hour</P>
+							)}
+							<P>
+								{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
+							</P>
 						</div>
-					)}
+						<div>
+							<P>Invoice ID: {timesheet?.invoiceId}</P>
+							{invoiceData?.status === "paid" && (
+								<P>Invoice has been marked as paid.</P>
+							)}
+							{invoiceData?.pdf && (
+								<P>
+									Invoice PDF is available.{" "}
+									<a
+										className="text-blue-500 underline underline-offset-4"
+										href={invoiceData.pdf}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Download PDF
+									</a>
+								</P>
+							)}
+							{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
+							{timesheet?.invoiceId && (
+								<Flex gap="2">
+									<Button
+										onClick={async () => {
+											if (timesheet?.invoiceId)
+												await markAsPaid(timesheet?.invoiceId);
+										}}
+										disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
+									>
+										Mark as Paid
+									</Button>
+									<Button
+										onClick={async () => {
+											if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
+										}}
+										disabled={["paid", "void"].includes(invoiceData?.status ?? "")}
+									>
+										Void Invoice
+									</Button>
+								</Flex>
+							)}
+						</div>
+					</Flex>
 				</CardHeader>
 				<CardContent>
 					{timesheet && (

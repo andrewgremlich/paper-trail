@@ -87,7 +87,7 @@ export const TimesheetTable = ({
 				</div>
 			) : (
 				<div className="text-center py-8 text-gray-500">
-					No timesheet entries yet. Add your first entry above.
+					No timesheet entries yet! Add your first entry above.
 				</div>
 			)}
 
