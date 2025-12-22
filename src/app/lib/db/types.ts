@@ -27,21 +27,24 @@ export type MinimalTimesheet = Pick<
 	"id" | "name" | "description" | "createdAt" | "updatedAt" | "closed"
 >;
 
-export type TimesheetRecord = {
+export type TimesheetWithProject = Timesheet & {
+	customerId: Nullable<string>;
+	projectRate: Nullable<number>;
+};
+
+export type TimesheetEntry = {
 	id: string;
 	timesheetId: string;
 	date: string;
 	hours: number;
 	description: string;
 	amount: number;
-	// derived client-side convenience
-	rate: number;
 	createdAt: string;
 	updatedAt: string;
 };
 
 export type TimesheetDetails = Timesheet & {
-	records: TimesheetRecord[];
+	entries: TimesheetEntry[];
 	customerId: Nullable<string>;
 	projectRate: Nullable<number>;
 };

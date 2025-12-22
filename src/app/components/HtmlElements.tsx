@@ -1,6 +1,5 @@
 import * as React from "react";
 
-// Base utility to merge our fixed classNames with user-provided ones
 function cx(...classes: (string | undefined | false)[]) {
 	return classes.filter(Boolean).join(" ");
 }

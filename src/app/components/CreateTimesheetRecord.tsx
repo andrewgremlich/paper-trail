@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
-import { createTimesheetRecord } from "../lib/db";
+import { createTimesheetEntry } from "../lib/db";
 import { Flex } from "./Flex";
 import { Input } from "./Input";
 import { Label } from "./Label";
@@ -18,7 +18,7 @@ export const CreateTimesheetRecord = ({
 	const queryClient = useQueryClient();
 	const { mutate } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await createTimesheetRecord(formData);
+			await createTimesheetEntry(formData);
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", timesheetId],
 			});
@@ -57,6 +57,7 @@ export const CreateTimesheetRecord = ({
 							placeholder="Hours worked"
 							required
 						/>
+						{/* TODO: make a timer */}
 						{/* <button type="button">
 						<Timer />
 						<TimerOff />

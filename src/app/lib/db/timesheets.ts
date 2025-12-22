@@ -3,51 +3,27 @@ import type {
 	Nullable,
 	Timesheet,
 	TimesheetDetails,
-	TimesheetRecord,
+	TimesheetEntry,
+	TimesheetWithProject,
 } from "./types";
 
 export const getAllTimesheets = async (): Promise<Timesheet[]> => {
 	const db = await getDb();
-	type TimesheetRow = {
-		id: string;
-		projectId: string;
-		invoiceId: Nullable<string>;
-		name: string;
-		description: Nullable<string>;
-		closed: number | boolean;
-		createdAt: string;
-		updatedAt: string;
-	};
 
-	const rows = await db.select<TimesheetRow[]>(
+	const rows = await db.select<Timesheet[]>(
 		`SELECT id, projectId, invoiceId, name, description, closed, createdAt, updatedAt
 		 FROM timesheets
 		 ORDER BY createdAt DESC`,
 	);
 
-	return rows.map((r: TimesheetRow) => ({ ...r, closed: !!r.closed }));
+	return rows.map((r: Timesheet) => ({ ...r, closed: !!r.closed }));
 };
 
 export const getTimesheetById = async (
 	timesheetId: string,
 ): Promise<TimesheetDetails | null> => {
 	const db = await getDb();
-
-	// Join to pull project-level info (customerId, rate)
-	const headerRows = await db.select<
-		Array<
-			{
-				id: string;
-				projectId: string;
-				invoiceId: Nullable<string>;
-				name: string;
-				description: Nullable<string>;
-				closed: number | boolean;
-				createdAt: string;
-				updatedAt: string;
-			} & { customerId: Nullable<string>; projectRate: Nullable<number> }
-		>
-	>(
+	const headerRows = await db.select<TimesheetWithProject[]>(
 		`SELECT t.id, t.projectId, t.invoiceId, t.name, t.description, t.closed, t.createdAt, t.updatedAt,
 						p.customerId as customerId, p.rate as projectRate
 		 FROM timesheets t
@@ -56,27 +32,14 @@ export const getTimesheetById = async (
 		[timesheetId],
 	);
 	const header = headerRows[0];
+
 	if (!header) return null;
 
-	type RecordRow = {
-		id: string;
-		timesheetId: string;
-		date: string;
-		hours: number;
-		description: string;
-		amount: number;
-		createdAt: string;
-		updatedAt: string;
-	};
-
-	const rows = await db.select<RecordRow[]>(
+	const rows = await db.select<TimesheetEntry[]>(
 		`SELECT id, timesheetId, date, hours, description, amount, createdAt, updatedAt
-		 FROM timesheet_records WHERE timesheetId = $1 ORDER BY date ASC, createdAt ASC`,
+		FROM timesheet_entries WHERE timesheetId = $1 ORDER BY date ASC, createdAt ASC`,
 		[timesheetId],
 	);
-
-	const rate = header.projectRate ?? 0;
-	const records: TimesheetRecord[] = rows.map((r) => ({ ...r, rate }));
 
 	const details: TimesheetDetails = {
 		id: header.id,
@@ -89,7 +52,7 @@ export const getTimesheetById = async (
 		updatedAt: header.updatedAt,
 		customerId: header.customerId,
 		projectRate: header.projectRate,
-		records,
+		entries: rows,
 	};
 
 	return details;

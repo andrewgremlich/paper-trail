@@ -88,7 +88,6 @@ export async function getAllCustomers(
 	const customers: StripeCustomerMinimal[] = [];
 	let startingAfter: string | undefined;
 
-	// Safety cap to avoid infinite loops if Stripe ever misbehaves
 	for (let page = 0; page < 50; page++) {
 		const url = new URL(`${STRIPE_BASE}/customers`);
 		const remaining =

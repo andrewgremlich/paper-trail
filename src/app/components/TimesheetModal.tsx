@@ -16,8 +16,11 @@ export const TimesheetModal = () => {
 		usePaperTrailStore();
 	const { data: timesheet } = useQuery({
 		queryKey: ["timesheet", activeTimesheetId],
-		queryFn: () =>
-			activeTimesheetId ? getTimesheetById(activeTimesheetId) : null,
+		queryFn: async () => {
+			if (activeTimesheetId) {
+				return await getTimesheetById(activeTimesheetId);
+			}
+		},
 		enabled: !!activeTimesheetId,
 	});
 	const { data: invoiceData } = useQuery({
@@ -30,6 +33,7 @@ export const TimesheetModal = () => {
 			const invoiceData = await getInvoice(timesheet.invoiceId);
 			return invoiceData.invoice;
 		},
+		// TODO: re-enable when needed
 		// enabled: !!timesheet?.invoiceId,
 	});
 	const {
@@ -112,10 +116,14 @@ export const TimesheetModal = () => {
 						</form>
 					</div>
 					{timesheet?.description ? <P>{timesheet?.description}</P> : null}
+					{timesheet?.projectRate && (
+						<P>Project Rate: ${timesheet.projectRate}/hour</P>
+					)}
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
 					{timesheet?.invoiceId && (
+						// TODO: add void invoice functionality
 						<form
 							onSubmit={async (evt) => {
 								evt.preventDefault();
@@ -158,7 +166,7 @@ export const TimesheetModal = () => {
 								projectRate={timesheet.projectRate ?? 25}
 							/>
 							<TimesheetTable
-								entries={timesheet.records || []}
+								entries={timesheet.entries || []}
 								closed={timesheet.closed}
 							/>
 						</>

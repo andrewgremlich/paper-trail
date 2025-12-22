@@ -108,7 +108,6 @@ export const deleteProject = async (formData: FormData): Promise<void> => {
 	const id = String(formData.get("projectId") || "");
 
 	try {
-		// Remove records for all timesheets under this project
 		await db.execute(`DELETE FROM projects WHERE id = $1`, [id]);
 	} catch (err) {
 		console.error(err);

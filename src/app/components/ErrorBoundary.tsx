@@ -1,25 +1,17 @@
 import * as React from "react";
 
-// Helper: replace / integrate with a real logging/telemetry solution if desired
 function logErrorToMyService(
 	error: Error,
 	componentStack: string,
 	ownerStack?: string,
 ) {
-	// eslint-disable-next-line no-console
 	console.error("Captured error:", error, { componentStack, ownerStack });
 }
 
 export interface ErrorBoundaryProps {
 	children: React.ReactNode;
-	/**
-	 * Fallback content shown when an error is caught. Can be a ReactNode or a render function.
-	 * A function form receives the actual Error instance.
-	 */
 	fallback: React.ReactNode | ((error: Error | null) => React.ReactNode);
-	/** Optional callback invoked after an error is caught */
 	onError?: (error: Error, info: React.ErrorInfo) => void;
-	/** If true, suppresses logging to console / service */
 	silent?: boolean;
 }
 
@@ -39,11 +31,9 @@ export class ErrorBoundary extends React.Component<
 	}
 
 	componentDidCatch(error: Error, info: React.ErrorInfo) {
-		// Optional external hook
 		if (this.props.onError) this.props.onError(error, info);
 
 		if (!this.props.silent) {
-			// Access potential experimental API safely
 			const maybeReact: unknown = React;
 			let ownerStack: string | undefined;
 			if (

@@ -14,8 +14,6 @@ import {
 	saveAttachment,
 } from "./lib/fileStorage";
 
-// A table where I can attach a file for the record, description, account, date, and category.
-// Allow for multiple tables.
 export const Accounting = () => {
 	const [data, setData] = useState<Transaction[]>([
 		{

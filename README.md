@@ -2,9 +2,9 @@
 
 A Paper Trail that integrates with Stripe in order to send invoices.
 
-## BUGS
+## Reference
 
-- Generate new timesheet doesn't update the homescreen.
+[Stripe SDK Invoice Doc](https://docs.stripe.com/api/invoices?lang=node)
 
 ## Setup
 

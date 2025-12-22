@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS timesheets (
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS timesheet_records (
+CREATE TABLE IF NOT EXISTS timesheet_entries (
   id TEXT PRIMARY KEY,
   timesheetId TEXT NOT NULL,
   date DATETIME NOT NULL,
@@ -33,4 +33,4 @@ CREATE TABLE IF NOT EXISTS timesheet_records (
 -- Indexes for performance (optional)
 CREATE INDEX IF NOT EXISTS idx_projects_customerId ON projects(customerId);
 CREATE INDEX IF NOT EXISTS idx_timesheets_projectId ON timesheets(projectId);
-CREATE INDEX IF NOT EXISTS idx_timesheet_records_timesheetId ON timesheet_records(timesheetId);
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId ON timesheet_entries(timesheetId);

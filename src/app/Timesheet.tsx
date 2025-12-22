@@ -34,6 +34,7 @@ export const Timesheet = () => {
 		},
 	});
 
+	// TODO: potentially keep for seeing how to call Tauri commands
 	// const [greetMsg, setGreetMsg] = useState("");
 	// const [name, setName] = useState("");
 

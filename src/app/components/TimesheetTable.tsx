@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
 import { usePaperTrailStore } from "@/lib/store";
-import { deleteTimesheetRecord, type TimesheetRecord } from "../lib/db";
+import { deleteTimesheetEntry, type TimesheetEntry } from "../lib/db";
 import { formatDate } from "../lib/utils";
 
 export const TimesheetTable = ({
 	entries,
 	closed,
 }: {
-	entries: TimesheetRecord[];
+	entries: TimesheetEntry[];
 	closed: boolean;
 }) => {
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
@@ -16,7 +16,7 @@ export const TimesheetTable = ({
 	const queryClient = useQueryClient();
 	const { mutate } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await deleteTimesheetRecord(formData);
+			await deleteTimesheetEntry(formData);
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
@@ -40,9 +40,6 @@ export const TimesheetTable = ({
 									Description
 								</th>
 								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Rate ($/hr)
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
 									Amount ($)
 								</th>
 								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900"></th>
@@ -57,11 +54,8 @@ export const TimesheetTable = ({
 									<td className="px-4 py-3 text-sm text-gray-900 text-center">
 										{entry.hours}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 max-w-[200px] truncate">
+									<td className="px-4 py-3 text-sm text-gray-900 max-w-50 truncate">
 										{entry.description}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										${entry.rate.toFixed(2)}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
 										${entry.amount.toFixed(2)}

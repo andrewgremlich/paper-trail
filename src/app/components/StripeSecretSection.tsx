@@ -4,8 +4,8 @@ import { useId } from "react";
 import { getStripeSecretKey, setStripeSecretKey } from "../lib/stronghold";
 
 interface StripeSecretSectionProps {
-	active: boolean; // whether the parent modal is open
-	idPrefix?: string; // optional ID prefix to keep IDs unique in parent
+	active: boolean;
+	idPrefix?: string;
 }
 
 export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {

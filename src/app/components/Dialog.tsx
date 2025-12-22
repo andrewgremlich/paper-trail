@@ -11,18 +11,16 @@ interface DialogProps {
 	isOpen: boolean;
 	onClose: () => void;
 	children: ReactNode;
-	titleId?: string; // If provided, associates heading via aria-labelledby
-	ariaLabel?: string; // Fallback label if no titleId
-	modal?: boolean; // true => showModal(); false => show();
+	titleId?: string;
+	ariaLabel?: string;
+	modal?: boolean;
 	className?: string;
-	returnFocusRef?: React.RefObject<HTMLElement>; // Where to restore focus
-	initialFocusRef?: React.RefObject<HTMLElement>; // Element to focus first
+	returnFocusRef?: React.RefObject<HTMLElement>;
+	initialFocusRef?: React.RefObject<HTMLElement>;
 	closeOnEsc?: boolean;
 	closeOnBackdrop?: boolean;
 	lockScroll?: boolean;
-	/** Enable built-in fade/scale transition */
 	animate?: boolean;
-	/** Duration (ms) for fade/scale; keep in sync with Tailwind duration classes */
 	animationDuration?: number;
 }
 
@@ -56,22 +54,16 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 			internalRef;
 		const lastFocusedRef = useRef<HTMLElement | null>(null);
 		const closeTimerRef = useRef<number | null>(null);
-
-		// staging for animation states
 		const [stage, setStage] = React.useState<
 			"closed" | "opening" | "open" | "closing"
 		>("closed");
-
-		// Derived data-state attribute for styling
 		const dataState = stage === "open" || stage === "opening" ? "open" : stage;
 
-		// Open / close management
 		useEffect(() => {
-			const dialog = dialogRef.current; // captured once per effect run
+			const dialog = dialogRef.current;
 			if (!dialog) return;
 
 			if (isOpen) {
-				// Cancel any pending close timer (rapid reopen)
 				if (closeTimerRef.current) {
 					window.clearTimeout(closeTimerRef.current);
 					closeTimerRef.current = null;
@@ -88,7 +80,6 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				} else {
 					setStage("open");
 				}
-				// Focus management
 				queueMicrotask(() => {
 					if (initialFocusRef?.current) {
 						initialFocusRef.current.focus();
@@ -157,7 +148,6 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 			dialogRef,
 		]);
 
-		// ESC key fallback (some browsers / polyfills)
 		useEffect(() => {
 			if (!isOpen || !closeOnEsc) return;
 			const handler = (e: KeyboardEvent) => {
@@ -171,7 +161,6 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				window.removeEventListener("keydown", handler, { capture: true });
 		}, [isOpen, closeOnEsc, onClose]);
 
-		// Backdrop click detection (native <dialog> gives us a backdrop area = element itself)
 		const handlePointerDown = useCallback(
 			(e: React.MouseEvent<HTMLDialogElement>) => {
 				if (!closeOnBackdrop) return;
@@ -181,7 +170,6 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 			[closeOnBackdrop, onClose, dialogRef],
 		);
 
-		// Native cancel event (e.g., ESC). We keep it in sync & manual.
 		const handleCancel: React.ReactEventHandler<HTMLDialogElement> = (e) => {
 			e.preventDefault();
 			if (closeOnEsc) onClose();

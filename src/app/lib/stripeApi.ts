@@ -1,85 +1,86 @@
-import { getTimesheetById, type Nullable } from "./db";
+import Stripe from "stripe";
+
+import { getTimesheetById } from "./db";
 import { getDb } from "./db/client";
 
-async function stripePost(
-	path: string,
-	body: URLSearchParams,
-): Promise<Response> {
+let stripeClient: Stripe | null = null;
+
+async function getStripeClient(): Promise<Stripe | null> {
 	const { getStripeSecretKey } = await import("./stronghold");
 	const key = await getStripeSecretKey();
 
 	if (!key) throw new Error("Stripe secret key not found. Set it in Settings.");
 
-	return fetch(`https://api.stripe.com/v1${path}`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${key}`,
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: body.toString(),
-	});
+	if (stripeClient) return stripeClient;
+
+	stripeClient = new Stripe(key);
+	return stripeClient;
 }
 
 export const generateInvoice = async (formData: FormData): Promise<void> => {
 	const db = await getDb();
+	const stripe = await getStripeClient();
 	const timesheetId = String(formData.get("timesheetId") || "");
 	const explicitCustomerId = formData.get("customerId");
-
-	// Fetch full timesheet context
 	const ts = await getTimesheetById(timesheetId);
 
 	if (!ts) throw new Error("Timesheet not found");
 	if (ts.closed) throw new Error("Timesheet already closed");
-
-	const customerId = (explicitCustomerId || ts.customerId) as Nullable<string>;
-
-	if (!customerId)
+	if (!stripe) throw new Error("Stripe client not initialized");
+	if (!explicitCustomerId)
 		throw new Error("Customer ID missing for invoice generation");
 
-	// Create invoice items for each record (amount in cents)
-	for (const r of ts.records) {
-		const cents = Math.round((r.amount || 0) * 100);
+	const {
+		name: timesheetName,
+		description: timesheetDescription,
+		entries,
+		projectRate,
+	} = ts;
 
-		if (cents <= 0) continue;
-		const params = new URLSearchParams();
+	let taskLog = "";
+	let totalHours = 0;
+	let totalAmount = 0;
 
-		params.set("customer", customerId);
-		params.set("currency", "usd");
-		params.set("amount", String(cents));
-		params.set(
-			"description",
-			`${new Date(r.date).toLocaleDateString()} • ${r.description} • ${r.hours}h @ $${r.rate}/h`,
-		);
+	for (const entry of entries) {
+		const {
+			description: entryDescription,
+			hours: entryHours,
+			date: entryDate,
+		} = entry;
 
-		const resp = await stripePost("/invoiceitems", params);
+		const amount = projectRate ? entryHours * projectRate : 0;
 
-		if (!resp.ok) {
-			const text = await resp.text();
-			throw new Error(`Failed to create invoice item: ${resp.status} ${text}`);
-		}
+		taskLog += `Date: ${entryDate} | Hours: ${entryHours} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
+
+		totalHours += entryHours;
+		totalAmount += amount;
 	}
 
-	// Create invoice
-	const invParams = new URLSearchParams();
+	const invoice = await stripe.invoices.create({
+		customer: explicitCustomerId as string,
+		collection_method: "send_invoice",
+		days_until_due: 30,
+		currency: "usd",
+		description: `Total hours: ${totalHours}\n${timesheetDescription as string}`,
+		footer: taskLog.length > 0 ? `Task log:\n${taskLog}` : undefined,
+	});
 
-	invParams.set("customer", customerId);
-	invParams.set("collection_method", "send_invoice");
-	invParams.set("days_until_due", "30");
-	invParams.set("description", `Invoice for ${ts.name}`);
-
-	const invResp = await stripePost("/invoices", invParams);
-
-	if (!invResp.ok) {
-		const text = await invResp.text();
-		throw new Error(`Failed to create invoice: ${invResp.status} ${text}`);
+	if (totalAmount > 0) {
+		await stripe.invoiceItems.create({
+			customer: explicitCustomerId as string,
+			invoice: invoice.id,
+			currency: "usd",
+			amount: Math.round(totalAmount * 100),
+			description: `${String(timesheetName)} — ${totalHours} hours`,
+		});
 	}
 
-	const invoiceJson = (await invResp.json()) as { id?: string };
-	const invoiceId = invoiceJson.id || null;
+	const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
 
-	// Close the timesheet and store invoice id
+	await stripe.invoices.sendInvoice(finalized.id);
+
 	await db.execute(
 		`UPDATE timesheets SET invoiceId = $1, closed = 1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
-		[invoiceId, timesheetId],
+		[invoice.id, timesheetId],
 	);
 };

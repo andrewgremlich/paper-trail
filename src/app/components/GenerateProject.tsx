@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-// import { generateProject } from "@/lib/actions";
 import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";

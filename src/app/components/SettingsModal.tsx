@@ -15,7 +15,7 @@ export const SettingsModal = () => {
 			isOpen={settingsModalActive}
 			onClose={toggleSettingsModal}
 			titleId={headingId}
-			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>} // Fallback focus
+			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>}
 		>
 			<header className="flex items-center justify-between">
 				<H2 id={headingId}>Settings</H2>
