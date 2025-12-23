@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { CardPreview } from "@/components/CardPreview";
 import { GenerateProject } from "@/components/GenerateProject";
-import { H1, H2, P, Section } from "@/components/HtmlElements";
+import { H1, H2, Main, P, Section } from "@/components/HtmlElements";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import { getAllCustomers } from "@/lib/stripeApi";
@@ -39,7 +39,7 @@ export const Timesheet = () => {
 	// }
 
 	return (
-		<>
+		<Main className="max-w-3xl">
 			<H1>Paper Trail</H1>
 			{/* <input
 				onChange={(e) => setName(e.currentTarget.value)}
@@ -92,6 +92,6 @@ export const Timesheet = () => {
 				<H2>New Project</H2>
 				<GenerateProject customers={customers} />
 			</Section>
-		</>
+		</Main>
 	);
 };

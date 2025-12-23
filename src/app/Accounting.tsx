@@ -4,7 +4,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { H1 } from "./components/HtmlElements";
+import { H1, Main } from "./components/HtmlElements";
 import { defaultColumns } from "./lib/accounting/tableColumns";
 import type { Transaction } from "./lib/accounting/types";
 import { upsertAccountingTransaction } from "./lib/db";
@@ -78,10 +78,10 @@ export const Accounting = () => {
 	});
 
 	return (
-		<>
+		<Main className="max-w-5xl">
 			<H1>Accounting</H1>
 			<div className="overflow-x-auto">
-				<table className="min-w-full border-collapse border border-gray-300">
+				<table className="border-collapse border border-gray-300">
 					<thead>
 						{table.getHeaderGroups().map((headerGroup) => (
 							<tr key={headerGroup.id} className="bg-gray-50">
@@ -117,6 +117,6 @@ export const Accounting = () => {
 					</tbody>
 				</table>
 			</div>
-		</>
+		</Main>
 	);
 };

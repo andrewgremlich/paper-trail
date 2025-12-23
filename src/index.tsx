@@ -21,18 +21,21 @@ if (!rootElement) {
 createRoot(rootElement).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			<TimesheetModal />
-			<ProjectModal />
-			<SettingsModal />
-			<Nav />
 			<ErrorBoundary
 				fallback={(error) => (
 					<div className="error-boundary">
 						<h2>Something went wrong:</h2>
+						<pre>{error?.name}</pre>
 						<pre>{error?.message}</pre>
+						<pre>{error?.stack}</pre>
+						<p>Restart the application.</p>
 					</div>
 				)}
 			>
+				<TimesheetModal />
+				<ProjectModal />
+				<SettingsModal />
+				<Nav />
 				<PageWrapper>
 					<App />
 				</PageWrapper>

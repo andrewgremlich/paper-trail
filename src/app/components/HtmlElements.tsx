@@ -4,6 +4,20 @@ function cx(...classes: (string | undefined | false)[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
+export type MainProps = React.ComponentPropsWithoutRef<"main">;
+export const Main = React.forwardRef<HTMLElement, MainProps>(
+	({ className, children, ...rest }, ref) => (
+		<main
+			ref={ref as React.Ref<HTMLElement>}
+			className={cx("flex-1 px-4 md:px-8 pb-8", className)}
+			{...rest}
+		>
+			{children}
+		</main>
+	),
+);
+Main.displayName = "Main";
+
 export type SectionProps = React.ComponentPropsWithoutRef<"section">;
 export const Section = React.forwardRef<HTMLElement, SectionProps>(
 	({ className, children, ...rest }, ref) => (
