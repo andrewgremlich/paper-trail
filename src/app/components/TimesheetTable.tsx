@@ -52,7 +52,7 @@ export const TimesheetTable = ({
 										{formatDate(entry.date)}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-center">
-										{entry.hours}
+										{entry.minutes / 60}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 max-w-50 truncate">
 										{entry.description}

@@ -4,11 +4,11 @@ import type { MinimalTimesheet, Nullable, Project, Timesheet } from "./types";
 export const getAllProjects = async (): Promise<Project[]> => {
 	const db = await getDb();
 	const rows = await db.select<Project[]>(
-		`SELECT id, name, status, customerId, rate, description, createdAt, updatedAt
+		`SELECT id, name, active, customerId, rate, description, createdAt, updatedAt
 		 FROM projects
 		 ORDER BY createdAt DESC`,
 	);
-	return rows;
+	return rows.map((r: Project) => ({ ...r, active: !!r.active }));
 };
 
 export type ProjectWithTimesheets = Project & {
@@ -16,12 +16,12 @@ export type ProjectWithTimesheets = Project & {
 };
 
 export const getProjectById = async (
-	projectId: string,
+	projectId: number,
 ): Promise<ProjectWithTimesheets | null> => {
 	const db = await getDb();
 	const projects = await db.select<Project[]>(
-		`SELECT id, name, status, customerId, rate, description, createdAt, updatedAt
-		 FROM projects WHERE id = $1`,
+		`SELECT id, name, active, customerId, rate, description, createdAt, updatedAt
+			FROM projects WHERE id = $1`,
 		[projectId],
 	);
 	const project = projects[0];
@@ -47,18 +47,16 @@ export const generateProject = async (
 	formData: FormData,
 ): Promise<{ project: Project; timesheet: Timesheet }> => {
 	const db = await getDb();
-	const id = crypto.randomUUID();
 
 	const name = String(formData.get("name") || "").trim();
 	const rate = Number(formData.get("rate") || 0);
 	const customerId = (formData.get("customerId") || "") as Nullable<string>;
 	const description = (formData.get("description") || "") as Nullable<string>;
 
-	await db.execute(
-		`INSERT INTO projects (id, name, status, customerId, rate, description)
-		 VALUES ($1, $2, 'active', $3, $4, $5)`,
+	const { lastInsertId: createdProjectId } = await db.execute(
+		`INSERT INTO projects (name, customerId, rate, description)
+		 VALUES ($1, $2, $3, $4)`,
 		[
-			id,
 			name,
 			customerId || null,
 			Number.isFinite(rate) ? rate : null,
@@ -66,20 +64,20 @@ export const generateProject = async (
 		],
 	);
 
-	const createdProject = (
+	const createdProjectRow = (
 		await db.select<Project[]>(
-			`SELECT id, name, status, customerId, rate, description, createdAt, updatedAt FROM projects WHERE id = $1`,
-			[id],
+			`SELECT id, name, active, customerId, rate, description, createdAt, updatedAt FROM projects WHERE id = $1`,
+			[createdProjectId],
 		)
 	)[0];
+	const createdProject: Project = { ...createdProjectRow, active: !!createdProjectRow.active };
 
-	const tsId = crypto.randomUUID();
 	const tsName = `${new Date().toLocaleDateString()} Timesheet`;
 	const tsDesc = "Initial timesheet";
-	await db.execute(
-		`INSERT INTO timesheets (id, projectId, name, description, closed)
-		 VALUES ($1, $2, $3, $4, 0)`,
-		[tsId, id, tsName, tsDesc],
+	const { lastInsertId: createdTimesheetId } = await db.execute(
+		`INSERT INTO timesheets (projectId, name, description, closed)
+		 VALUES ($1, $2, $3, 0)`,
+		[createdProjectId, tsName, tsDesc],
 	);
 
 	const createdTsRow = (
@@ -91,7 +89,7 @@ export const generateProject = async (
 			>
 		>(
 			`SELECT id, projectId, invoiceId, name, description, closed, createdAt, updatedAt FROM timesheets WHERE id = $1`,
-			[tsId],
+			[createdTimesheetId],
 		)
 	)[0];
 

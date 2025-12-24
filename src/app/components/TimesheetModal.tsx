@@ -12,10 +12,10 @@ import { Button } from "./Button";
 import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { Dialog } from "./Dialog";
+import { Flex } from "./Flex";
 import { H1, P } from "./HtmlElements";
 import { Input } from "./Input";
 import { TimesheetTable } from "./TimesheetTable";
-import { Flex } from "./Flex";
 
 export const TimesheetModal = () => {
 	const queryClient = useQueryClient();
@@ -112,7 +112,7 @@ export const TimesheetModal = () => {
 
 			<Card>
 				<CardHeader>
-					<div className="w-full flex justify-between">
+					<Flex justify="between">
 						<H1>
 							{timesheet?.name ?? "Timesheet Invoice Generator"}
 							{timesheet?.closed && " (Closed)"}
@@ -135,19 +135,22 @@ export const TimesheetModal = () => {
 								<TrashIcon className="w-6 h-6 hover:text-blue-500" />
 							</Button>
 						</form>
-					</div>
+					</Flex>
 					<Flex justify="between">
 						<div>
-							{timesheet?.description ? <P>Description: {timesheet?.description}</P> : null}
+							{timesheet?.description ? (
+								<P>Description: {timesheet?.description}</P>
+							) : null}
 							{timesheet?.projectRate && (
 								<P>Project Rate: ${timesheet.projectRate}/hour</P>
 							)}
 							<P>
-								{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
+								{timesheet?.customerId &&
+									`Customer ID: ${timesheet.customerId}`}
 							</P>
 						</div>
 						<div>
-							<P>Invoice ID: {timesheet?.invoiceId}</P>
+							{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
 							{invoiceData?.status === "paid" && (
 								<P>Invoice has been marked as paid.</P>
 							)}
@@ -164,7 +167,9 @@ export const TimesheetModal = () => {
 									</a>
 								</P>
 							)}
-							{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
+							{invoiceData?.status === "void" && (
+								<P>Invoice has been voided.</P>
+							)}
 							{timesheet?.invoiceId && (
 								<Flex gap="2">
 									<Button
@@ -174,15 +179,24 @@ export const TimesheetModal = () => {
 										}}
 										disabled={invoiceData?.disabled ?? false}
 									>
-										{invoiceData?.status === "paid" ? "Already Paid" : invoiceData?.disabled ? "Disabled" : "Mark as Paid"}
+										{invoiceData?.status === "paid"
+											? "Already Paid"
+											: invoiceData?.disabled
+												? "Disabled"
+												: "Mark as Paid"}
 									</Button>
 									<Button
 										onClick={async () => {
-											if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
+											if (timesheet?.invoiceId)
+												await voidInv(timesheet?.invoiceId);
 										}}
 										disabled={invoiceData?.disabled ?? false}
 									>
-										{invoiceData?.status === "void" ? "AlreadyVoided" : invoiceData?.disabled ? "Void Disabled" : "Void Invoice"}
+										{invoiceData?.status === "void"
+											? "AlreadyVoided"
+											: invoiceData?.disabled
+												? "Void Disabled"
+												: "Void Invoice"}
 									</Button>
 								</Flex>
 							)}

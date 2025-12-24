@@ -1,20 +1,22 @@
 import { create } from "zustand";
+import { ProjectPageTab } from "./types";
+import type { Project, Timesheet } from "./db";
 
 type PaperTrailState = {
 	projectModalActive: boolean;
 	timesheetModalActive: boolean;
 	settingsModalActive: boolean;
-	activeProjectId: string | undefined;
-	activeTimesheetId: string | undefined;
-	projects: unknown[];
-	timesheets: unknown[];
-	activeTab: unknown;
-	toggleProjectModal: (args?: { projectId?: string }) => void;
-	toggleTimesheetModal: (args?: { timesheetId?: string }) => void;
+	activeProjectId: number | undefined;
+	activeTimesheetId: number | undefined;
+	projects: Project[];
+	timesheets: Timesheet[];
+	activeTab: ProjectPageTab;
+	toggleProjectModal: (args?: { projectId?: number }) => void;
+	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
-	changeActiveTab: (tab: unknown) => void;
-	addProject: (project: unknown) => void;
-	addTimesheet: (timesheet: unknown) => void;
+	changeActiveTab: (tab: ProjectPageTab) => void;
+	addProject: (project: Project) => void;
+	addTimesheet: (timesheet: Timesheet) => void;
 };
 
 export const usePaperTrailStore = create<PaperTrailState>((set) => ({
@@ -25,7 +27,7 @@ export const usePaperTrailStore = create<PaperTrailState>((set) => ({
 	activeTimesheetId: undefined,
 	projects: [],
 	timesheets: [],
-	activeTab: undefined,
+	activeTab: ProjectPageTab.Transactions,
 	toggleProjectModal: (args) =>
 		set((state) => ({
 			projectModalActive:

@@ -31,6 +31,15 @@
 				{ "path": "$DOCUMENT" }
 			]
 		},
+		{
+			"identifier": "fs:allow-mkdir",
+			"allow": [
+				{ "path": "$APPDATA" },
+				{ "path": "$APPDATA/**/*" },
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
 		"fs:default"
 	]
 }

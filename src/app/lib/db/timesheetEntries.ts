@@ -7,16 +7,24 @@ export const createTimesheetEntry = async (
 	const id = crypto.randomUUID();
 	const timesheetId = String(formData.get("timesheetId") || "");
 	const projectRate = Number(formData.get("projectRate") || 0);
-	const date = String(formData.get("date") || "");
-	const hours = Number(formData.get("hours") || 0);
+	const dateRaw = formData.get("date");
+	const date = dateRaw ? Number(dateRaw) : Math.floor(Date.now() / 1000);
+
+	let minutes = Number(formData.get("minutes"));
+
+	if (Number.isNaN(minutes) || minutes === 0) {
+		const hours = Number(formData.get("hours") || 0);
+		minutes = hours * 60;
+	}
+
 	const description = String(formData.get("description") || "").trim();
 
-	const amount = Math.max(0, projectRate) * Math.max(0, hours);
+	const amount = Math.max(0, projectRate) * Math.max(0, minutes) / 60;
 
 	await db.execute(
-		`INSERT INTO timesheet_entries (id, timesheetId, date, hours, description, amount)
+		`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		[id, timesheetId, date, hours, description, amount],
+		[id, timesheetId, date, minutes, description, Math.round(amount)],
 	);
 };
 

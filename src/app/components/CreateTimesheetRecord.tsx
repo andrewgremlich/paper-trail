@@ -12,7 +12,7 @@ export const CreateTimesheetRecord = ({
 	projectRate,
 	closed,
 }: {
-	timesheetId: string;
+	timesheetId: number;
 	projectRate: number;
 	closed: boolean;
 }) => {

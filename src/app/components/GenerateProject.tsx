@@ -4,13 +4,13 @@ import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Button } from "./Button";
-import { Label } from "./Label";
 import { Input } from "./Input";
+import { Label } from "./Label";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
 	const { addProject, addTimesheet } = usePaperTrailStore();
-	const { mutate } = useMutation({
+	const { mutate: mutateProject } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			return generateProject(formData);
 		},
@@ -28,7 +28,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 			onSubmit={(e) => {
 				e.preventDefault();
 				const formData = new FormData(e.currentTarget);
-				mutate(formData);
+				mutateProject(formData);
 				e.currentTarget.reset();
 			}}
 		>
@@ -36,7 +36,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<Label htmlFor="name">Project Name</Label>
 				<Input
 					name="name"
-					placeholder="Enter project name"
+					placeholder="Awesome Project"
 					required
 					className="w-full"
 				/>
@@ -46,7 +46,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<Input
 					type="number"
 					name="rate"
-					placeholder="Enter project rate"
+					placeholder="dollars/hour"
 					required
 					className="w-full"
 				/>
@@ -72,7 +72,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				<Label htmlFor="description">Project Description</Label>
 				<textarea
 					name="description"
-					placeholder="Enter project description"
+					placeholder="Awesome project description"
 					className="h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
 				/>
 			</div>

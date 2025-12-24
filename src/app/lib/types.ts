@@ -7,7 +7,7 @@ export type Customer = {
 export enum ProjectPageTab {
 	Timesheet = "Timesheet",
 	FileStorage = "FileStorage",
-	Accounting = "Accounting",
+	Transactions = "Transactions",
 }
 
 export interface StripeInvoiceMinimal {
@@ -23,3 +23,14 @@ export interface StripeCustomerMinimal {
 	name: string | null;
 	email: string | null;
 }
+
+export type Transaction = {
+	id: string;
+	date: string; // ISO date string
+	description: string;
+	account: number; // account id or number
+	category: string;
+	amount: number; // positive for income, negative for expense
+	file: File | null; // in-memory selection (not persisted)
+	filePath?: string | null; // persisted relative path under AppData
+};

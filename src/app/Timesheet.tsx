@@ -12,20 +12,18 @@ import { getAllCustomers } from "@/lib/stripeApi";
 
 export const Timesheet = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
-	const { data: dashboardData } = useQuery({
-		queryKey: ["dashboardData"],
-		queryFn: async () => {
-			const [projects, timesheets] = await Promise.all([
-				getAllProjects(),
-				getAllTimesheets(),
-			]);
-			return { projects, timesheets };
-		},
-	});
+	const { data: projects } = useQuery({
+		queryKey: ["projects"],
+		queryFn: getAllProjects,
+	})
+	const { data: timesheets } = useQuery({
+		queryKey: ["timesheets"],
+		queryFn: getAllTimesheets,
+	})
 	const { data: customers } = useQuery({
 		queryKey: ["customers"],
 		queryFn: async () => {
-			return getAllCustomers(50);
+			return await getAllCustomers(50);
 		},
 	});
 
@@ -55,15 +53,19 @@ export const Timesheet = () => {
 				</P>
 			</Section>
 
-			{dashboardData && dashboardData.timesheets.length > 0 && (
+			{timesheets && timesheets.length > 0 && (
 				<Section>
 					<H2>All Timesheets</H2>
 
-					{dashboardData.timesheets.map((timesheet) => (
+					{projects && timesheets.map((timesheet) => (
 						<CardPreview
 							key={timesheet.id}
-							name={timesheet.name}
-							description={timesheet.description ?? "No description provided"}
+							name={`${timesheet.name} ${projects.find(
+								(p) => p.id === timesheet.projectId,
+							)?.name ? `(${projects.find(
+								(p) => p.id === timesheet.projectId,
+							)?.name})` : ""}`}
+							description={timesheet.description ? `${timesheet.description} (#${timesheet.id})` : "No description provided"}
 							action={() => {
 								toggleTimesheetModal({ timesheetId: timesheet.id });
 							}}
@@ -72,10 +74,10 @@ export const Timesheet = () => {
 				</Section>
 			)}
 
-			{dashboardData && dashboardData.projects.length > 0 && (
+			{projects && projects.length > 0 && (
 				<Section>
 					<H2>Projects</H2>
-					{dashboardData.projects.map((project) => (
+					{projects.map((project) => (
 						<CardPreview
 							key={project.id}
 							name={project.name}

@@ -1,25 +1,25 @@
 export type Nullable<T> = T | null | undefined;
 
 export type Project = {
-	id: string;
+	id: number;
 	name: string;
-	status: string;
+	active: boolean;
 	customerId: Nullable<string>;
 	rate: Nullable<number>;
 	description: Nullable<string>;
-	createdAt: string;
-	updatedAt: string;
+	createdAt: number;
+	updatedAt: number;
 };
 
 export type Timesheet = {
-	id: string;
-	projectId: string;
+	id: number;
+	projectId: number;
 	invoiceId: Nullable<string>;
 	name: string;
 	description: Nullable<string>;
 	closed: boolean;
-	createdAt: string;
-	updatedAt: string;
+	createdAt: number;
+	updatedAt: number;
 };
 
 export type MinimalTimesheet = Pick<
@@ -33,14 +33,14 @@ export type TimesheetWithProject = Timesheet & {
 };
 
 export type TimesheetEntry = {
-	id: string;
-	timesheetId: string;
-	date: string;
-	hours: number;
+	id: number;
+	timesheetId: number;
+	date: number;
+	minutes: number;
 	description: string;
 	amount: number;
-	createdAt: string;
-	updatedAt: string;
+	createdAt: number;
+	updatedAt: number;
 };
 
 export type TimesheetDetails = Timesheet & {
@@ -49,12 +49,18 @@ export type TimesheetDetails = Timesheet & {
 	projectRate: Nullable<number>;
 };
 
-export type AccountingTx = {
-	id: string;
-	date: string;
+export type Transaction = {
+	id: number;
+	projectId: number;
+	date: number;
 	description: string;
-	account: number;
-	category: string;
 	amount: number;
-	filePath: string | null;
+	filePath?: string;
+	createdAt: number;
+	updatedAt: number;
 };
+
+export type SubmitTransaction = Pick<
+	Transaction,
+	"projectId" | "date" | "description" | "amount" | "filePath" // TODO: account and category?
+>;

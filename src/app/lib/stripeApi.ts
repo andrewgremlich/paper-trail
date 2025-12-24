@@ -21,7 +21,7 @@ async function getStripeClient(): Promise<Stripe | null> {
 export const generateInvoice = async (formData: FormData): Promise<void> => {
 	const db = await getDb();
 	const stripe = await getStripeClient();
-	const timesheetId = String(formData.get("timesheetId") || "");
+	const timesheetId = Number(formData.get("timesheetId") || 0);
 	const explicitCustomerId = formData.get("customerId");
 	const ts = await getTimesheetById(timesheetId);
 
@@ -45,15 +45,14 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 	for (const entry of entries) {
 		const {
 			description: entryDescription,
-			hours: entryHours,
+			minutes: entryMinutes,
 			date: entryDate,
 		} = entry;
 
-		const amount = projectRate ? entryHours * projectRate : 0;
+		const amount = projectRate ? (entryMinutes / 60) * projectRate : 0;
+		taskLog += `Date: ${entryDate} | Hours: ${entryMinutes / 60} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
 
-		taskLog += `Date: ${entryDate} | Hours: ${entryHours} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
-
-		totalHours += entryHours;
+		totalHours += entryMinutes / 60;
 		totalAmount += amount;
 	}
 

@@ -10,6 +10,7 @@ import { Dialog } from "./Dialog";
 import { H2, P, Section } from "./HtmlElements";
 import { Input } from "./Input";
 import { Label } from "./Label";
+import { Flex } from "./Flex";
 
 type FormState = { name: string; description: string };
 type FormAction =
@@ -92,16 +93,22 @@ export const ProjectModal = () => {
 						</button>
 					</form>
 				</div>
-				<P>
-					Started:{" "}
-					{project?.createdAt
-						? new Date(project?.createdAt).toLocaleDateString()
-						: "N/A"}
-				</P>
-				<P>Active: {project?.status}</P>
-				<P>{project?.description}</P>
-				<P>Rate: {project?.rate ? `$${project.rate}/hr` : "N/A"}</P>
-				{project?.customerId && <P>Customer: {project?.customerId}</P>}
+				<Flex gap={4} justify="between">
+					<div>
+						<P>
+							Started:{" "}
+							{project?.createdAt
+								? new Date(project?.createdAt).toLocaleDateString()
+								: "N/A"}
+						</P>
+						<P>Rate: {project?.rate ? `$${project.rate}/hr` : "N/A"}</P>
+						<P>Active: {project?.active ? "Yes" : "No"}</P>
+					</div>
+					<div>
+						<P>{project?.description}</P>
+						{project?.customerId && <P>Customer: {project?.customerId}</P>}
+					</div>
+				</Flex>
 			</CardHeader>
 			<CardContent>
 				<div className="mb-6">

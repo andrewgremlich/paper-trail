@@ -20,7 +20,7 @@ export const getAllTimesheets = async (): Promise<Timesheet[]> => {
 };
 
 export const getTimesheetById = async (
-	timesheetId: string,
+	timesheetId: number,
 ): Promise<TimesheetDetails | null> => {
 	const db = await getDb();
 	const headerRows = await db.select<TimesheetWithProject[]>(
@@ -36,7 +36,7 @@ export const getTimesheetById = async (
 	if (!header) return null;
 
 	const rows = await db.select<TimesheetEntry[]>(
-		`SELECT id, timesheetId, date, hours, description, amount, createdAt, updatedAt
+		`SELECT id, timesheetId, date, minutes, description, amount, createdAt, updatedAt
 		FROM timesheet_entries WHERE timesheetId = $1 ORDER BY date ASC, createdAt ASC`,
 		[timesheetId],
 	);

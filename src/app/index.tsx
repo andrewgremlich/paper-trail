@@ -1,4 +1,4 @@
-import { Accounting } from "./Accounting";
+import { Transactions } from "./Transactions";
 import { FileStorage } from "./FileStorage";
 import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
@@ -12,8 +12,8 @@ export const App = () => {
 			return <Timesheet />;
 		case ProjectPageTab.FileStorage:
 			return <FileStorage />;
-		case ProjectPageTab.Accounting:
-			return <Accounting />;
+		case ProjectPageTab.Transactions:
+			return <Transactions />;
 		default:
 			return <Timesheet />;
 	}
