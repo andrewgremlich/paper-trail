@@ -62,5 +62,5 @@ export type Transaction = {
 
 export type SubmitTransaction = Pick<
 	Transaction,
-	"projectId" | "date" | "description" | "amount" | "filePath" // TODO: account and category?
+	"projectId" | "date" | "description" | "amount" | "filePath"
 >;

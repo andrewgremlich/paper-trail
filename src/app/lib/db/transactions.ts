@@ -1,8 +1,8 @@
 import { getDb } from "./client";
-import type { Transaction } from "./types";
+import type { SubmitTransaction, Transaction } from "./types";
 
 // Create or update a transaction by id
-export const upsertTransaction = async (tx: Transaction): Promise<void> => {
+export const upsertTransaction = async (tx: SubmitTransaction): Promise<void> => {
 	const db = await getDb();
 	await db.execute(
 		`INSERT INTO transactions (projectId, date, description, amount, filePath)
@@ -22,6 +22,15 @@ export const upsertTransaction = async (tx: Transaction): Promise<void> => {
 			tx.filePath,
 		],
 	);
+};
+
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+	const db = await getDb();
+	const rows = await db.select<Transaction[]>(
+		`SELECT id, projectId, date, description, amount, filePath, createdAt, updatedAt
+		 FROM transactions ORDER BY date ASC, createdAt ASC`,
+	);
+	return rows;
 };
 
 // Read: list all transactions for a project

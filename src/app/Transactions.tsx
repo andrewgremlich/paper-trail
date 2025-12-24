@@ -1,47 +1,57 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { H1, Main } from "./components/HtmlElements";
 import { getAllProjects } from "./lib/db/projects";
-import { Grid, GridHeader, GridRow } from "./components/Grid";
+import { Grid } from "./components/Grid";
 import { Flex } from "./components/Flex";
-import { upsertTransaction } from "./lib/db";
+import { getAllTransactions, upsertTransaction } from "./lib/db";
 import { useEffect, useState, type FormEvent } from "react";
-
-const exampleData = [
-	{
-		id: 1,
-		date: "2024-01-15",
-		description: "Office Supplies",
-		account: "Expenses",
-		category: "Office",
-		amount: 150.0,
-		filePath: "/files/receipt1.pdf",
-	},
-	{
-		id: 2,
-		date: "2024-01-20",
-		description: "Client Lunch",
-		account: "Meals",
-		category: "Entertainment",
-		amount: 85.5,
-		filePath: "/files/receipt2.pdf",
-	},
-	{
-		id: 3,
-		date: "2024-01-25",
-		description: "Software Subscription",
-		account: "Software",
-		category: "Subscriptions",
-		amount: 299.99,
-		filePath: "/files/receipt3.pdf",
-	},
-];
+import { Edit } from "lucide-react";
+import { openAttachment, saveAttachment } from "./lib/fileStorage";
 
 export const Transactions = () => {
+	const queryClient = useQueryClient();
 	const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
 		queryFn: getAllProjects,
+	});
+	const { data: transactions } = useQuery({
+		queryKey: ["transactions"],
+		queryFn: getAllTransactions,
+		enabled: activeProjectId !== null,
+	});
+	const { mutateAsync: submitTransaction } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			const date = formData.get("date") as string;
+			const projectId = formData.get("projectId") as string;
+			const description = formData.get("description") as string;
+			const amount = formData.get("amount") as string;
+			const file = formData.get("file") as File | null;
+			const projectName =
+				projects?.find((p) => p.id === Number(projectId))?.name || "default";
+
+			let filePath = "";
+
+			if (file && file.size > 0) {
+				filePath = await saveAttachment(file, projectName);
+			}
+
+			await upsertTransaction({
+				date: new Date(date).getTime(),
+				projectId: parseInt(projectId as unknown as string, 10),
+				description,
+				amount: parseFloat(amount as string),
+				filePath,
+			});
+		},
+		onSuccess: async () => {
+			if (activeProjectId != null) {
+				await queryClient.invalidateQueries({
+					queryKey: ["transactions"],
+				});
+			}
+		},
 	});
 
 	useEffect(() => {
@@ -49,121 +59,118 @@ export const Transactions = () => {
 			setActiveProjectId(projects[0].id);
 		}
 	}, [projects, activeProjectId]);
-	const { mutateAsync: submitTransaction } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			const date = formData.get("date") as string;
-			const projectId = parseInt(formData.get("projectId") as string, 10);
-			const description = formData.get("description") as string;
-			const account = formData.get("account") as string;
-			const category = formData.get("category") as string;
-			const amount = formData.get("amount");
-			const file = formData.get("file") as File | null;
-
-			// Here you would typically handle file upload and get a file path
-			const filePath = file ? `/files/${file.name}` : "";
-
-			// For demonstration, we just log the transaction data
-			const transaction = {
-				date,
-				projectId,
-				description,
-				account,
-				category,
-				amount,
-				filePath,
-			};
-			console.log("Submitting transaction:", transaction);
-
-			// await upsertTransaction(transaction);
-		},
-	});
 
 	return (
 		<Main className="max-w-5xl">
 			<H1>Transactions</H1>
 
-			<select
-				className="mb-4 p-2 border border-gray-300 rounded"
-				onChange={(e) => {
-					const projectId = e.target.value
-						? parseInt(e.target.value, 10)
-						: null;
-					setActiveProjectId(projectId);
-				}}
-				value={activeProjectId?.toString() ?? ""}
-			>
-				<option value="">Select Project</option>
-				{projects?.map((project) => (
-					<option key={project.id} value={project.id.toString()}>
-						{project.name}
-					</option>
-				))}
-			</select>
-
-			<GridHeader
-				headers={[
-					"Date",
-					"Description",
-					"Account",
-					"Category",
-					"Amount",
-					"File",
-				]}
-				// colsClass="grid-cols-6" // optional override
-				// gapClass="gap-4"       // optional override
-			/>
-
-			{exampleData.map((tx) => (
-				<GridRow key={tx.id}>
-					<div>{tx.date}</div>
-					<div>{tx.description}</div>
-					<div>{tx.account}</div>
-					<div>{tx.category}</div>
-					<div>${tx.amount.toFixed(2)}</div>
-					<div>
-						<a href={tx.filePath} className="text-blue-500 underline">
-							View File
-						</a>
-					</div>
-				</GridRow>
-			))}
-
 			<Grid
 				as="form"
+				className="pb-6"
+				colsClass="grid-cols-5"
 				onSubmit={async (evt: FormEvent<HTMLFormElement>) => {
 					evt.preventDefault();
-					submitTransaction(new FormData(evt.currentTarget));
+					await submitTransaction(new FormData(evt.currentTarget));
+					evt.currentTarget.reset();
 				}}
 			>
 				<Flex as="label" direction="col">
 					<span className="font-semibold mb-1">Date</span>
-					<input name="date" type="date" />
+					<input name="date" type="date" className="border rounded p-2" />
 				</Flex>
 				<Flex as="label" direction="col">
 					<span className="font-semibold mb-1">Description</span>
-					<input name="description" type="text" />
+					<input
+						name="description"
+						type="text"
+						className="border rounded p-2"
+					/>
 				</Flex>
 				<Flex as="label" direction="col">
 					<span className="font-semibold mb-1">Account</span>
-					<input name="account" />
-				</Flex>
-				<Flex as="label" direction="col">
-					<span className="font-semibold mb-1">Category</span>
-					<input name="category" />
+					<select
+						name="projectId"
+						className="p-2 border rounded"
+						onChange={(e) => {
+							const projectId = e.target.value
+								? parseInt(e.target.value, 10)
+								: null;
+							setActiveProjectId(projectId);
+						}}
+						value={activeProjectId?.toString() ?? ""}
+					>
+						<option value="">Select Project</option>
+						{projects?.map((project) => (
+							<option key={project.id} value={project.id.toString()}>
+								{project.name}
+							</option>
+						))}
+					</select>
 				</Flex>
 				<Flex as="label" direction="col">
 					<span className="font-semibold mb-1">Amount</span>
-					<input name="amount" type="number" />
+					<input name="amount" type="number" className="border rounded p-2" />
 				</Flex>
 				<Flex as="label" direction="col">
 					<span className="font-semibold mb-1">File</span>
-					<input name="file" type="file" />
+					<input name="file" type="file" className="border rounded p-2" />
 				</Flex>
 				<input name="projectId" type="hidden" value={activeProjectId ?? ""} />
 				<button type="submit" className="sr-only">
 					Submit
 				</button>
 			</Grid>
+
+			{transactions?.map((tx) => {
+				const path = tx.filePath ?? "";
+				return (
+					<Grid
+						key={tx.id}
+						as="form"
+						className="border-b-2 py-2"
+						colsClass="grid-cols-6"
+					>
+						<Flex as="span" justify="center" items="center">
+							{tx.date}
+						</Flex>
+						<Flex as="span" justify="center" items="center">
+							{tx.description}
+						</Flex>
+						<Flex as="span" justify="center" items="center">
+							{projects?.find((project) => project.id === tx.projectId)?.name}
+						</Flex>
+						<Flex as="span" justify="center" items="center">
+							${tx.amount.toFixed(2)}
+						</Flex>
+						<Flex as="span" justify="center" items="center">
+							{path.length > 0 ? (
+								<button
+									type="button"
+									className="text-blue-500 underline"
+									onClick={async () => {
+										await openAttachment(path);
+									}}
+								>
+									View File
+								</button>
+							) : (
+								<span className="text-gray-500">No File</span>
+							)}
+						</Flex>
+						<Flex as="span" justify="center" items="center">
+							<button
+								type="button"
+								className="cursor-pointer hover:bg-blue-500 p-2 rounded"
+								onClick={() => {
+									console.log("edit this transaction entry");
+								}}
+							>
+								<Edit size={24} />
+							</button>
+						</Flex>
+					</Grid>
+				);
+			})}
 		</Main>
 	);
 };

@@ -14,9 +14,7 @@ export const Nav = () => {
 					type="button"
 					variant="ghost"
 					onClick={() => changeActiveTab(ProjectPageTab.Timesheet)}
-					className={
-						activeTab === ProjectPageTab.Timesheet ? "bg-blue-600/20" : ""
-					}
+					className={`${activeTab === ProjectPageTab.Timesheet ? "bg-blue-600/20" : ""} mr-4`}
 					aria-pressed={activeTab === ProjectPageTab.Timesheet}
 				>
 					<Timer size={40} />
@@ -25,9 +23,7 @@ export const Nav = () => {
 					type="button"
 					variant="ghost"
 					onClick={() => changeActiveTab(ProjectPageTab.Transactions)}
-					className={
-						activeTab === ProjectPageTab.Transactions ? "bg-blue-600/20" : ""
-					}
+					className={`${activeTab === ProjectPageTab.Transactions ? "bg-blue-600/20" : ""} mr-4`}
 					aria-pressed={activeTab === ProjectPageTab.Transactions}
 				>
 					<Table size={40} />
@@ -36,9 +32,7 @@ export const Nav = () => {
 					type="button"
 					variant="ghost"
 					onClick={() => changeActiveTab(ProjectPageTab.FileStorage)}
-					className={
-						activeTab === ProjectPageTab.FileStorage ? "bg-blue-600/20" : ""
-					}
+					className={`${activeTab === ProjectPageTab.FileStorage ? "bg-blue-600/20" : ""}`}
 					aria-pressed={activeTab === ProjectPageTab.FileStorage}
 				>
 					<HardDrive size={40} />
