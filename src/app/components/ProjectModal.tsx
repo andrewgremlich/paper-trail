@@ -7,10 +7,10 @@ import { Button } from "./Button";
 import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
 import { Dialog } from "./Dialog";
+import { Flex } from "./Flex";
 import { H2, P, Section } from "./HtmlElements";
 import { Input } from "./Input";
 import { Label } from "./Label";
-import { Flex } from "./Flex";
 
 type FormState = { name: string; description: string };
 type FormAction =

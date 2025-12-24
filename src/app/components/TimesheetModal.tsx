@@ -150,7 +150,9 @@ export const TimesheetModal = () => {
 							</P>
 						</div>
 						<div>
-							{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
+							{timesheet?.invoiceId && (
+								<P>Invoice ID: {timesheet?.invoiceId}</P>
+							)}
 							{invoiceData?.status === "paid" && (
 								<P>Invoice has been marked as paid.</P>
 							)}

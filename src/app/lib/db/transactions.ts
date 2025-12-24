@@ -2,7 +2,9 @@ import { getDb } from "./client";
 import type { SubmitTransaction, Transaction } from "./types";
 
 // Create or update a transaction by id
-export const upsertTransaction = async (tx: SubmitTransaction): Promise<void> => {
+export const upsertTransaction = async (
+	tx: SubmitTransaction,
+): Promise<void> => {
 	const db = await getDb();
 	await db.execute(
 		`INSERT INTO transactions (projectId, date, description, amount, filePath)
@@ -14,13 +16,7 @@ export const upsertTransaction = async (tx: SubmitTransaction): Promise<void> =>
 			 amount = excluded.amount,
 			 filePath = excluded.filePath,
 			 updatedAt = CAST(strftime('%s','now') AS INTEGER)`,
-		[
-			tx.projectId,
-			tx.date,
-			tx.description,
-			tx.amount,
-			tx.filePath,
-		],
+		[tx.projectId, tx.date, tx.description, tx.amount, tx.filePath],
 	);
 };
 
@@ -34,7 +30,9 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
 };
 
 // Read: list all transactions for a project
-export const getTransactionsByProject = async (projectId: number): Promise<Transaction[]> => {
+export const getTransactionsByProject = async (
+	projectId: number,
+): Promise<Transaction[]> => {
 	const db = await getDb();
 	const rows = await db.select<Transaction[]>(
 		`SELECT id, projectId, date, description, amount, filePath, createdAt, updatedAt
@@ -45,7 +43,9 @@ export const getTransactionsByProject = async (projectId: number): Promise<Trans
 };
 
 // Read: get a single transaction by id
-export const getTransactionById = async (id: number): Promise<Transaction | null> => {
+export const getTransactionById = async (
+	id: number,
+): Promise<Transaction | null> => {
 	const db = await getDb();
 	const rows = await db.select<Transaction[]>(
 		`SELECT id, projectId, date, description, amount, filePath, createdAt, updatedAt

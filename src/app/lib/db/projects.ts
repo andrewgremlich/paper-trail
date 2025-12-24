@@ -70,7 +70,10 @@ export const generateProject = async (
 			[createdProjectId],
 		)
 	)[0];
-	const createdProject: Project = { ...createdProjectRow, active: !!createdProjectRow.active };
+	const createdProject: Project = {
+		...createdProjectRow,
+		active: !!createdProjectRow.active,
+	};
 
 	const tsName = `${new Date().toLocaleDateString()} Timesheet`;
 	const tsDesc = "Initial timesheet";

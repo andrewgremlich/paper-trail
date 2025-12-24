@@ -10,7 +10,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import sanitize from "sanitize-filename";
 
 export const saveAttachment = async (file: File, projectName: string) => {
-	const relDir = `paper-trail/${sanitize(projectName)}/attachments`
+	const relDir = `paper-trail/${sanitize(projectName)}/attachments`;
 	const fname = `${crypto.randomUUID()}-${file.name}`;
 	const relPath = `${relDir}/${fname}`;
 	const hasDir = await exists(relDir, { baseDir: BaseDirectory.Document });

@@ -19,7 +19,7 @@ export const createTimesheetEntry = async (
 
 	const description = String(formData.get("description") || "").trim();
 
-	const amount = Math.max(0, projectRate) * Math.max(0, minutes) / 60;
+	const amount = (Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
 
 	await db.execute(
 		`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount)

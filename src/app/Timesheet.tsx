@@ -15,11 +15,11 @@ export const Timesheet = () => {
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
 		queryFn: getAllProjects,
-	})
+	});
 	const { data: timesheets } = useQuery({
 		queryKey: ["timesheets"],
 		queryFn: getAllTimesheets,
-	})
+	});
 	const { data: customers } = useQuery({
 		queryKey: ["customers"],
 		queryFn: async () => {
@@ -57,20 +57,27 @@ export const Timesheet = () => {
 				<Section>
 					<H2>All Timesheets</H2>
 
-					{projects && timesheets.map((timesheet) => (
-						<CardPreview
-							key={timesheet.id}
-							name={`${timesheet.name} ${projects.find(
-								(p) => p.id === timesheet.projectId,
-							)?.name ? `(${projects.find(
-								(p) => p.id === timesheet.projectId,
-							)?.name})` : ""}`}
-							description={timesheet.description ? `${timesheet.description} (#${timesheet.id})` : "No description provided"}
-							action={() => {
-								toggleTimesheetModal({ timesheetId: timesheet.id });
-							}}
-						/>
-					))}
+					{projects &&
+						timesheets.map((timesheet) => (
+							<CardPreview
+								key={timesheet.id}
+								name={`${timesheet.name} ${
+									projects.find((p) => p.id === timesheet.projectId)?.name
+										? `(${
+												projects.find((p) => p.id === timesheet.projectId)?.name
+											})`
+										: ""
+								}`}
+								description={
+									timesheet.description
+										? `${timesheet.description} (#${timesheet.id})`
+										: "No description provided"
+								}
+								action={() => {
+									toggleTimesheetModal({ timesheetId: timesheet.id });
+								}}
+							/>
+						))}
 				</Section>
 			)}
 

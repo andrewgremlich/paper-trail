@@ -1,19 +1,12 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { documentDir, join as joinPath } from "@tauri-apps/api/path";
-import {
-	BaseDirectory,
-	readDir,
-	readTextFile,
-	remove,
-	rename,
-} from "@tauri-apps/plugin-fs";
+import { BaseDirectory, readDir, remove } from "@tauri-apps/plugin-fs";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import sanitize from "sanitize-filename";
 import { Button } from "./Button";
 import { Card, CardContent, CardHeader } from "./Card";
 import { Flex } from "./Flex";
-import { Input } from "./Input";
 
 type FileEntry = {
 	name: string;
@@ -107,7 +100,13 @@ export const ProjectFiles = ({ projectName }: { projectName: string }) => {
 					) : (
 						<ul className="divide-y divide-slate-200 rounded-md border">
 							{(filesQuery.data ?? []).map((f) => (
-								<Flex as="li" items="center" justify="between" className="mx-4" key={f.name}>
+								<Flex
+									as="li"
+									items="center"
+									justify="between"
+									className="mx-4"
+									key={f.name}
+								>
 									<Flex items="center" gap={2}>
 										<span className="font-mono">{f.name}</span>
 										{f.isDirectory ? (

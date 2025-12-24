@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { ProjectPageTab } from "./types";
 import type { Project, Timesheet } from "./db";
+import { ProjectPageTab } from "./types";
 
 type PaperTrailState = {
 	projectModalActive: boolean;
