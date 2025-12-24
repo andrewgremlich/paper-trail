@@ -52,6 +52,13 @@
 				{ "path": "$DOCUMENT" }
 			]
 		},
+		{
+			"identifier": "fs:allow-remove",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
 		"fs:default"
 	]
 }
