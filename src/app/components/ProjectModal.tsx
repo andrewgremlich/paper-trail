@@ -55,7 +55,8 @@ export const ProjectModal = () => {
 			await queryClient.invalidateQueries({
 				queryKey: ["project", activeProjectId],
 			});
-			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+			await queryClient.invalidateQueries({ queryKey: ["projects"] });
+			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
 		},
 	});
 	const { mutateAsync: mutateDeleteProject } = useMutation({
@@ -63,7 +64,8 @@ export const ProjectModal = () => {
 			await deleteProject(formData);
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+			await queryClient.invalidateQueries({ queryKey: ["projects"] });
+			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
 			toggleProjectModal({ projectId: undefined });
 		},
 	});

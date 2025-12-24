@@ -62,8 +62,9 @@ export const TimesheetModal = () => {
 		mutationFn: async (formData: FormData) => {
 			await deleteTimesheet(formData);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["projects"] });
+			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
 			toggleTimesheetModal({ timesheetId: undefined });
 		},
 	});

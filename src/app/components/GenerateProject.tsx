@@ -17,8 +17,8 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 		onSuccess: async ({ project, timesheet }) => {
 			addProject(project);
 			addTimesheet(timesheet);
-
-			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+			await queryClient.invalidateQueries({ queryKey: ["projects"] });
+			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
 		},
 	});
 
