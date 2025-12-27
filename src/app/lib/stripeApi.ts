@@ -19,70 +19,76 @@ async function getStripeClient(): Promise<Stripe | null> {
 }
 
 export const generateInvoice = async (formData: FormData): Promise<void> => {
-	const db = await getDb();
-	const stripe = await getStripeClient();
-	const timesheetId = Number(formData.get("timesheetId") || 0);
-	const explicitCustomerId = formData.get("customerId");
-	const ts = await getTimesheetById(timesheetId);
+	try {
 
-	if (!ts) throw new Error("Timesheet not found");
-	if (ts.closed) throw new Error("Timesheet already closed");
-	if (!stripe) throw new Error("Stripe client not initialized");
-	if (!explicitCustomerId)
-		throw new Error("Customer ID missing for invoice generation");
+		const db = await getDb();
+		const stripe = await getStripeClient();
+		const timesheetId = Number(formData.get("timesheetId") || 0);
+		const explicitCustomerId = formData.get("customerId");
+		const ts = await getTimesheetById(timesheetId);
 
-	const {
-		name: timesheetName,
-		description: timesheetDescription,
-		entries,
-		projectRate,
-	} = ts;
+		if (!ts) throw new Error("Timesheet not found");
+		if (!ts.active) throw new Error("Timesheet already closed");
+		if (!stripe) throw new Error("Stripe client not initialized");
+		if (!explicitCustomerId)
+			throw new Error("Customer ID missing for invoice generation");
 
-	let taskLog = "";
-	let totalHours = 0;
-	let totalAmount = 0;
-
-	for (const entry of entries) {
 		const {
-			description: entryDescription,
-			minutes: entryMinutes,
-			date: entryDate,
-		} = entry;
+			name: timesheetName,
+			description: timesheetDescription,
+			entries,
+			projectRate,
+		} = ts;
 
-		const amount = projectRate ? (entryMinutes / 60) * projectRate : 0;
-		taskLog += `Date: ${entryDate} | Hours: ${entryMinutes / 60} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
+		let taskLog = "";
+		let totalHours = 0;
+		let totalAmount = 0;
 
-		totalHours += entryMinutes / 60;
-		totalAmount += amount;
-	}
+		for (const entry of entries) {
+			const {
+				description: entryDescription,
+				minutes: entryMinutes,
+				date: entryDate,
+			} = entry;
 
-	const invoice = await stripe.invoices.create({
-		customer: explicitCustomerId as string,
-		collection_method: "send_invoice",
-		days_until_due: 30,
-		currency: "usd",
-		description: `Total hours: ${totalHours}\n${timesheetDescription as string}`,
-		footer: taskLog.length > 0 ? `Task log:\n${taskLog}` : undefined,
-	});
+			const amount = projectRate ? (entryMinutes / 60) * projectRate : 0;
+			taskLog += `Date: ${entryDate} | Hours: ${entryMinutes / 60} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
 
-	if (totalAmount > 0) {
-		await stripe.invoiceItems.create({
+			totalHours += entryMinutes / 60;
+			totalAmount += amount;
+		}
+
+		const invoice = await stripe.invoices.create({
 			customer: explicitCustomerId as string,
-			invoice: invoice.id,
+			collection_method: "send_invoice",
+			days_until_due: 30,
 			currency: "usd",
-			amount: Math.round(totalAmount * 100),
-			description: `${String(timesheetName)} — ${totalHours} hours`,
+			description: `Total hours: ${totalHours}\n${timesheetDescription as string}`,
+			footer: taskLog.length > 0 ? `Task log:\n${taskLog}` : undefined,
 		});
+
+		if (totalAmount > 0) {
+			await stripe.invoiceItems.create({
+				customer: explicitCustomerId as string,
+				invoice: invoice.id,
+				currency: "usd",
+				amount: Math.round(totalAmount * 100),
+				description: `${String(timesheetName)} — ${totalHours} hours`,
+			});
+		}
+
+		const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
+
+		await stripe.invoices.sendInvoice(finalized.id);
+
+		await db.execute(
+			`UPDATE timesheets SET invoiceId = $1, active = 0, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+			[invoice.id, timesheetId],
+		);
+	} catch (err) {
+		console.error(err);
+		throw err;
 	}
-
-	const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
-
-	await stripe.invoices.sendInvoice(finalized.id);
-
-	await db.execute(
-		`UPDATE timesheets SET invoiceId = $1, closed = 1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
-		[invoice.id, timesheetId],
-	);
 };
 
 export async function getInvoice(

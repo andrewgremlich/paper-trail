@@ -103,7 +103,12 @@ export const ProjectModal = () => {
 								? new Date(project?.createdAt).toLocaleDateString()
 								: "N/A"}
 						</P>
-						<P>Rate: {project?.rate ? `$${project.rate}/hr` : "N/A"}</P>
+						<P>
+							Rate:{" "}
+							{project?.rate_in_cents
+								? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
+								: "N/A"}
+						</P>
 						<P>Active: {project?.active ? "Yes" : "No"}</P>
 					</div>
 					<div>

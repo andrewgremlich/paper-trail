@@ -14,7 +14,10 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 		mutationFn: async (formData: FormData) => {
 			return generateProject(formData);
 		},
-		onSuccess: async ({ project, timesheet }) => {
+		onSuccess: async (data) => {
+			if (!data) return;
+			const { project, timesheet } = data;
+
 			addProject(project);
 			addTimesheet(timesheet);
 			await queryClient.invalidateQueries({ queryKey: ["projects"] });

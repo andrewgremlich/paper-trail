@@ -22,7 +22,8 @@ export const Transactions = () => {
 	});
 	const { mutateAsync: submitTransaction } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const date = formData.get("date") as string;
+			const rawDate = formData.get("date") as string;
+			const date = rawDate || new Date().toISOString().split("T")[0];
 			const projectId = formData.get("projectId") as string;
 			const description = formData.get("description") as string;
 			const amount = formData.get("amount") as string;
@@ -36,8 +37,10 @@ export const Transactions = () => {
 				filePath = await saveAttachment(file, projectName);
 			}
 
+			console.log(date);
+
 			await upsertTransaction({
-				date: new Date(date).getTime(),
+				date,
 				projectId: parseInt(projectId as unknown as string, 10),
 				description,
 				amount: parseFloat(amount as string),

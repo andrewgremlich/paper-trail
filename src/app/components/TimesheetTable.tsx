@@ -6,10 +6,10 @@ import { formatDate } from "../lib/utils";
 
 export const TimesheetTable = ({
 	entries,
-	closed,
+	active,
 }: {
 	entries: TimesheetEntry[];
-	closed: boolean;
+	active: boolean;
 }) => {
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
 	const { activeTimesheetId } = usePaperTrailStore();
@@ -71,7 +71,7 @@ export const TimesheetTable = ({
 										>
 											<input type="hidden" name="id" value={entry.id} />
 											<button
-												disabled={closed}
+												disabled={!active}
 												type="submit"
 												className="disabled:opacity-50 disabled:cursor-not-allowed h-8 w-8 p-0 flex items-center justify-center hover:bg-gray-100 rounded "
 											>

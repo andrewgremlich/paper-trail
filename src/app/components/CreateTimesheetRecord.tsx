@@ -10,11 +10,11 @@ import { Label } from "./Label";
 export const CreateTimesheetRecord = ({
 	timesheetId,
 	projectRate,
-	closed,
+	active,
 }: {
 	timesheetId: number;
 	projectRate: number;
-	closed: boolean;
+	active: boolean;
 }) => {
 	const queryClient = useQueryClient();
 	const { mutate } = useMutation({
@@ -74,7 +74,7 @@ export const CreateTimesheetRecord = ({
 						type="submit"
 						variant="ghost"
 						size="icon"
-						disabled={closed}
+						disabled={!active}
 						className="disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0 px-3 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
 					>
 						<PlusIcon className="h-4 w-4" />

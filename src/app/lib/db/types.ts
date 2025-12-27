@@ -5,7 +5,7 @@ export type Project = {
 	name: string;
 	active: boolean;
 	customerId: Nullable<string>;
-	rate: Nullable<number>;
+	rate_in_cents: Nullable<number>;
 	description: Nullable<string>;
 	createdAt: number;
 	updatedAt: number;
@@ -17,14 +17,14 @@ export type Timesheet = {
 	invoiceId: Nullable<string>;
 	name: string;
 	description: Nullable<string>;
-	closed: boolean;
+	active: boolean;
 	createdAt: number;
 	updatedAt: number;
 };
 
 export type MinimalTimesheet = Pick<
 	Timesheet,
-	"id" | "name" | "description" | "createdAt" | "updatedAt" | "closed"
+	"id" | "name" | "description" | "createdAt" | "updatedAt" | "active"
 >;
 
 export type TimesheetWithProject = Timesheet & {
@@ -35,7 +35,7 @@ export type TimesheetWithProject = Timesheet & {
 export type TimesheetEntry = {
 	id: number;
 	timesheetId: number;
-	date: number;
+	date: string;
 	minutes: number;
 	description: string;
 	amount: number;
@@ -52,7 +52,7 @@ export type TimesheetDetails = Timesheet & {
 export type Transaction = {
 	id: number;
 	projectId: number;
-	date: number;
+	date: string;
 	description: string;
 	amount: number;
 	filePath?: string;

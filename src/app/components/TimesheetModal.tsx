@@ -68,6 +68,7 @@ export const TimesheetModal = () => {
 			toggleTimesheetModal({ timesheetId: undefined });
 		},
 	});
+	// TODO: whenever an invoice is paid or voided, add to transaction history
 	const { mutate: markAsPaid } = useMutation({
 		mutationFn: async (invoiceId: string | undefined) => {
 			if (invoiceId) {
@@ -116,7 +117,7 @@ export const TimesheetModal = () => {
 					<Flex justify="between">
 						<H1>
 							{timesheet?.name ?? "Timesheet Invoice Generator"}
-							{timesheet?.closed && " (Closed)"}
+							{!timesheet?.active && " (Closed)"}
 						</H1>
 						<form
 							onSubmit={async (evt) => {
@@ -210,13 +211,13 @@ export const TimesheetModal = () => {
 					{timesheet && (
 						<>
 							<CreateTimesheetRecord
-								closed={timesheet.closed}
+								active={timesheet.active}
 								timesheetId={timesheet.id}
 								projectRate={timesheet.projectRate ?? 25}
 							/>
 							<TimesheetTable
 								entries={timesheet.entries || []}
-								closed={timesheet.closed}
+								active={timesheet.active}
 							/>
 						</>
 					)}
@@ -245,11 +246,11 @@ export const TimesheetModal = () => {
 						<Button
 							type="submit"
 							variant="default"
-							disabled={timesheet?.closed || timesheet?.entries.length === 0}
+							disabled={!timesheet?.active || timesheet?.entries.length === 0}
 						>
 							{isPending
 								? "Generating..."
-								: !timesheet?.closed
+								: timesheet?.active
 									? "Generate Invoice"
 									: "Invoice Generated"}
 						</Button>
