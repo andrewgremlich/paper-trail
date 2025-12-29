@@ -4,8 +4,8 @@ import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Button } from "./Button";
+import { Label } from "./HtmlElements";
 import { Input } from "./Input";
-import { Label } from "./Label";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();

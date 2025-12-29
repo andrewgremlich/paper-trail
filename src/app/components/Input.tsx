@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
 import { forwardRef, useId } from "react";
-import { Label } from "./Label";
+import { Label } from "./HtmlElements";
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 	className?: string;
@@ -35,23 +35,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 		},
 		ref,
 	) => {
-		const inputClasses = className ? `${baseClasses} ${className}` : baseClasses;
+		const inputClasses = className
+			? `${baseClasses} ${className}`
+			: baseClasses;
 		const generatedId = useId();
 		const inputId = id ?? generatedId;
 
 		// Merge any provided aria-describedby with description and error ids
-		const { ["aria-describedby"]: restAriaDescribedBy, ...restProps } =
-			(rest as Record<string, unknown>);
-		const ariaDescribedBy = [
-			restAriaDescribedBy as string | undefined,
-			descriptionId,
-			errorId,
-		]
-			.filter(Boolean)
-			.join(" ") || undefined;
+		const { "aria-describedby": restAriaDescribedBy, ...restProps } =
+			rest as Record<string, unknown>;
+		const ariaDescribedBy =
+			[restAriaDescribedBy as string | undefined, descriptionId, errorId]
+				.filter(Boolean)
+				.join(" ") || undefined;
 
 		return (
-			<div className={containerClassName}>
+			<div className={`flex flex-col gap-2 ${containerClassName}`}>
 				{label ? (
 					<Label htmlFor={inputId} className={labelClassName}>
 						{label}

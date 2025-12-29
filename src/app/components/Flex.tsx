@@ -94,9 +94,9 @@ export const Flex = forwardRef<HTMLElement, FlexProps>(
 		const mergedStyle =
 			gap !== undefined && gap !== null
 				? {
-					...style,
-					gap: typeof gap === "number" ? `${gap}px` : gap,
-				}
+						...style,
+						gap: typeof gap === "number" ? `${gap}px` : gap,
+					}
 				: style;
 
 		return (

@@ -9,11 +9,12 @@
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
+		"test": "vitest run",
 		"tauri": "tauri"
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.1.18",
-		"@tanstack/react-query": "^5.90.12",
+		"@tanstack/react-query": "^5.90.14",
 		"@tauri-apps/api": "^2.9.1",
 		"@tauri-apps/plugin-fs": "^2.4.4",
 		"@tauri-apps/plugin-opener": "^2.5.2",
@@ -41,6 +42,7 @@
 		"@types/react": "^19.2.7",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^5.1.2",
+		"vitest": "^4.0.16",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3",
 		"vite": "^7.3.0",

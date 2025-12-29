@@ -10,7 +10,6 @@ import { Dialog } from "./Dialog";
 import { Flex } from "./Flex";
 import { H2, P, Section } from "./HtmlElements";
 import { Input } from "./Input";
-import { Label } from "./Label";
 
 type FormState = { name: string; description: string };
 type FormAction =
@@ -76,7 +75,7 @@ export const ProjectModal = () => {
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 		>
 			<CardHeader>
-				<div className="w-full flex justify-between items-start">
+				<Flex className="w-full" justify="between" items="start">
 					<H2>{project?.name}</H2>
 					<form
 						onSubmit={async (evt) => {
@@ -86,15 +85,11 @@ export const ProjectModal = () => {
 						}}
 					>
 						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<button
-							className="hover:cursor-pointer p-2 rounded"
-							type="submit"
-							aria-label="Delete project"
-						>
+						<Button variant="ghost" type="submit" aria-label="Delete project">
 							<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-						</button>
+						</Button>
 					</form>
-				</div>
+				</Flex>
 				<Flex gap={4} justify="between">
 					<div>
 						<P>
@@ -150,7 +145,6 @@ export const ProjectModal = () => {
 								label="Timesheet Name"
 								placeholder="Timesheet Name"
 								required
-								className="flex h-10 rounded-md border border-input bg-white px-3 text-sm placeholder:text-slate-500 text-slate-900"
 								value={form.name}
 								onChange={(e) =>
 									dispatch({
@@ -180,7 +174,7 @@ export const ProjectModal = () => {
 							placeholder="Timesheet Description"
 							label="Timesheet Description"
 							containerClassName="col-span-3"
-							className="flex h-10 rounded-md border border-input bg-white px-3 py-2 mb-6 text-sm placeholder:text-slate-500 text-slate-900"
+							className="mb-6"
 							value={form.description}
 							onChange={(e) =>
 								dispatch({

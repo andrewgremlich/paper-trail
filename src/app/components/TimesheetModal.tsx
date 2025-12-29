@@ -175,7 +175,7 @@ export const TimesheetModal = () => {
 								<P>Invoice has been voided.</P>
 							)}
 							{timesheet?.invoiceId && (
-								<Flex gap="2">
+								<Flex gap={8}>
 									<Button
 										onClick={async () => {
 											if (timesheet?.invoiceId)

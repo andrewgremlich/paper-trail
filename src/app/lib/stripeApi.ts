@@ -20,7 +20,6 @@ async function getStripeClient(): Promise<Stripe | null> {
 
 export const generateInvoice = async (formData: FormData): Promise<void> => {
 	try {
-
 		const db = await getDb();
 		const stripe = await getStripeClient();
 		const timesheetId = Number(formData.get("timesheetId") || 0);

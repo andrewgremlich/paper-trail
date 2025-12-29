@@ -1,4 +1,5 @@
 import * as React from "react";
+import { cn } from "../lib/utils";
 
 function cx(...classes: (string | undefined | false)[]) {
 	return classes.filter(Boolean).join(" ");
@@ -79,3 +80,31 @@ export const P = React.forwardRef<HTMLParagraphElement, PProps>(
 	),
 );
 P.displayName = "P";
+
+export type SpanProps = React.ComponentPropsWithoutRef<"span">;
+export const Span = React.forwardRef<HTMLSpanElement, SpanProps>(
+	({ className, children, ...rest }, ref) => (
+		<span ref={ref} className={cx("", className)} {...rest}>
+			{children}
+		</span>
+	),
+);
+Span.displayName = "Span";
+
+export interface LabelProps
+	extends React.LabelHTMLAttributes<HTMLLabelElement> {}
+
+export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
+	({ className, ...props }, ref) => (
+		// biome-ignore lint/a11y/noLabelWithoutControl: used in other components
+		<label
+			ref={ref}
+			className={cn(
+				"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+				className,
+			)}
+			{...props}
+		/>
+	),
+);
+Label.displayName = "Label";
