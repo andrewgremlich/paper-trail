@@ -9,7 +9,6 @@ import {
 	voidInvoice,
 } from "../lib/stripeApi";
 import { Button } from "./Button";
-import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { Dialog } from "./Dialog";
 import { Flex } from "./Flex";
@@ -96,6 +95,8 @@ export const TimesheetModal = () => {
 
 	return (
 		<Dialog
+			className="px-10 py-8"
+			variant="liquidGlass"
 			isOpen={timesheetModalActive}
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
 		>
@@ -112,151 +113,133 @@ export const TimesheetModal = () => {
 				</div>
 			)}
 
-			<Card>
-				<CardHeader>
-					<Flex justify="between">
-						<H1>
-							{timesheet?.name ?? "Timesheet Invoice Generator"}
-							{!timesheet?.active && " (Closed)"}
-						</H1>
-						<form
-							onSubmit={async (evt) => {
-								evt.preventDefault();
-								const formData = new FormData(evt.currentTarget);
-								await mutateDeleteTimesheet(formData);
-							}}
-						>
-							<Input type="hidden" name="id" defaultValue={timesheet?.id} />
-							<Button
-								variant="ghost"
-								size="icon"
-								className="ml-2"
-								type="submit"
-								aria-label="Delete timesheet"
-							>
-								<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-							</Button>
-						</form>
-					</Flex>
-					<Flex justify="between">
-						<div>
-							{timesheet?.description ? (
-								<P>Description: {timesheet?.description}</P>
-							) : null}
-							{timesheet?.projectRate && (
-								<P>Project Rate: ${timesheet.projectRate}/hour</P>
-							)}
-							<P>
-								{timesheet?.customerId &&
-									`Customer ID: ${timesheet.customerId}`}
-							</P>
-						</div>
-						<div>
-							{timesheet?.invoiceId && (
-								<P>Invoice ID: {timesheet?.invoiceId}</P>
-							)}
-							{invoiceData?.status === "paid" && (
-								<P>Invoice has been marked as paid.</P>
-							)}
-							{invoiceData?.pdf && (
-								<P>
-									Invoice PDF is available.{" "}
-									<a
-										className="text-blue-500 underline underline-offset-4 decoration-dashed"
-										href={invoiceData.pdf}
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										Download PDF
-									</a>
-								</P>
-							)}
-							{invoiceData?.status === "void" && (
-								<P>Invoice has been voided.</P>
-							)}
-							{timesheet?.invoiceId && (
-								<Flex gap={8}>
-									<Button
-										onClick={async () => {
-											if (timesheet?.invoiceId)
-												await markAsPaid(timesheet?.invoiceId);
-										}}
-										disabled={invoiceData?.disabled ?? false}
-									>
-										{invoiceData?.status === "paid"
-											? "Already Paid"
-											: invoiceData?.disabled
-												? "Disabled"
-												: "Mark as Paid"}
-									</Button>
-									<Button
-										onClick={async () => {
-											if (timesheet?.invoiceId)
-												await voidInv(timesheet?.invoiceId);
-										}}
-										disabled={invoiceData?.disabled ?? false}
-									>
-										{invoiceData?.status === "void"
-											? "AlreadyVoided"
-											: invoiceData?.disabled
-												? "Void Disabled"
-												: "Void Invoice"}
-									</Button>
-								</Flex>
-							)}
-						</div>
-					</Flex>
-				</CardHeader>
-				<CardContent>
-					{timesheet && (
-						<>
-							<CreateTimesheetRecord
-								active={timesheet.active}
-								timesheetId={timesheet.id}
-								projectRate={timesheet.projectRate ?? 25}
-							/>
-							<TimesheetTable
-								entries={timesheet.entries || []}
-								active={timesheet.active}
-							/>
-						</>
-					)}
-				</CardContent>
-				<CardFooter>
-					<form
-						onSubmit={async (e) => {
-							e.preventDefault();
-							const formData = new FormData(e.currentTarget);
-							await mutateInvoice(formData);
-						}}
-						className="flex gap-2"
+			<Flex justify="between">
+				<H1>
+					{timesheet?.name ?? "Timesheet Invoice Generator"}
+					{!timesheet?.active && " (Closed)"}
+				</H1>
+				<form
+					onSubmit={async (evt) => {
+						evt.preventDefault();
+						const formData = new FormData(evt.currentTarget);
+						await mutateDeleteTimesheet(formData);
+					}}
+				>
+					<Input type="hidden" name="id" defaultValue={timesheet?.id} />
+					<Button
+						variant="ghost"
+						size="icon"
+						className="ml-2"
+						type="submit"
+						aria-label="Delete timesheet"
 					>
-						<Input
-							type="hidden"
-							name="timesheetId"
-							defaultValue={timesheet?.id}
-						/>
-						{timesheet?.customerId && (
-							<Input
-								type="hidden"
-								name="customerId"
-								defaultValue={timesheet?.customerId}
-							/>
-						)}
-						<Button
-							type="submit"
-							variant="default"
-							disabled={!timesheet?.active || timesheet?.entries.length === 0}
-						>
-							{isPending
-								? "Generating..."
-								: timesheet?.active
-									? "Generate Invoice"
-									: "Invoice Generated"}
-						</Button>
-					</form>
-				</CardFooter>
-			</Card>
+						<TrashIcon className="w-6 h-6 hover:text-blue-500" />
+					</Button>
+				</form>
+			</Flex>
+			<Flex justify="between">
+				<div>
+					{timesheet?.description ? (
+						<P>Description: {timesheet?.description}</P>
+					) : null}
+					{timesheet?.projectRate && (
+						<P>Project Rate: ${timesheet.projectRate}/hour</P>
+					)}
+					<P>
+						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
+					</P>
+				</div>
+				<div>
+					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
+					{invoiceData?.status === "paid" && (
+						<P>Invoice has been marked as paid.</P>
+					)}
+					{invoiceData?.pdf && (
+						<P>
+							Invoice PDF is available.{" "}
+							<a
+								className="text-blue-500 underline underline-offset-4 decoration-dashed"
+								href={invoiceData.pdf}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								Download PDF
+							</a>
+						</P>
+					)}
+					{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
+					{timesheet?.invoiceId && (
+						<Flex gap={8}>
+							<Button
+								onClick={async () => {
+									if (timesheet?.invoiceId)
+										await markAsPaid(timesheet?.invoiceId);
+								}}
+								disabled={invoiceData?.disabled ?? false}
+							>
+								{invoiceData?.status === "paid"
+									? "Already Paid"
+									: invoiceData?.disabled
+										? "Disabled"
+										: "Mark as Paid"}
+							</Button>
+							<Button
+								onClick={async () => {
+									if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
+								}}
+								disabled={invoiceData?.disabled ?? false}
+							>
+								{invoiceData?.status === "void"
+									? "AlreadyVoided"
+									: invoiceData?.disabled
+										? "Void Disabled"
+										: "Void Invoice"}
+							</Button>
+						</Flex>
+					)}
+				</div>
+			</Flex>
+			{timesheet && (
+				<>
+					<CreateTimesheetRecord
+						active={timesheet.active}
+						timesheetId={timesheet.id}
+						projectRate={timesheet.projectRate ?? 25}
+					/>
+					<TimesheetTable
+						entries={timesheet.entries || []}
+						active={timesheet.active}
+					/>
+				</>
+			)}
+			<form
+				onSubmit={async (e) => {
+					e.preventDefault();
+					const formData = new FormData(e.currentTarget);
+					await mutateInvoice(formData);
+				}}
+				className="flex gap-2"
+			>
+				<Input type="hidden" name="timesheetId" defaultValue={timesheet?.id} />
+				{timesheet?.customerId && (
+					<Input
+						type="hidden"
+						name="customerId"
+						defaultValue={timesheet?.customerId}
+					/>
+				)}
+				<Button
+					type="submit"
+					variant="default"
+					disabled={!timesheet?.active || timesheet?.entries.length === 0}
+				>
+					{isPending
+						? "Generating..."
+						: timesheet?.active
+							? "Generate Invoice"
+							: "Invoice Generated"}
+				</Button>
+			</form>
 		</Dialog>
 	);
 };

@@ -11,12 +11,13 @@ const buttonVariants = cva(
 				secondary: "bg-gray-600 text-white hover:bg-gray-700",
 				outline: "bg-transparent",
 				ghost: "bg-transparent border-transparent hover:bg-blue-600/40",
+				liquidGlass: "relative bg-white/10 text-white border border-white/20 backdrop-blur-md shadow-md hover:bg-white/20 hover:border-white/30",
 			},
 			size: {
 				sm: "h-8 px-3 py-1.5",
 				md: "h-10 px-4 py-2",
 				lg: "h-12 px-6 py-3",
-				icon: "h-10 w-10 p-0",
+				icon: "h-8 w-8 p-6 rounded-full",
 			},
 		},
 		defaultVariants: {

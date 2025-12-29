@@ -13,6 +13,7 @@ export const SettingsModal = () => {
 	return (
 		<Dialog
 			isOpen={settingsModalActive}
+			variant="liquidGlass"
 			onClose={toggleSettingsModal}
 			titleId={headingId}
 			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>}

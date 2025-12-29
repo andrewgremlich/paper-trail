@@ -4,7 +4,6 @@ import { useReducer } from "react";
 import { deleteProject, generateTimesheet, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import { Button } from "./Button";
-import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
 import { Dialog } from "./Dialog";
 import { Flex } from "./Flex";
@@ -71,125 +70,123 @@ export const ProjectModal = () => {
 
 	return (
 		<Dialog
+			className="px-10 py-8"
+			variant="liquidGlass"
 			isOpen={projectModalActive}
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 		>
-			<CardHeader>
-				<Flex className="w-full" justify="between" items="start">
-					<H2>{project?.name}</H2>
-					<form
-						onSubmit={async (evt) => {
-							evt.preventDefault();
-							const formData = new FormData(evt.currentTarget);
-							await mutateDeleteProject(formData);
-						}}
-					>
-						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<Button variant="ghost" type="submit" aria-label="Delete project">
-							<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-						</Button>
-					</form>
-				</Flex>
-				<Flex gap={4} justify="between">
-					<div>
-						<P>
-							Started:{" "}
-							{project?.createdAt
-								? new Date(project?.createdAt).toLocaleDateString()
-								: "N/A"}
-						</P>
-						<P>
-							Rate:{" "}
-							{project?.rate_in_cents
-								? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
-								: "N/A"}
-						</P>
-						<P>Active: {project?.active ? "Yes" : "No"}</P>
-					</div>
-					<div>
-						<P>{project?.description}</P>
-						{project?.customerId && <P>Customer: {project?.customerId}</P>}
-					</div>
-				</Flex>
-			</CardHeader>
-			<CardContent>
-				<div className="mb-6">
-					{project?.timesheets.map((timesheet) => (
-						<CardPreview
-							key={timesheet.id}
-							name={timesheet.name}
-							description={timesheet.description ?? "No description provided"}
-							action={() => {
-								toggleProjectModal({ projectId: undefined });
-								toggleTimesheetModal({ timesheetId: timesheet.id });
-							}}
-						/>
-					))}
+			<Flex className="w-full" justify="between" items="start">
+				<H2>{project?.name}</H2>
+				<form
+					onSubmit={async (evt) => {
+						evt.preventDefault();
+						const formData = new FormData(evt.currentTarget);
+						await mutateDeleteProject(formData);
+					}}
+				>
+					<input type="hidden" name="projectId" defaultValue={project?.id} />
+					<Button variant="ghost" type="submit" aria-label="Delete project">
+						<TrashIcon className="w-6 h-6 hover:text-blue-500" />
+					</Button>
+				</form>
+			</Flex>
+			<Flex gap={4} justify="between">
+				<div>
+					<P>
+						Started:{" "}
+						{project?.createdAt
+							? new Date(project?.createdAt).toLocaleDateString()
+							: "N/A"}
+					</P>
+					<P>
+						Rate:{" "}
+						{project?.rate_in_cents
+							? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
+							: "N/A"}
+					</P>
+					<P>Active: {project?.active ? "Yes" : "No"}</P>
 				</div>
-				<hr />
-				<Section>
-					<H2>Generate Timesheet for {project?.name}</H2>
-					<form
-						onSubmit={async (evt) => {
-							evt.preventDefault();
-							const formData = new FormData(evt.currentTarget);
-							await generateProject(formData);
-							dispatch({ type: "reset" });
+				<div>
+					<P>{project?.description}</P>
+					{project?.customerId && <P>Customer: {project?.customerId}</P>}
+				</div>
+			</Flex>
+			<div className="mb-6">
+				{project?.timesheets.map((timesheet) => (
+					<CardPreview
+						key={timesheet.id}
+						name={timesheet.name}
+						description={timesheet.description ?? "No description provided"}
+						action={() => {
+							toggleProjectModal({ projectId: undefined });
+							toggleTimesheetModal({ timesheetId: timesheet.id });
 						}}
-					>
-						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<Flex gap={4} className="mb-4" items="end">
-							<Input
-								type="text"
-								name="name"
-								label="Timesheet Name"
-								placeholder="Timesheet Name"
-								required
-								value={form.name}
-								onChange={(e) =>
-									dispatch({
-										type: "set",
-										field: "name",
-										value: e.target.value,
-									})
-								}
-							/>
-							<Button
-								variant="ghost"
-								size="md"
-								onClick={() => {
-									dispatch({
-										type: "set",
-										field: "name",
-										value: `${new Date().toLocaleDateString()} Timesheet`,
-									});
-								}}
-							>
-								Autogen Name
-							</Button>
-						</Flex>
+					/>
+				))}
+			</div>
+			<hr />
+			<Section>
+				<H2>Generate Timesheet for {project?.name}</H2>
+				<form
+					onSubmit={async (evt) => {
+						evt.preventDefault();
+						const formData = new FormData(evt.currentTarget);
+						await generateProject(formData);
+						dispatch({ type: "reset" });
+					}}
+				>
+					<input type="hidden" name="projectId" defaultValue={project?.id} />
+					<Flex gap={4} className="mb-4" items="end">
 						<Input
 							type="text"
-							name="description"
-							placeholder="Timesheet Description"
-							label="Timesheet Description"
-							containerClassName="col-span-3"
-							className="mb-6"
-							value={form.description}
+							name="name"
+							label="Timesheet Name"
+							placeholder="Timesheet Name"
+							required
+							value={form.name}
 							onChange={(e) =>
 								dispatch({
 									type: "set",
-									field: "description",
+									field: "name",
 									value: e.target.value,
 								})
 							}
 						/>
-						<Button type="submit" variant="default" size="lg">
-							Generate Timesheet
+						<Button
+							variant="ghost"
+							size="md"
+							onClick={() => {
+								dispatch({
+									type: "set",
+									field: "name",
+									value: `${new Date().toLocaleDateString()} Timesheet`,
+								});
+							}}
+						>
+							Autogen Name
 						</Button>
-					</form>
-				</Section>
-			</CardContent>
+					</Flex>
+					<Input
+						type="text"
+						name="description"
+						placeholder="Timesheet Description"
+						label="Timesheet Description"
+						containerClassName="col-span-3"
+						className="mb-6"
+						value={form.description}
+						onChange={(e) =>
+							dispatch({
+								type: "set",
+								field: "description",
+								value: e.target.value,
+							})
+						}
+					/>
+					<Button type="submit" variant="default" size="lg">
+						Generate Timesheet
+					</Button>
+				</form>
+			</Section>
 		</Dialog>
 	);
 };
