@@ -43,6 +43,7 @@ export const CreateTimesheetRecord = ({
 						<Label htmlFor="date">Date</Label>
 						<Input
 							name="date"
+							label="Date"
 							type="date"
 							defaultValue={format(new Date(), "yyyy-MM-dd")}
 							required

@@ -143,62 +143,56 @@ export const ProjectModal = () => {
 						}}
 					>
 						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<div className="grid gap-4 grid-cols-3">
-							<div className="col-span-3">
-								<Label htmlFor="name">Timesheet Name</Label>
-								<div className="flex flex-row items-center">
-									<input
-										type="text"
-										name="name"
-										placeholder="Timesheet Name"
-										required
-										className="flex h-10 rounded-md border border-input bg-white px-3 text-sm placeholder:text-slate-500 text-slate-900"
-										value={form.name}
-										onChange={(e) =>
-											dispatch({
-												type: "set",
-												field: "name",
-												value: e.target.value,
-											})
-										}
-									/>
-									<Button
-										variant="outline"
-										size="md"
-										className="ml-2"
-										onClick={() => {
-											dispatch({
-												type: "set",
-												field: "name",
-												value: `${new Date().toLocaleDateString()} Timesheet`,
-											});
-										}}
-									>
-										Autogen Name
-									</Button>
-								</div>
-							</div>
-							<div className="col-span-3">
-								<Label htmlFor="description">Timesheet Description</Label>
-								<Input
-									type="text"
-									name="description"
-									placeholder="Timesheet Description"
-									className="flex h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
-									value={form.description}
-									onChange={(e) =>
-										dispatch({
-											type: "set",
-											field: "description",
-											value: e.target.value,
-										})
-									}
-								/>
-							</div>
-							<Button type="submit" variant="default" size="lg">
-								Generate Timesheet
+						<Flex gap={4} className="mb-4" items="end">
+							<Input
+								type="text"
+								name="name"
+								label="Timesheet Name"
+								placeholder="Timesheet Name"
+								required
+								className="flex h-10 rounded-md border border-input bg-white px-3 text-sm placeholder:text-slate-500 text-slate-900"
+								value={form.name}
+								onChange={(e) =>
+									dispatch({
+										type: "set",
+										field: "name",
+										value: e.target.value,
+									})
+								}
+							/>
+							<Button
+								variant="ghost"
+								size="md"
+								onClick={() => {
+									dispatch({
+										type: "set",
+										field: "name",
+										value: `${new Date().toLocaleDateString()} Timesheet`,
+									});
+								}}
+							>
+								Autogen Name
 							</Button>
-						</div>
+						</Flex>
+						<Input
+							type="text"
+							name="description"
+							placeholder="Timesheet Description"
+							label="Timesheet Description"
+							containerClassName="col-span-3"
+							className="flex h-10 rounded-md border border-input bg-white px-3 py-2 mb-6 text-sm placeholder:text-slate-500 text-slate-900"
+							value={form.description}
+							onChange={(e) =>
+								dispatch({
+									type: "set",
+									field: "description",
+									value: e.target.value,
+								})
+							}
+						/>
+						<Button type="submit" variant="default" size="lg">
+							Generate Timesheet
+						</Button>
 					</form>
 				</Section>
 			</CardContent>

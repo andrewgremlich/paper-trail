@@ -37,23 +37,73 @@ export const Flex = forwardRef<HTMLElement, FlexProps>(
 	) => {
 		const Comp: keyof JSX.IntrinsicElements = as;
 
+		// Use explicit class maps so Tailwind can statically detect classes
+		const directionClassMap: Record<Direction, string> = {
+			row: "flex-row",
+			"row-reverse": "flex-row-reverse",
+			col: "flex-col",
+			"col-reverse": "flex-col-reverse",
+		};
+
+		const justifyClassMap: Record<Justify, string> = {
+			start: "justify-start",
+			end: "justify-end",
+			center: "justify-center",
+			between: "justify-between",
+			around: "justify-around",
+			evenly: "justify-evenly",
+		};
+
+		const itemsClassMap: Record<Items, string> = {
+			start: "items-start",
+			end: "items-end",
+			center: "items-center",
+			baseline: "items-baseline",
+			stretch: "items-stretch",
+		};
+
+		const contentClassMap: Record<Content, string> = {
+			start: "content-start",
+			end: "content-end",
+			center: "content-center",
+			between: "content-between",
+			around: "content-around",
+			evenly: "content-evenly",
+		};
+
+		const wrapClassMap: Record<Wrap, string> = {
+			wrap: "flex-wrap",
+			"wrap-reverse": "flex-wrap-reverse",
+			nowrap: "flex-nowrap",
+		};
+
 		const classes = [
 			inline ? "inline-flex" : "flex",
-			direction ? `flex-${direction}` : null,
-			justify ? `justify-${justify}` : null,
-			items ? `items-${items}` : null,
-			content ? `content-${content}` : null,
-			wrap ? (wrap === "nowrap" ? "flex-nowrap" : `flex-${wrap}`) : null,
-			gap !== undefined && gap !== null ? `gap-${gap}` : null,
+			directionClassMap[direction],
+			justify ? justifyClassMap[justify] : null,
+			items ? itemsClassMap[items] : null,
+			content ? contentClassMap[content] : null,
+			wrap ? wrapClassMap[wrap] : null,
 			className,
 		]
 			.filter(Boolean)
 			.join(" ");
 
+		// Prefer inline style for gap to avoid dynamic class generation
+		const { style, ...restProps } = rest as HTMLAttributes<HTMLElement>;
+		const mergedStyle =
+			gap !== undefined && gap !== null
+				? {
+					...style,
+					gap: typeof gap === "number" ? `${gap}px` : gap,
+				}
+				: style;
+
 		return (
 			<Comp
 				className={classes}
-				{...(rest as unknown as Record<string, unknown>)}
+				style={mergedStyle}
+				{...(restProps as unknown as Record<string, unknown>)}
 			/>
 		);
 	},

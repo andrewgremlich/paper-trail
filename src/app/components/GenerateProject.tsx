@@ -35,25 +35,23 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				e.currentTarget.reset();
 			}}
 		>
-			<div className="col-span-3">
-				<Label htmlFor="name">Project Name</Label>
-				<Input
-					name="name"
-					placeholder="Awesome Project"
-					required
-					className="w-full"
-				/>
-			</div>
-			<div className="col-span-1">
-				<Label htmlFor="rate">Rate</Label>
-				<Input
-					type="number"
-					name="rate"
-					placeholder="dollars/hour"
-					required
-					className="w-full"
-				/>
-			</div>
+			<Input
+				name="name"
+				placeholder="Awesome Project"
+				required
+				label="Project Name"
+				containerClassName="col-span-3"
+				className="w-full"
+			/>
+			<Input
+				type="number"
+				name="rate"
+				placeholder="dollars/hour"
+				required
+				label="Rate"
+				containerClassName="col-span-1"
+				className="w-full"
+			/>
 			<div className="col-span-2">
 				<Label htmlFor="customerId">Customer</Label>
 				<select
@@ -71,14 +69,14 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 						))}
 				</select>
 			</div>
-			<div className="col-span-3">
-				<Label htmlFor="description">Project Description</Label>
-				<textarea
-					name="description"
-					placeholder="Awesome project description"
-					className="h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
-				/>
-			</div>
+			<Input
+				name="description"
+				placeholder="Awesome project description"
+				required
+				containerClassName="col-span-3"
+				className="w-full"
+				label="Project Description"
+			/>
 			<Button type="submit" size="lg" variant="default">
 				Generate Project
 			</Button>
