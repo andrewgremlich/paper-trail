@@ -1,16 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { Flex } from "./components/Flex";
 import { Grid } from "./components/Grid";
 import { H1, Main } from "./components/HtmlElements";
+import { Input } from "./components/Input";
+import { Select } from "./components/Select";
+import { Table, TBody, TD, TR } from "./components/Table";
 import { getAllTransactions, upsertTransaction } from "./lib/db";
 import { getAllProjects } from "./lib/db/projects";
 import { openAttachment, saveAttachment } from "./lib/fileStorage";
-import { Input } from "./components/Input";
-import { Select } from "./components/Select";
 import { formatDate } from "./lib/utils";
-import { Table, TBody, TD, TR } from "./components/Table";
 
 export const Transactions = () => {
 	const queryClient = useQueryClient();
@@ -183,7 +182,7 @@ export const Transactions = () => {
 							<TD></TD>
 							<TD></TD>
 							<TD>
-								Total:{" "}$
+								Total: $
 								{transactions
 									?.reduce((acc, tx) => acc + tx.amount, 0)
 									.toFixed(2)}

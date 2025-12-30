@@ -1,7 +1,7 @@
-import type { SelectHTMLAttributes, ReactNode } from "react";
+import type { ReactNode, SelectHTMLAttributes } from "react";
 import { forwardRef, useId } from "react";
-import { Label } from "./HtmlElements";
 import { Flex } from "./Flex";
+import { Label } from "./HtmlElements";
 
 export type SelectOption = {
 	value: string | number;

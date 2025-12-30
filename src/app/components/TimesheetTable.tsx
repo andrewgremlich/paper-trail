@@ -3,10 +3,10 @@ import { TrashIcon } from "lucide-react";
 import { usePaperTrailStore } from "@/lib/store";
 import { deleteTimesheetEntry, type TimesheetEntry } from "../lib/db";
 import { formatDate } from "../lib/utils";
+import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { H2, Label } from "./HtmlElements";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
-import { Button } from "./Button";
 
 export const TimesheetTable = ({
 	entries,
