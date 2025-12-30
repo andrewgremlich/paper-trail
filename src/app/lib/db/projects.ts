@@ -99,7 +99,7 @@ export const generateProject = async (
 
 export const deleteProject = async (formData: FormData): Promise<void> => {
 	const db = await getDb();
-	const id = String(formData.get("projectId") || "");
+	const id = String(formData.get("id") || "");
 
 	try {
 		await db.execute(`DELETE FROM projects WHERE id = $1`, [id]);

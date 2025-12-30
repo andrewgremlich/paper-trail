@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTimesheetById } from "../lib/db";
+import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
-import { DeleteTimesheetIcon } from "./DeleteTimesheet";
+import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
 import { Flex } from "./Flex";
 import { GenerateInvoice } from "./GenerateInvoice";
@@ -35,7 +35,15 @@ export const TimesheetModal = () => {
 					{timesheet?.name ?? "Timesheet Invoice Generator"}
 					{!timesheet?.active && " (Closed)"}
 				</H2>
-				{timesheet?.id && <DeleteTimesheetIcon timesheetId={timesheet.id} />}
+				{timesheet?.id && (
+					<DeleteItem
+						deleteItemId={timesheet.id}
+						actionFn={async (formData: FormData) =>
+							await deleteTimesheet(formData)
+						}
+						successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
+					/>
+				)}
 			</Flex>
 			<Flex justify="between" className="mb-6">
 				<div>

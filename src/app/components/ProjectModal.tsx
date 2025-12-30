@@ -1,36 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrashIcon } from "lucide-react";
-import { useReducer } from "react";
-import { deleteProject, generateTimesheet, getProjectById } from "../lib/db";
+import { useQuery } from "@tanstack/react-query";
+import { deleteProject, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
-import { Button } from "./Button";
 import { CardPreview } from "./CardPreview";
+import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
 import { Flex } from "./Flex";
-import { H2, P, Section } from "./HtmlElements";
-import { Input } from "./Input";
-
-type FormState = { name: string; description: string };
-type FormAction =
-	| { type: "set"; field: keyof FormState; value: string }
-	| { type: "reset" };
-
-const initialForm: FormState = { name: "", description: "" };
-
-const formReducer = (state: FormState, action: FormAction): FormState => {
-	switch (action.type) {
-		case "set":
-			return { ...state, [action.field]: action.value };
-		case "reset":
-			return initialForm;
-		default:
-			return state;
-	}
-};
+import { GenerateTimesheet } from "./GenerateTimesheet";
+import { H2, P } from "./HtmlElements";
 
 export const ProjectModal = () => {
-	const [form, dispatch] = useReducer(formReducer, initialForm);
-	const queryClient = useQueryClient();
 	const {
 		projectModalActive,
 		toggleProjectModal,
@@ -47,26 +25,6 @@ export const ProjectModal = () => {
 		},
 		enabled: !!activeProjectId,
 	});
-	const { mutateAsync: generateProject } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await generateTimesheet(formData);
-			await queryClient.invalidateQueries({
-				queryKey: ["project", activeProjectId],
-			});
-			await queryClient.invalidateQueries({ queryKey: ["projects"] });
-			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
-		},
-	});
-	const { mutateAsync: mutateDeleteProject } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await deleteProject(formData);
-		},
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["projects"] });
-			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
-			toggleProjectModal({ projectId: undefined });
-		},
-	});
 
 	return (
 		<Dialog
@@ -77,18 +35,15 @@ export const ProjectModal = () => {
 		>
 			<Flex className="w-full" justify="between" items="start">
 				<H2>{project?.name}</H2>
-				<form
-					onSubmit={async (evt) => {
-						evt.preventDefault();
-						const formData = new FormData(evt.currentTarget);
-						await mutateDeleteProject(formData);
-					}}
-				>
-					<input type="hidden" name="projectId" defaultValue={project?.id} />
-					<Button variant="ghost" type="submit" aria-label="Delete project">
-						<TrashIcon className="w-6 h-6 text-foreground" />
-					</Button>
-				</form>
+				{project?.id && (
+					<DeleteItem
+						deleteItemId={project.id}
+						actionFn={async (formData: FormData) =>
+							await deleteProject(formData)
+						}
+						successFn={() => toggleProjectModal({ projectId: undefined })}
+					/>
+				)}
 			</Flex>
 			<Flex gap={4} justify="between">
 				<div>
@@ -127,68 +82,7 @@ export const ProjectModal = () => {
 					))}
 				</div>
 			)}
-			<Section>
-				<H2>Generate Timesheet for {project?.name}</H2>
-				<form
-					onSubmit={async (evt) => {
-						evt.preventDefault();
-						const formData = new FormData(evt.currentTarget);
-						await generateProject(formData);
-						dispatch({ type: "reset" });
-					}}
-				>
-					<input type="hidden" name="projectId" defaultValue={project?.id} />
-					<Flex gap={4} className="mb-4" items="end">
-						<Input
-							type="text"
-							name="name"
-							label="Timesheet Name"
-							placeholder="Timesheet Name"
-							required
-							value={form.name}
-							onChange={(e) =>
-								dispatch({
-									type: "set",
-									field: "name",
-									value: e.target.value,
-								})
-							}
-						/>
-						<Button
-							variant="ghost"
-							size="md"
-							onClick={() => {
-								dispatch({
-									type: "set",
-									field: "name",
-									value: `${new Date().toLocaleDateString()} Timesheet`,
-								});
-							}}
-						>
-							Autogen Name
-						</Button>
-					</Flex>
-					<Input
-						type="text"
-						name="description"
-						placeholder="Timesheet Description"
-						label="Timesheet Description"
-						containerClassName="col-span-3"
-						className="mb-6"
-						value={form.description}
-						onChange={(e) =>
-							dispatch({
-								type: "set",
-								field: "description",
-								value: e.target.value,
-							})
-						}
-					/>
-					<Button type="submit" variant="default" size="lg">
-						Generate Timesheet
-					</Button>
-				</form>
-			</Section>
+			{project && <GenerateTimesheet project={project} />}
 		</Dialog>
 	);
 };

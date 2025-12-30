@@ -1,26 +1,25 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
-import { deleteTimesheet } from "@/lib/db";
-import { usePaperTrailStore } from "@/lib/store";
 import { Button } from "./Button";
 import { Input } from "./Input";
 
-export const DeleteTimesheetIcon = ({
-	timesheetId,
+export const DeleteItem = ({
+	deleteItemId,
+	actionFn,
+	successFn,
 }: {
-	timesheetId: number;
+	deleteItemId: number;
+	actionFn: (formData: FormData) => Promise<void>;
+	successFn: () => void;
 }) => {
 	const queryClient = useQueryClient();
-	const { toggleTimesheetModal } = usePaperTrailStore();
 
-	const { mutate: mutateDeleteTimesheet } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await deleteTimesheet(formData);
-		},
+	const { mutate } = useMutation({
+		mutationFn: actionFn,
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["projects"] });
 			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
-			toggleTimesheetModal({ timesheetId: undefined });
+			successFn();
 		},
 	});
 
@@ -29,10 +28,10 @@ export const DeleteTimesheetIcon = ({
 			onSubmit={async (evt) => {
 				evt.preventDefault();
 				const formData = new FormData(evt.currentTarget);
-				await mutateDeleteTimesheet(formData);
+				await mutate(formData);
 			}}
 		>
-			<Input type="hidden" name="id" defaultValue={timesheetId} />
+			<Input type="hidden" name="id" defaultValue={deleteItemId} />
 			<Button
 				variant="ghost"
 				size="icon"
