@@ -47,11 +47,9 @@ export const Timesheet = () => {
 				Greet
 			</button>
 			<p>{greetMsg}</p> */}
-			<Section>
-				<P>
-					A Paper Trail that integrates with Stripe in order to send invoices.
-				</P>
-			</Section>
+			<P>
+				A Paper Trail that integrates with Stripe in order to send invoices.
+			</P>
 
 			{timesheets && timesheets.length > 0 && (
 				<Section>
