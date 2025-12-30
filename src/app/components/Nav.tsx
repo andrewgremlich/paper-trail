@@ -9,7 +9,11 @@ export const Nav = () => {
 		usePaperTrailStore();
 
 	return (
-		<Flex as="nav" justify="between" className="fixed top-0 left-0 right-0 py-6 px-4">
+		<Flex
+			as="nav"
+			justify="between"
+			className="fixed top-0 left-0 right-0 py-6 px-4"
+		>
 			<div>
 				<Button
 					type="button"
@@ -45,7 +49,7 @@ export const Nav = () => {
 
 			<Button
 				variant="liquidGlass"
-					size="icon"
+				size="icon"
 				onClick={toggleSettingsModal}
 				type="button"
 				aria-label="Open settings"

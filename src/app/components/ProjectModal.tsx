@@ -86,7 +86,7 @@ export const ProjectModal = () => {
 				>
 					<input type="hidden" name="projectId" defaultValue={project?.id} />
 					<Button variant="ghost" type="submit" aria-label="Delete project">
-						<TrashIcon className="w-6 h-6 hover:text-blue-500" />
+						<TrashIcon className="w-6 h-6 text-foreground" />
 					</Button>
 				</form>
 			</Flex>
@@ -111,20 +111,22 @@ export const ProjectModal = () => {
 					{project?.customerId && <P>Customer: {project?.customerId}</P>}
 				</div>
 			</Flex>
-			<div className="mb-6">
-				{project?.timesheets.map((timesheet) => (
-					<CardPreview
-						key={timesheet.id}
-						name={timesheet.name}
-						description={timesheet.description ?? "No description provided"}
-						action={() => {
-							toggleProjectModal({ projectId: undefined });
-							toggleTimesheetModal({ timesheetId: timesheet.id });
-						}}
-					/>
-				))}
-			</div>
-			<hr />
+			{project?.timesheets && project.timesheets.length > 0 && (
+				<div className="mb-6">
+					<H2 className="mt-8 mb-4">Timesheets</H2>
+					{project?.timesheets.map((timesheet) => (
+						<CardPreview
+							key={timesheet.id}
+							name={timesheet.name}
+							description={timesheet.description ?? "No description provided"}
+							action={() => {
+								toggleProjectModal({ projectId: undefined });
+								toggleTimesheetModal({ timesheetId: timesheet.id });
+							}}
+						/>
+					))}
+				</div>
+			)}
 			<Section>
 				<H2>Generate Timesheet for {project?.name}</H2>
 				<form

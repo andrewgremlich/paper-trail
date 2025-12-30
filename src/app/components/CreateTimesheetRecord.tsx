@@ -66,7 +66,7 @@ export const CreateTimesheetRecord = ({
 					variant="ghost"
 					size="icon"
 					disabled={!active}
-					className="disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0 px-3 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+					className="disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0 px-3 h-10 bg-blue-600 hover:bg-blue-700 text-primary-foreground rounded-md"
 				>
 					<PlusIcon className="h-4 w-4" />
 				</Button>
