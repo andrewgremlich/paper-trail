@@ -47,6 +47,7 @@ export const ProjectModal = () => {
 			</Flex>
 			<Flex gap={4} justify="between">
 				<div>
+					<P>{project?.description}</P>
 					<P>
 						Started:{" "}
 						{project?.createdAt
@@ -59,11 +60,10 @@ export const ProjectModal = () => {
 							? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
 							: "N/A"}
 					</P>
-					<P>Active: {project?.active ? "Yes" : "No"}</P>
 				</div>
 				<div>
-					<P>{project?.description}</P>
 					{project?.customerId && <P>Customer: {project?.customerId}</P>}
+					<P>Active: {project?.active ? "Yes" : "No"}</P>
 				</div>
 			</Flex>
 			{project?.timesheets && project.timesheets.length > 0 && (

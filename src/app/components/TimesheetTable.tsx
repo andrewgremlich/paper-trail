@@ -6,6 +6,7 @@ import { formatDate } from "../lib/utils";
 import { Flex } from "./Flex";
 import { H2, Label } from "./HtmlElements";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
+import { Button } from "./Button";
 
 export const TimesheetTable = ({
 	entries,
@@ -17,7 +18,7 @@ export const TimesheetTable = ({
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
 	const { activeTimesheetId } = usePaperTrailStore();
 	const queryClient = useQueryClient();
-	const { mutate } = useMutation({
+	const { mutate: deleteEntry } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			await deleteTimesheetEntry(formData);
 			await queryClient.invalidateQueries({
@@ -36,7 +37,7 @@ export const TimesheetTable = ({
 							<TH>Hours</TH>
 							<TH>Description</TH>
 							<TH>Amount ($)</TH>
-							<TH>Delete</TH>
+							<TH></TH>
 						</TR>
 					</THead>
 					<TBody>
@@ -46,26 +47,35 @@ export const TimesheetTable = ({
 								<TD>{entry.minutes / 60}</TD>
 								<TD>{entry.description}</TD>
 								<TD>${entry.amount.toFixed(2)}</TD>
-								<TD>
+								<Flex as="td" justify="end">
 									<form
 										onSubmit={(evt) => {
 											evt.preventDefault();
 											const formData = new FormData(evt.currentTarget);
-											mutate(formData);
+											deleteEntry(formData);
 										}}
-										className="inline"
 									>
 										<input type="hidden" name="id" value={entry.id} />
-										<button
+										<Button
 											disabled={!active}
+											variant="ghost"
+											size="sm"
 											type="submit"
-											className="disabled:opacity-50 disabled:cursor-not-allowed h-8 w-8 p-0 flex items-center justify-center hover:bg-gray-100 rounded "
 										>
-											<span className="sr-only">Delete entry</span>
 											<TrashIcon color="black" className="h-4 w-4" />
-										</button>
+										</Button>
 									</form>
-								</TD>
+									{/* <Button
+										disabled={!active}
+										variant="ghost"
+										size="sm"
+										onClick={() => {
+											console.log("Edit entry", entry.id);
+										}}
+									>
+										<PencilIcon color="black" className="h-4 w-4" />
+									</Button> */}
+								</Flex>
 							</TR>
 						))}
 					</TBody>

@@ -1,9 +1,15 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { SelectHTMLAttributes, ReactNode } from "react";
 import { forwardRef, useId } from "react";
 import { Label } from "./HtmlElements";
 import { Flex } from "./Flex";
 
-export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
+export type SelectOption = {
+	value: string | number;
+	label: ReactNode;
+	disabled?: boolean;
+};
+
+export type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
 	className?: string;
 	label?: ReactNode;
 	labelClassName?: string;
@@ -11,19 +17,15 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 	invalid?: boolean;
 	descriptionId?: string;
 	errorId?: string;
+	options?: SelectOption[];
 };
 
 const baseClasses =
-	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 read-only:opacity-75";
+	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 	(
 		{
-			type,
-			step,
-			min,
-			placeholder,
-			required,
 			className,
 			label,
 			labelClassName,
@@ -32,17 +34,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 			descriptionId,
 			errorId,
 			id,
+			options,
+			children,
 			...rest
 		},
 		ref,
 	) => {
-		const inputClasses = className
+		const selectClasses = className
 			? `${baseClasses} ${className}`
 			: baseClasses;
 		const generatedId = useId();
-		const inputId = id ?? generatedId;
+		const selectId = id ?? generatedId;
 
-		// Merge any provided aria-describedby with description and error ids
 		const { "aria-describedby": restAriaDescribedBy, ...restProps } =
 			rest as Record<string, unknown>;
 		const ariaDescribedBy =
@@ -53,26 +56,32 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 		return (
 			<Flex className={containerClassName} direction="col" gap={10}>
 				{label ? (
-					<Label htmlFor={inputId} className={labelClassName}>
+					<Label htmlFor={selectId} className={labelClassName}>
 						{label}
 					</Label>
 				) : null}
-				<input
+				<select
 					ref={ref}
-					id={inputId}
-					type={type}
-					step={step}
-					min={min}
-					placeholder={placeholder}
-					required={required}
+					id={selectId}
 					aria-invalid={invalid || undefined}
 					aria-describedby={ariaDescribedBy}
-					className={inputClasses}
+					className={selectClasses}
 					{...restProps}
-				/>
+				>
+					{options?.map((opt) => (
+						<option
+							key={String(opt.value)}
+							value={opt.value}
+							disabled={opt.disabled}
+						>
+							{opt.label}
+						</option>
+					))}
+					{children}
+				</select>
 			</Flex>
 		);
 	},
 );
 
-Input.displayName = "Input";
+Select.displayName = "Select";
