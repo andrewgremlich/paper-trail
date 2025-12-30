@@ -78,9 +78,20 @@ export const ProjectFiles = ({ projectName }: { projectName: string }) => {
 			<CardHeader>
 				<Flex justify="between" items="center">
 					<h3 className="text-lg font-semibold">{projectName}</h3>
-					<Button variant="secondary" onClick={() => filesQuery.refetch()}>
-						Refresh
-					</Button>
+					<div>
+						<Button
+							variant="secondary"
+							onClick={() => {
+								openExternally("");
+							}}
+							className="mr-4"
+						>
+							Open Folder
+						</Button>
+						<Button variant="secondary" onClick={() => filesQuery.refetch()}>
+							Refresh
+						</Button>
+					</div>
 				</Flex>
 			</CardHeader>
 			<CardContent>
