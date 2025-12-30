@@ -11,21 +11,20 @@ export const createTimesheetEntry = async (
 		const dateObj = new Date(dateRaw);
 		const date = dateObj.toISOString().split("T")[0];
 
-		let minutes = Number(formData.get("minutes"));
-
-		if (Number.isNaN(minutes) || minutes === 0) {
-			const hours = Number(formData.get("hours") || 0);
-			minutes = hours * 60;
-		}
+		const hours = Number(formData.get("hours") || 0);
+		const minutes = Math.max(0, hours) * 60;
 
 		const description = String(formData.get("description") || "").trim();
 
-		const amount = (Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
+		// Calculate in dollars then store as integer cents
+		const amountDollars =
+			(Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
+		const amountInCents = Math.round(amountDollars * 100);
 
 		await db.execute(
 			`INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount)
-		 VALUES ($1, $2, $3, $4, $5)`,
-			[timesheetId, date, minutes, description, Math.round(amount)],
+			 VALUES ($1, $2, $3, $4, $5)`,
+			[timesheetId, date, minutes, description, amountInCents],
 		);
 	} catch (err) {
 		console.error(err);

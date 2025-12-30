@@ -40,8 +40,6 @@ export const Transactions = () => {
 				filePath = await saveAttachment(file, projectName);
 			}
 
-			console.log(date);
-
 			await upsertTransaction({
 				date,
 				projectId: parseInt(projectId as unknown as string, 10),
@@ -113,6 +111,7 @@ export const Transactions = () => {
 				<Input
 					label="Amount"
 					name="amount"
+					step="0.01"
 					type="number"
 					className="border rounded p-2"
 				/>

@@ -42,6 +42,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 		const generatedId = useId();
 		const inputId = id ?? generatedId;
 
+		// If this is a number input and no step is provided,
+		// default to "any" so decimals are allowed.
+		const computedStep =
+			step !== undefined ? step : type === "number" ? "any" : undefined;
+
 		// Merge any provided aria-describedby with description and error ids
 		const { "aria-describedby": restAriaDescribedBy, ...restProps } =
 			rest as Record<string, unknown>;
@@ -61,7 +66,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 					ref={ref}
 					id={inputId}
 					type={type}
-					step={step}
+					step={computedStep}
 					min={min}
 					placeholder={placeholder}
 					required={required}

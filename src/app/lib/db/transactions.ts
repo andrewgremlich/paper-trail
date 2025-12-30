@@ -6,6 +6,8 @@ export const upsertTransaction = async (
 	tx: SubmitTransaction,
 ): Promise<void> => {
 	const db = await getDb();
+	// Store amounts as integer cents to avoid floating point errors
+	const amountInCents = Math.round(Math.max(0, tx.amount) * 100);
 	await db.execute(
 		`INSERT INTO transactions (projectId, date, description, amount, filePath)
 		 VALUES ($1, $2, $3, $4, $5)
@@ -16,7 +18,7 @@ export const upsertTransaction = async (
 			 amount = excluded.amount,
 			 filePath = excluded.filePath,
 			 updatedAt = CAST(strftime('%s','now') AS INTEGER)`,
-		[tx.projectId, tx.date, tx.description, tx.amount, tx.filePath],
+		[tx.projectId, tx.date, tx.description, amountInCents, tx.filePath],
 	);
 };
 
@@ -26,7 +28,8 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
 		`SELECT id, projectId, date, description, amount, filePath, createdAt, updatedAt
 		 FROM transactions ORDER BY date ASC, createdAt ASC`,
 	);
-	return rows;
+	// Convert integer cents to dollars for UI consumption
+	return rows.map((r) => ({ ...r, amount: r.amount / 100 }));
 };
 
 // Read: list all transactions for a project
@@ -39,7 +42,7 @@ export const getTransactionsByProject = async (
 		 FROM transactions WHERE projectId = $1 ORDER BY date ASC, createdAt ASC`,
 		[projectId],
 	);
-	return rows;
+	return rows.map((r) => ({ ...r, amount: r.amount / 100 }));
 };
 
 // Read: get a single transaction by id
@@ -52,7 +55,8 @@ export const getTransactionById = async (
 		 FROM transactions WHERE id = $1`,
 		[id],
 	);
-	return rows[0] ?? null;
+	const row = rows[0] ?? null;
+	return row ? { ...row, amount: row.amount / 100 } : null;
 };
 
 // Delete: remove a transaction by id

@@ -37,7 +37,6 @@ export const getTimesheetById = async (
 		 WHERE t.id = $1`,
 			[timesheetId],
 		);
-		console.log("getTimesheetById", { timesheetId, headerRows });
 		const header = headerRows[0];
 
 		if (!header) return null;
@@ -47,6 +46,12 @@ export const getTimesheetById = async (
 		FROM timesheet_entries WHERE timesheetId = $1 ORDER BY date ASC, createdAt ASC`,
 			[timesheetId],
 		);
+
+		// Convert amount from integer cents to dollars for UI
+		const normalizedEntries = rows.map((e) => ({
+			...e,
+			amount: e.amount / 100,
+		}));
 
 		const details: TimesheetDetails = {
 			id: header.id,
@@ -59,7 +64,7 @@ export const getTimesheetById = async (
 			updatedAt: header.updatedAt,
 			customerId: header.customerId,
 			projectRate: header.projectRate,
-			entries: rows,
+			entries: normalizedEntries,
 		};
 
 		return details;

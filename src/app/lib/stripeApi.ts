@@ -62,7 +62,7 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 			collection_method: "send_invoice",
 			days_until_due: 30,
 			currency: "usd",
-			description: `Total hours: ${totalHours}\n${timesheetDescription as string}`,
+			description: `Rate: $${projectRate} per hour | Total hours: ${totalHours}\n${timesheetDescription ? timesheetDescription : ""}`,
 			footer: taskLog.length > 0 ? `Task log:\n${taskLog}` : undefined,
 		});
 
