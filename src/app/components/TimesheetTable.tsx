@@ -5,7 +5,7 @@ import { deleteTimesheetEntry, type TimesheetEntry } from "../lib/db";
 import { formatDate } from "../lib/utils";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
-import { H2, Label } from "./HtmlElements";
+import { H2, Label, P } from "./HtmlElements";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
 
 export const TimesheetTable = ({
@@ -46,7 +46,7 @@ export const TimesheetTable = ({
 								<TD>{formatDate(entry.date)}</TD>
 								<TD>{entry.minutes / 60}</TD>
 								<TD>{entry.description}</TD>
-								<TD>${entry.amount.toFixed(2)}</TD>
+								<TD>${(entry.amount / 100).toFixed(2)}</TD>
 								<Flex as="td" justify="end">
 									<form
 										onSubmit={(evt) => {
@@ -81,16 +81,16 @@ export const TimesheetTable = ({
 					</TBody>
 				</Table>
 			) : (
-				<div className="text-center py-8 text-gray-500">
-					No timesheet entries yet! Add your first entry above.
-				</div>
+				<Flex justify="center" className="py-8">
+					<P>No timesheet entries yet! Add your first entry above.</P>
+				</Flex>
 			)}
 
 			{entries.length > 0 && (
 				<Flex justify="end">
 					<div className="text-right">
 						<Label>Total Amount</Label>
-						<H2>${totalAmount.toFixed(2)}</H2>
+						<H2>${(totalAmount / 100).toFixed(2)}</H2>
 					</div>
 				</Flex>
 			)}

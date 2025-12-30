@@ -11,19 +11,17 @@ export const PayVoidButtons = ({
 	timesheet: TimesheetDetails;
 }) => {
 	const queryClient = useQueryClient();
+	const invoiceId = timesheet?.invoiceId;
 	const { data: invoiceData } = useQuery({
-		queryKey: ["invoice", timesheet?.invoiceId],
+		queryKey: ["invoice", invoiceId],
 		queryFn: async () => {
-			if (!timesheet?.invoiceId) {
-				return null;
-			}
-			return await getInvoice(timesheet.invoiceId);
+			if (!invoiceId) return null;
+			return await getInvoice(invoiceId);
 		},
-		// TODO: re-enable when needed
-		// enabled: !!timesheet?.invoiceId,
+		enabled: !!invoiceId,
 	});
 	// TODO: whenever an invoice is paid, add to transaction history
-	const { mutate: markAsPaid } = useMutation({
+	const { mutateAsync: markAsPaid, isPending: isMarkingAsPaid } = useMutation({
 		mutationFn: async (invoiceId: string | undefined) => {
 			if (invoiceId) {
 				await markInvoiceAsPaid(invoiceId);
@@ -31,11 +29,11 @@ export const PayVoidButtons = ({
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: ["invoice", timesheet?.invoiceId],
+				queryKey: ["invoice", invoiceId],
 			});
 		},
 	});
-	const { mutate: voidInv } = useMutation({
+	const { mutateAsync: voidInv, isPending: isVoiding } = useMutation({
 		mutationFn: async (invoiceId: string | undefined) => {
 			if (invoiceId) {
 				await voidInvoice(invoiceId);
@@ -43,10 +41,26 @@ export const PayVoidButtons = ({
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: ["invoice", timesheet?.invoiceId],
+				queryKey: ["invoice", invoiceId],
 			});
 		},
 	});
+
+	const isDisabled = Boolean(
+		invoiceData?.disabled || isMarkingAsPaid || isVoiding,
+	);
+	const payLabel =
+		invoiceData?.status === "paid"
+			? "Already Paid"
+			: invoiceData?.disabled || isMarkingAsPaid
+				? "Disabled"
+				: "Mark as Paid";
+	const voidLabel =
+		invoiceData?.status === "void"
+			? "Already Voided"
+			: invoiceData?.disabled || isVoiding
+				? "Void Disabled"
+				: "Void Invoice";
 
 	return (
 		<>
@@ -62,7 +76,7 @@ export const PayVoidButtons = ({
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						Download PDF
+						Open PDF
 					</a>
 				</P>
 			)}
@@ -70,27 +84,19 @@ export const PayVoidButtons = ({
 			<Flex gap={8}>
 				<Button
 					onClick={async () => {
-						if (timesheet?.invoiceId) await markAsPaid(timesheet?.invoiceId);
+						if (invoiceId) await markAsPaid(invoiceId);
 					}}
-					disabled={invoiceData?.disabled ?? false}
+					disabled={isDisabled}
 				>
-					{invoiceData?.status === "paid"
-						? "Already Paid"
-						: invoiceData?.disabled
-							? "Disabled"
-							: "Mark as Paid"}
+					{payLabel}
 				</Button>
 				<Button
 					onClick={async () => {
-						if (timesheet?.invoiceId) await voidInv(timesheet?.invoiceId);
+						if (invoiceId) await voidInv(invoiceId);
 					}}
-					disabled={invoiceData?.disabled ?? false}
+					disabled={isDisabled}
 				>
-					{invoiceData?.status === "void"
-						? "Already Voided"
-						: invoiceData?.disabled
-							? "Void Disabled"
-							: "Void Invoice"}
+					{voidLabel}
 				</Button>
 			</Flex>
 		</>

@@ -51,7 +51,9 @@ export const TimesheetModal = () => {
 						<P>Description: {timesheet?.description}</P>
 					) : null}
 					{timesheet?.projectRate && (
-						<P>Project Rate: ${timesheet.projectRate}/hour</P>
+						<P>
+							Project Rate: ${(timesheet.projectRate / 100).toFixed(2)}/hour
+						</P>
 					)}
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}

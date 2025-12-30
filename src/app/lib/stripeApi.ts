@@ -6,7 +6,10 @@ import type { StripeCustomerMinimal, StripeInvoiceMinimal } from "./types";
 
 let stripeClient: Stripe | null = null;
 
-async function getStripeClient(): Promise<Stripe | null> {
+const CURRENCY = "usd";
+const DAYS_UNTIL_DUE = 30;
+
+async function getStripeClient(): Promise<Stripe> {
 	if (stripeClient) return stripeClient;
 
 	const { getStripeSecretKey } = await import("./stronghold");
@@ -16,6 +19,20 @@ async function getStripeClient(): Promise<Stripe | null> {
 
 	stripeClient = new Stripe(key);
 	return stripeClient;
+}
+
+function toMinimalInvoice(invoice: Stripe.Invoice): StripeInvoiceMinimal {
+	const status = invoice.status ?? null;
+	return {
+		id: invoice.id,
+		status,
+		disabled: ["paid", "void"].includes(status ?? ""),
+		pdf: invoice.invoice_pdf,
+	};
+}
+
+function formatUsd(cents: number): string {
+	return `$${(cents / 100).toFixed(2)}`;
 }
 
 export const generateInvoice = async (formData: FormData): Promise<void> => {
@@ -28,7 +45,6 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 
 		if (!ts) throw new Error("Timesheet not found");
 		if (!ts.active) throw new Error("Timesheet already closed");
-		if (!stripe) throw new Error("Stripe client not initialized");
 		if (!explicitCustomerId)
 			throw new Error("Customer ID missing for invoice generation");
 
@@ -39,9 +55,9 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 			projectRate,
 		} = ts;
 
-		let taskLog = "";
+		const lines: string[] = [];
 		let totalHours = 0;
-		let totalAmount = 0;
+		let totalCents = 0;
 
 		for (const entry of entries) {
 			const {
@@ -49,29 +65,34 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 				minutes: entryMinutes,
 				date: entryDate,
 			} = entry;
-
-			const amount = projectRate ? (entryMinutes / 60) * projectRate : 0;
-			taskLog += `Date: ${entryDate} | Hours: ${entryMinutes / 60} | Amount: $${amount.toFixed(2)} | Description: ${entryDescription}\n`;
-
+			const amountCents = projectRate
+				? Math.round((entryMinutes * projectRate) / 60)
+				: 0;
+			lines.push(
+				`Date: ${entryDate} | Hours: ${entryMinutes / 60} | Amount: ${formatUsd(amountCents)} | Description: ${entryDescription}`,
+			);
 			totalHours += entryMinutes / 60;
-			totalAmount += amount;
+			totalCents += amountCents;
 		}
+
+		const taskLog =
+			lines.length > 0 ? `Task log:\n${lines.join("\n")}` : undefined;
 
 		const invoice = await stripe.invoices.create({
 			customer: explicitCustomerId as string,
 			collection_method: "send_invoice",
-			days_until_due: 30,
-			currency: "usd",
-			description: `Rate: $${projectRate} per hour | Total hours: ${totalHours}\n${timesheetDescription ? timesheetDescription : ""}`,
-			footer: taskLog.length > 0 ? `Task log:\n${taskLog}` : undefined,
+			days_until_due: DAYS_UNTIL_DUE,
+			currency: CURRENCY,
+			description: `Rate: ${formatUsd(projectRate ?? 0)} per hour | Total hours: ${totalHours}\n${timesheetDescription ? timesheetDescription : ""}`,
+			footer: taskLog,
 		});
 
-		if (totalAmount > 0) {
+		if (totalCents > 0) {
 			await stripe.invoiceItems.create({
 				customer: explicitCustomerId as string,
 				invoice: invoice.id,
-				currency: "usd",
-				amount: Math.round(totalAmount * 100),
+				currency: CURRENCY,
+				amount: totalCents,
 				description: `${String(timesheetName)} — ${totalHours} hours`,
 			});
 		}
@@ -94,49 +115,27 @@ export async function getInvoice(
 	invoiceId: string,
 ): Promise<StripeInvoiceMinimal> {
 	const stripe = await getStripeClient();
-
-	if (!stripe) throw new Error("Stripe client not initialized");
-
 	const invoice = await stripe.invoices.retrieve(invoiceId);
-
-	return {
-		id: invoice.id,
-		status: invoice.status ?? null,
-		disabled: ["paid", "void"].includes(invoice.status ?? "") ?? false,
-		pdf: invoice.invoice_pdf,
-	};
+	return toMinimalInvoice(invoice);
 }
 
 export async function markInvoiceAsPaid(
 	invoiceId: string,
 ): Promise<StripeInvoiceMinimal> {
 	const stripe = await getStripeClient();
-
-	if (!stripe) throw new Error("Stripe client not initialized");
-
 	const invoice = await stripe.invoices.pay(invoiceId, {
 		paid_out_of_band: true,
 	});
 
-	return {
-		id: invoice.id,
-		status: invoice.status ?? null,
-	};
+	return toMinimalInvoice(invoice);
 }
 
 export async function voidInvoice(
 	invoiceId: string,
 ): Promise<{ invoice: StripeInvoiceMinimal }> {
 	const stripe = await getStripeClient();
-
-	if (!stripe) throw new Error("Stripe client not initialized");
-
 	const invoice = await stripe.invoices.voidInvoice(invoiceId);
-	const minimal: StripeInvoiceMinimal = {
-		id: invoice.id,
-		status: invoice.status ?? null,
-	};
-	return { invoice: minimal };
+	return { invoice: toMinimalInvoice(invoice) };
 }
 
 export async function getAllCustomers(
@@ -149,11 +148,10 @@ export async function getAllCustomers(
 
 	let startingAfter: string | undefined;
 
-	if (!stripe) throw new Error("Stripe client not initialized");
-
 	for (let page = 0; page < 50; page++) {
 		const remaining =
 			typeof max === "number" ? Math.max(0, max - customers.length) : 100;
+		if (typeof max === "number" && remaining <= 0) break;
 		const pageLimit = Math.min(100, remaining || 100);
 
 		const list = await stripe.customers.list({
@@ -161,19 +159,11 @@ export async function getAllCustomers(
 			starting_after: startingAfter,
 		});
 
-		let pageItems: StripeCustomerMinimal[] = (list.data || []).map((c) => ({
+		const pageItems: StripeCustomerMinimal[] = (list.data || []).map((c) => ({
 			id: c.id,
 			name: c.name ?? null,
 			email: c.email ?? null,
 		}));
-
-		if (typeof max === "number") {
-			const remainingAfterMap = max - customers.length;
-			if (remainingAfterMap <= 0) break;
-			if (pageItems.length > remainingAfterMap) {
-				pageItems = pageItems.slice(0, remainingAfterMap);
-			}
-		}
 
 		customers.push(...pageItems);
 
