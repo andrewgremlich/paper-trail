@@ -10,7 +10,7 @@ export const Main = React.forwardRef<HTMLElement, MainProps>(
 	({ className, children, ...rest }, ref) => (
 		<main
 			ref={ref as React.Ref<HTMLElement>}
-			className={cx("flex-1 px-4 md:px-8 pb-8", className)}
+			className={cx("px-4 md:px-8 pb-8", className)}
 			{...rest}
 		>
 			{children}

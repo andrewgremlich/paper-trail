@@ -12,7 +12,8 @@ const buttonVariants = cva(
 				secondary:
 					"bg-gray-600 text-primary-foreground border hover:border-border",
 				outline: "bg-transparent",
-				ghost: "bg-transparent border-transparent",
+				ghost:
+					"bg-transparent border-transparent text-primary-foreground hover:bg-muted",
 				liquidGlass:
 					"relative bg-white/10 text-primary-foreground border border-white/20 backdrop-blur-md shadow-md hover:bg-white/20 hover:border-white/30",
 			},
