@@ -6,7 +6,7 @@ import { H1, Main } from "./components/HtmlElements";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { Table, TBody, TD, TR } from "./components/Table";
-import { getAllTransactions, upsertTransaction } from "./lib/db";
+import { getAllTransactions, upsertTransaction, updateTransaction } from "./lib/db";
 import { getAllProjects } from "./lib/db/projects";
 import { openAttachment, saveAttachment } from "./lib/fileStorage";
 import { formatDate } from "./lib/utils";
@@ -14,6 +14,7 @@ import { formatDate } from "./lib/utils";
 export const Transactions = () => {
 	const queryClient = useQueryClient();
 	const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+	const [editingId, setEditingId] = useState<number | null>(null);
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
 		queryFn: getAllProjects,
@@ -54,6 +55,16 @@ export const Transactions = () => {
 					queryKey: ["transactions"],
 				});
 			}
+		},
+	});
+
+	const { mutateAsync: saveEdit } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			await updateTransaction(formData);
+			await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+		},
+		onSuccess: async () => {
+			setEditingId(null);
 		},
 	});
 
@@ -137,41 +148,137 @@ export const Transactions = () => {
 							const path = tx.filePath ?? "";
 							return (
 								<TR key={tx.id}>
-									<TD>{formatDate(tx.date)}</TD>
-									<TD>{tx.description}</TD>
-									<TD>
-										{
-											projects?.find((project) => project.id === tx.projectId)
-												?.name
-										}
-									</TD>
-									<TD>${tx.amount.toFixed(2)}</TD>
-									<TD>
-										{path.length > 0 ? (
-											<button
-												type="button"
-												className="text-blue-500 underline"
-												onClick={async () => {
-													await openAttachment(path);
-												}}
-											>
-												View File
-											</button>
-										) : (
-											<span className="text-gray-500">No File</span>
-										)}
-									</TD>
-									<TD>
-										<button
-											type="button"
-											className="cursor-pointer hover:bg-blue-500 p-2 rounded"
-											onClick={() => {
-												console.log("edit this transaction entry");
-											}}
-										>
-											<Edit size={24} />
-										</button>
-									</TD>
+									{editingId === tx.id ? (
+										<>
+											<TD>
+												<input
+													name="date"
+													type="date"
+													defaultValue={tx.date}
+													className="border px-2 py-1 rounded-md"
+													form={`tx-edit-form-${tx.id}`}
+													required
+												/>
+											</TD>
+											<TD>
+												<input
+													name="description"
+													type="text"
+													defaultValue={tx.description}
+													className="border px-2 py-1 rounded-md w-full"
+													form={`tx-edit-form-${tx.id}`}
+													required
+												/>
+											</TD>
+											<TD>
+												<Select
+													name="projectId"
+													value={tx.projectId}
+													options={
+														projects?.map((project) => ({
+															value: project.id,
+															label: project.name,
+														})) ?? []
+													}
+													containerClassName=""
+													className="border rounded p-2"
+													form={`tx-edit-form-${tx.id}`}
+												/>
+											</TD>
+											<TD>
+												<input
+													name="amount"
+													type="number"
+													step="0.01"
+													min={0}
+													defaultValue={tx.amount}
+													className="border px-2 py-1 rounded-md w-28"
+													form={`tx-edit-form-${tx.id}`}
+													required
+												/>
+											</TD>
+											<TD>
+												{path.length > 0 ? (
+													<button
+														type="button"
+														className="text-blue-500 underline"
+														onClick={async () => {
+															await openAttachment(path);
+														}}
+													>
+														View File
+													</button>
+												) : (
+													<span className="text-gray-500">No File</span>
+												)}
+											</TD>
+											<TD>
+												<form
+													id={`tx-edit-form-${tx.id}`}
+													onSubmit={async (evt) => {
+														evt.preventDefault();
+														const fd = new FormData(evt.currentTarget);
+														fd.set("id", String(tx.id));
+														try {
+															await saveEdit(fd);
+														} catch (e) {
+															console.error(e);
+														}
+													}}
+												>
+													<button
+														type="submit"
+														className="cursor-pointer bg-blue-500 text-white px-3 py-2 rounded"
+													>
+														Save
+													</button>
+													<button
+														type="button"
+														className="cursor-pointer ml-2 px-3 py-2 rounded border"
+														onClick={() => setEditingId(null)}
+													>
+														Cancel
+													</button>
+												</form>
+											</TD>
+										</>
+									) : (
+										<>
+											<TD>{formatDate(tx.date)}</TD>
+											<TD>{tx.description}</TD>
+											<TD>
+												{
+													projects?.find((project) => project.id === tx.projectId)
+														?.name
+												}
+											</TD>
+											<TD>${tx.amount.toFixed(2)}</TD>
+											<TD>
+												{path.length > 0 ? (
+													<button
+														type="button"
+														className="text-blue-500 underline"
+														onClick={async () => {
+															await openAttachment(path);
+														}}
+													>
+														View File
+													</button>
+												) : (
+													<span className="text-gray-500">No File</span>
+												)}
+											</TD>
+											<TD>
+												<button
+													type="button"
+													className="cursor-pointer hover:bg-blue-500 p-2 rounded"
+													onClick={() => setEditingId(tx.id)}
+												>
+													<Edit size={24} />
+												</button>
+											</TD>
+										</>
+									)}
 								</TR>
 							);
 						})}

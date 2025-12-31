@@ -1,5 +1,6 @@
 import { getDb } from "./client";
 import type { SubmitTransaction, Transaction } from "./types";
+import { normalizeDateInput } from "./utils";
 
 // Create or update a transaction by id
 export const upsertTransaction = async (
@@ -19,6 +20,24 @@ export const upsertTransaction = async (
 			 filePath = excluded.filePath,
 			 updatedAt = CAST(strftime('%s','now') AS INTEGER)`,
 		[tx.projectId, tx.date, tx.description, amountInCents, tx.filePath],
+	);
+};
+
+export const updateTransaction = async (formData: FormData): Promise<void> => {
+	const db = await getDb();
+	const id = Number(formData.get("id") || 0);
+	const projectId = Number(formData.get("projectId") || 0);
+	const rawDate = String(formData.get("date") || "");
+	const date = normalizeDateInput(rawDate);
+	const description = String(formData.get("description") || "").trim();
+	const amountDollars = Number(formData.get("amount") || 0);
+	const amountInCents = Math.round(Math.max(0, amountDollars) * 100);
+
+	await db.execute(
+		`UPDATE transactions
+		 SET projectId = $2, date = $3, description = $4, amount = $5
+		 WHERE id = $1`,
+		[id, projectId, date, description, amountInCents],
 	);
 };
 
