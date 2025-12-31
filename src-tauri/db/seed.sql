@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS transactions (
       AND date(date) IS NOT NULL
     ),
   description TEXT NOT NULL,
-  amount INTEGER NOT NULL CHECK (amount >= 0),
+  amount INTEGER NOT NULL,
   filePath TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),

@@ -6,11 +6,11 @@ import { normalizeDateInput } from "./utils";
 export const upsertTransaction = async (
 	tx: SubmitTransaction,
 ): Promise<void> => {
-	const db = await getDb();
-	// Store amounts as integer cents to avoid floating point errors
-	const amountInCents = Math.round(Math.max(0, tx.amount) * 100);
-	await db.execute(
-		`INSERT INTO transactions (projectId, date, description, amount, filePath)
+	try {
+		const db = await getDb();
+		const amountInCents = Math.round(tx.amount * 100);
+		await db.execute(
+			`INSERT INTO transactions (projectId, date, description, amount, filePath)
 		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT(id) DO UPDATE SET
 			 projectId = excluded.projectId,
@@ -19,8 +19,12 @@ export const upsertTransaction = async (
 			 amount = excluded.amount,
 			 filePath = excluded.filePath,
 			 updatedAt = CAST(strftime('%s','now') AS INTEGER)`,
-		[tx.projectId, tx.date, tx.description, amountInCents, tx.filePath],
-	);
+			[tx.projectId, tx.date, tx.description, amountInCents, tx.filePath],
+		);
+	} catch (err) {
+		console.error(err);
+		throw err;
+	}
 };
 
 export const updateTransaction = async (formData: FormData): Promise<void> => {
@@ -31,7 +35,7 @@ export const updateTransaction = async (formData: FormData): Promise<void> => {
 	const date = normalizeDateInput(rawDate);
 	const description = String(formData.get("description") || "").trim();
 	const amountDollars = Number(formData.get("amount") || 0);
-	const amountInCents = Math.round(Math.max(0, amountDollars) * 100);
+	const amountInCents = Math.round(amountDollars * 100);
 
 	await db.execute(
 		`UPDATE transactions

@@ -6,7 +6,7 @@ import { H1, Main } from "./components/HtmlElements";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { Table, TBody, TD, TR } from "./components/Table";
-import { getAllTransactions, upsertTransaction, updateTransaction } from "./lib/db";
+import { getAllTransactions, upsertTransaction, updateTransaction, deleteTransaction } from "./lib/db";
 import { getAllProjects } from "./lib/db/projects";
 import { openAttachment, saveAttachment } from "./lib/fileStorage";
 import { formatDate } from "./lib/utils";
@@ -65,6 +65,14 @@ export const Transactions = () => {
 		},
 		onSuccess: async () => {
 			setEditingId(null);
+		},
+	});
+
+	const { mutateAsync: removeTx } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			const id = String(formData.get("id") || "");
+			await deleteTransaction(id);
+			await queryClient.invalidateQueries({ queryKey: ["transactions"] });
 		},
 	});
 
@@ -190,7 +198,6 @@ export const Transactions = () => {
 													name="amount"
 													type="number"
 													step="0.01"
-													min={0}
 													defaultValue={tx.amount}
 													className="border px-2 py-1 rounded-md w-28"
 													form={`tx-edit-form-${tx.id}`}
@@ -269,9 +276,28 @@ export const Transactions = () => {
 												)}
 											</TD>
 											<TD>
+												<form
+													onSubmit={async (evt) => {
+														evt.preventDefault();
+														const fd = new FormData(evt.currentTarget);
+														try {
+															await removeTx(fd);
+														} catch (e) {
+															console.error(e);
+														}
+													}}
+												>
+													<input type="hidden" name="id" value={tx.id} />
+													<button
+														type="submit"
+														className="cursor-pointer hover:bg-red-500 text-red-600 hover:text-white p-2 rounded border border-red-400"
+													>
+														Delete
+													</button>
+												</form>
 												<button
 													type="button"
-													className="cursor-pointer hover:bg-blue-500 p-2 rounded"
+													className="cursor-pointer hover:bg-blue-500 p-2 rounded ml-2"
 													onClick={() => setEditingId(tx.id)}
 												>
 													<Edit size={24} />
