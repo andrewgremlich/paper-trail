@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { TrashIcon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
+import { useState } from "react";
 import { usePaperTrailStore } from "@/lib/store";
-import { deleteTimesheetEntry, type TimesheetEntry } from "../lib/db";
+import { deleteTimesheetEntry, updateTimesheetEntry, type TimesheetEntry } from "../lib/db";
 import { formatDate } from "../lib/utils";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
@@ -11,10 +12,13 @@ import { Table, TBody, TD, TH, THead, TR } from "./Table";
 export const TimesheetTable = ({
 	entries,
 	active,
+	projectRate,
 }: {
 	entries: TimesheetEntry[];
 	active: boolean;
+	projectRate: number;
 }) => {
+	const [editingId, setEditingId] = useState<number | null>(null);
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
 	const { activeTimesheetId } = usePaperTrailStore();
 	const queryClient = useQueryClient();
@@ -24,6 +28,18 @@ export const TimesheetTable = ({
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
+		},
+	});
+
+	const { mutateAsync: saveEdit } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			await updateTimesheetEntry(formData);
+			await queryClient.invalidateQueries({
+				queryKey: ["timesheet", activeTimesheetId],
+			});
+		},
+		onSuccess: async () => {
+			setEditingId(null);
 		},
 	});
 
@@ -43,39 +59,106 @@ export const TimesheetTable = ({
 					<TBody>
 						{entries.map((entry) => (
 							<TR key={entry.id}>
-								<TD>{formatDate(entry.date)}</TD>
-								<TD>{entry.minutes / 60}</TD>
-								<TD>{entry.description}</TD>
-								<TD>${(entry.amount / 100).toFixed(2)}</TD>
-								<Flex as="td" justify="end">
-									<form
-										onSubmit={(evt) => {
-											evt.preventDefault();
-											const formData = new FormData(evt.currentTarget);
-											deleteEntry(formData);
-										}}
-									>
-										<input type="hidden" name="id" value={entry.id} />
-										<Button
-											disabled={!active}
-											variant="ghost"
-											size="sm"
-											type="submit"
-										>
-											<TrashIcon color="black" className="h-4 w-4" />
-										</Button>
-									</form>
-									{/* <Button
-										disabled={!active}
-										variant="ghost"
-										size="sm"
-										onClick={() => {
-											console.log("Edit entry", entry.id);
-										}}
-									>
-										<PencilIcon color="black" className="h-4 w-4" />
-									</Button> */}
-								</Flex>
+								{editingId === entry.id ? (
+									<>
+										<TD>
+											<input
+												name="date"
+												type="date"
+												defaultValue={entry.date}
+												className="border px-2 py-1 rounded-md"
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>
+											<input
+												name="hours"
+												type="number"
+												step="0.25"
+												defaultValue={entry.minutes / 60}
+												className="border px-2 py-1 rounded-md w-24"
+												min={0}
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>
+											<input
+												name="description"
+												type="text"
+												defaultValue={entry.description}
+												className="border px-2 py-1 rounded-md w-full"
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>${(entry.amount / 100).toFixed(2)}</TD>
+										<Flex as="td" justify="end" gap={8}>
+											<form
+												id={`edit-form-${entry.id}`}
+												onSubmit={async (evt) => {
+													evt.preventDefault();
+													const formData = new FormData(evt.currentTarget);
+													try {
+														await saveEdit(formData);
+													} catch (e) {
+														console.error(e);
+													}
+												}}
+											>
+												<input type="hidden" name="id" value={entry.id} />
+												<input type="hidden" name="projectRate" value={projectRate} />
+												<Button type="submit" size="sm" variant="secondary" disabled={!active}>
+													Save
+												</Button>
+											</form>
+											<Button
+												type="button"
+												size="sm"
+												variant="ghost"
+												onClick={() => setEditingId(null)}
+											>
+												Cancel
+											</Button>
+										</Flex>
+									</>
+								) : (
+									<>
+										<TD>{formatDate(entry.date)}</TD>
+										<TD>{entry.minutes / 60}</TD>
+										<TD>{entry.description}</TD>
+										<TD>${(entry.amount / 100).toFixed(2)}</TD>
+										<Flex as="td" justify="end" gap={8}>
+											<Button
+												type="button"
+												disabled={!active}
+												variant="ghost"
+												size="sm"
+												onClick={() => setEditingId(entry.id)}
+											>
+												<PencilIcon color="black" className="h-4 w-4" />
+											</Button>
+											<form
+												onSubmit={(evt) => {
+													evt.preventDefault();
+													const formData = new FormData(evt.currentTarget);
+													deleteEntry(formData);
+												}}
+											>
+												<input type="hidden" name="id" value={entry.id} />
+												<Button
+													disabled={!active}
+													variant="ghost"
+													size="sm"
+													type="submit"
+												>
+													<TrashIcon color="black" className="h-4 w-4" />
+												</Button>
+											</form>
+										</Flex>
+									</>
+								)}
 							</TR>
 						))}
 					</TBody>

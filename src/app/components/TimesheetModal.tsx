@@ -93,6 +93,7 @@ export const TimesheetModal = () => {
 					<TimesheetTable
 						entries={timesheet.entries || []}
 						active={timesheet.active}
+						projectRate={timesheet.projectRate ?? 25}
 					/>
 				</>
 			)}

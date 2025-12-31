@@ -16,7 +16,7 @@ export const CreateTimesheetRecord = ({
 	active: boolean;
 }) => {
 	const queryClient = useQueryClient();
-	const { mutate } = useMutation({
+	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			await createTimesheetEntry(formData);
 			await queryClient.invalidateQueries({
@@ -27,11 +27,15 @@ export const CreateTimesheetRecord = ({
 
 	return (
 		<form
-			onSubmit={(evt) => {
+			onSubmit={async (evt) => {
 				evt.preventDefault();
 				const formData = new FormData(evt.currentTarget);
-				mutate(formData);
-				evt.currentTarget.reset();
+				try {
+					await mutateAsync(formData);
+					evt.currentTarget.reset();
+				} catch (e) {
+					console.error(e);
+				}
 			}}
 		>
 			<input type="hidden" name="timesheetId" value={timesheetId} />
