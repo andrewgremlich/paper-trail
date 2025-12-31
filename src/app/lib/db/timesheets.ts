@@ -109,3 +109,40 @@ export const deleteTimesheet = async (formData: FormData): Promise<void> => {
 	const id = String(formData.get("id") || "");
 	await db.execute(`DELETE FROM timesheets WHERE id = $1`, [id]);
 };
+
+export const updateTimesheet = async ({
+	id,
+	name,
+	description,
+	active,
+}: Pick<
+	Timesheet,
+	"id" | "name" | "description" | "active"
+>): Promise<Timesheet | null> => {
+	const db = await getDb();
+
+	try {
+		if (id) {
+			await db.execute(
+				`UPDATE timesheets
+				 SET name = $1, description = $2, active = $3, updatedAt = CURRENT_TIMESTAMP
+				 WHERE id = $4`,
+				[name, description, active ? 1 : 0, id],
+			);
+			const updated = (
+				await db.select<
+					Array<Omit<Timesheet, "active"> & { active: number | boolean }>
+				>(
+					`SELECT id, projectId, invoiceId, name, description, active, createdAt, updatedAt
+					 FROM timesheets WHERE id = $1`,
+					[id],
+				)
+			)[0];
+			return { ...updated, active: !!updated.active } as Timesheet;
+		}
+		throw new Error("Timesheet ID is required for update");
+	} catch (error) {
+		console.error("Error in updateTimesheet:", error);
+		return null;
+	}
+};

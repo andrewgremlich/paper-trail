@@ -1,0 +1,60 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormEvent } from "react";
+import { updateTimesheet } from "../lib/db";
+import type { TimesheetDetails } from "../lib/db/types";
+import { Button } from "./Button";
+import { Grid } from "./Grid";
+import { Input } from "./Input";
+
+type TimesheetEditFormProps = {
+	timesheet: TimesheetDetails;
+	onSaved?: () => void;
+};
+
+export const TimesheetEditForm = ({
+	timesheet,
+	onSaved,
+}: TimesheetEditFormProps) => {
+	const queryClient = useQueryClient();
+
+	const mutation = useMutation({
+		mutationFn: async (formData: FormData) => {
+			return await updateTimesheet({
+				id: timesheet.id,
+				name: String(formData.get("name") || ""),
+				description: String(formData.get("description") || ""),
+				active: timesheet.active,
+			});
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["timesheet", timesheet.id],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
+			onSaved?.();
+		},
+	});
+
+	return (
+		<Grid
+			as="form"
+			cols={2}
+			gap={6}
+			onSubmit={async (evt: FormEvent<HTMLFormElement>) => {
+				evt.preventDefault();
+				const formData = new FormData(evt.currentTarget);
+				await mutation.mutateAsync(formData);
+			}}
+		>
+			<Input name="name" label="Name" defaultValue={timesheet?.name || ""} />
+			<Input
+				name="description"
+				label="Description"
+				defaultValue={timesheet?.description || ""}
+			/>
+			<Button type="submit" className="mt-4">
+				Save Changes
+			</Button>
+		</Grid>
+	);
+};

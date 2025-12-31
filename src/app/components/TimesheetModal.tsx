@@ -1,16 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
+import { EditToggleButton } from "./EditToggleButton";
 import { Flex } from "./Flex";
 import { GenerateInvoice } from "./GenerateInvoice";
+import { Grid } from "./Grid";
 import { H2, P } from "./HtmlElements";
 import { PayVoidButtons } from "./PayVoidButtons";
+import { TimesheetEditForm } from "./TimesheetEditForm";
 import { TimesheetTable } from "./TimesheetTable";
 
 export const TimesheetModal = () => {
+	const [isEditing, setIsEditing] = useState(false);
 	const { timesheetModalActive, toggleTimesheetModal, activeTimesheetId } =
 		usePaperTrailStore();
 	const { data: timesheet } = useQuery({
@@ -35,18 +40,36 @@ export const TimesheetModal = () => {
 					{timesheet?.name ?? "Timesheet Invoice Generator"}
 					{!timesheet?.active && " (Closed)"}
 				</H2>
-				{timesheet?.id && (
-					<DeleteItem
-						deleteItemId={timesheet.id}
-						actionFn={async (formData: FormData) =>
-							await deleteTimesheet(formData)
-						}
-						successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
+				<Flex gap={2} items="center">
+					<EditToggleButton
+						enabled={!!timesheet?.id}
+						isEditing={isEditing}
+						ariaLabel="Edit timesheet"
+						onToggle={async () => {
+							setIsEditing((prev) => !prev);
+						}}
 					/>
-				)}
+					{timesheet?.id && (
+						<DeleteItem
+							deleteItemId={timesheet.id}
+							actionFn={async (formData: FormData) =>
+								await deleteTimesheet(formData)
+							}
+							successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
+						/>
+					)}
+				</Flex>
 			</Flex>
-			<Flex justify="between" className="mb-6">
-				<div>
+			{isEditing && timesheet && (
+				<TimesheetEditForm
+					timesheet={timesheet}
+					onSaved={() => setIsEditing(false)}
+				/>
+			)}
+			{!isEditing && (
+				<Grid rows={4} flow="col" gap={6} className="mb-6">
+					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
+					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}
 					{timesheet?.description ? (
 						<P>Description: {timesheet?.description}</P>
 					) : null}
@@ -58,12 +81,8 @@ export const TimesheetModal = () => {
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
-				</div>
-				<div>
-					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
-					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}
-				</div>
-			</Flex>
+				</Grid>
+			)}
 			{timesheet && (
 				<>
 					<CreateTimesheetRecord

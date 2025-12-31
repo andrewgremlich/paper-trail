@@ -1,26 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon } from "lucide-react";
-import { type FormEvent, useState } from "react";
-import {
-	deleteProject,
-	getProjectById,
-	type Project,
-	updateProject,
-} from "../lib/db";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { deleteProject, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
-import { Button } from "./Button";
 import { CardPreview } from "./CardPreview";
 import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
+import { EditToggleButton } from "./EditToggleButton";
 import { Flex } from "./Flex";
 import { GenerateTimesheet } from "./GenerateTimesheet";
 import { Grid } from "./Grid";
 import { H2, P } from "./HtmlElements";
-import { Input } from "./Input";
+import { ProjectEditForm } from "./ProjectEditForm";
 
 export const ProjectModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
-	const queryClient = useQueryClient();
 	const {
 		projectModalActive,
 		toggleProjectModal,
@@ -37,29 +30,7 @@ export const ProjectModal = () => {
 		},
 		enabled: !!activeProjectId,
 	});
-	const updateProjectMutation = useMutation({
-		mutationFn: async (formData: FormData) => {
-			if (!project || !project.id) return null;
-
-			const updatedProject: Project = {
-				...project,
-				name: String(formData.get("name") || ""),
-				description: String(formData.get("description") || ""),
-				rate_in_cents: Number(formData.get("rate_in_cents") || 0),
-				active: true,
-			};
-
-			return await updateProject(updatedProject);
-		},
-		onSuccess: async () => {
-			// Invalidate and refetch
-			await queryClient.invalidateQueries({
-				queryKey: ["project", activeProjectId],
-			});
-			await queryClient.invalidateQueries({ queryKey: ["projects"] });
-			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
-		},
-	});
+	// editing logic moved to ProjectEditForm
 
 	return (
 		<Dialog
@@ -70,20 +41,19 @@ export const ProjectModal = () => {
 		>
 			<Flex className="w-full" justify="between" items="start">
 				<H2>{project?.name}</H2>
+				{/* TODO: abstract editing so it's reusable */}
 				<Flex gap={2} items="center">
-					{project?.id && (
-						<Button
-							variant={isEditing ? "secondary" : "ghost"}
-							size="icon"
-							aria-label="Edit project"
-							onClick={() => {
+					<EditToggleButton
+						enabled={!!project?.id}
+						isEditing={isEditing}
+						ariaLabel="Edit project"
+						onToggle={() => {
+							if (project?.id) {
 								console.log("Edit project", project.id);
-								setIsEditing(!isEditing);
-							}}
-						>
-							<PencilIcon className="w-6 h-6" />
-						</Button>
-					)}
+							}
+							setIsEditing(!isEditing);
+						}}
+					/>
 					{project?.id && (
 						<DeleteItem
 							deleteItemId={project.id}
@@ -95,34 +65,11 @@ export const ProjectModal = () => {
 					)}
 				</Flex>
 			</Flex>
-			{isEditing && (
-				<Grid
-					as="form"
-					cols={2}
-					gap={6}
-					onSubmit={async (evt: FormEvent<HTMLFormElement>) => {
-						evt.preventDefault();
-						const formData = new FormData(evt.currentTarget);
-						await updateProjectMutation.mutateAsync(formData);
-						setIsEditing(false);
-					}}
-				>
-					<Input name="name" label="Name" defaultValue={project?.name || ""} />
-					<Input
-						name="description"
-						label="Description"
-						defaultValue={project?.description || ""}
-					/>
-					<Input
-						name="rate_in_cents"
-						label="Rate (USD/hr)"
-						type="number"
-						defaultValue={(project?.rate_in_cents ?? 0) / 100}
-					/>
-					<Button type="submit" className="mt-4">
-						Save Changes
-					</Button>
-				</Grid>
+			{isEditing && project && (
+				<ProjectEditForm
+					project={project}
+					onSaved={() => setIsEditing(false)}
+				/>
 			)}
 			{!isEditing && (
 				<Grid cols={2} gap={6}>

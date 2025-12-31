@@ -7,6 +7,10 @@ export type GridProps = HTMLAttributes<HTMLElement> & {
 	className?: string;
 	/** Number of columns (Tailwind mapped 1-12). */
 	cols?: ColCount;
+	/** Number of rows (Tailwind mapped 1-12). */
+	rows?: ColCount;
+	/** Grid auto-flow direction (Tailwind mapped). */
+	flow?: "row" | "col" | "row-dense" | "col-dense";
 	/** Gap between grid items (inline style, e.g., 8 or "1rem"). */
 	gap?: string | number;
 	/** Set inline grid instead of block grid. */
@@ -15,6 +19,8 @@ export type GridProps = HTMLAttributes<HTMLElement> & {
 	fullWidth?: boolean;
 	/** Optional CSS grid template columns via inline style. */
 	templateCols?: string;
+	/** Optional CSS grid template rows via inline style. */
+	templateRows?: string;
 	children: ReactNode;
 };
 
@@ -22,10 +28,13 @@ export function Grid({
 	as = "div",
 	className,
 	cols,
+	rows,
+	flow,
 	gap,
 	inline = false,
 	fullWidth = true,
 	templateCols,
+	templateRows,
 	children,
 	...rest
 }: GridProps) {
@@ -47,9 +56,33 @@ export function Grid({
 		12: "grid-cols-12",
 	};
 
+	const rowsClassMap: Record<ColCount, string> = {
+		1: "grid-rows-1",
+		2: "grid-rows-2",
+		3: "grid-rows-3",
+		4: "grid-rows-4",
+		5: "grid-rows-5",
+		6: "grid-rows-6",
+		7: "grid-rows-7",
+		8: "grid-rows-8",
+		9: "grid-rows-9",
+		10: "grid-rows-10",
+		11: "grid-rows-11",
+		12: "grid-rows-12",
+	};
+
+	const flowClassMap: Record<NonNullable<GridProps["flow"]>, string> = {
+		"row": "grid-flow-row",
+		"col": "grid-flow-col",
+		"row-dense": "grid-flow-row-dense",
+		"col-dense": "grid-flow-col-dense",
+	};
+
 	const classes = [
 		inline ? "inline-grid" : "grid",
 		cols ? colsClassMap[cols] : null,
+		rows ? rowsClassMap[rows] : null,
+		flow ? flowClassMap[flow] : null,
 		fullWidth ? "w-full" : null,
 		className,
 	]
@@ -64,6 +97,7 @@ export function Grid({
 			? { gap: typeof gap === "number" ? `${gap}px` : gap }
 			: {}),
 		...(templateCols ? { gridTemplateColumns: templateCols } : {}),
+		...(templateRows ? { gridTemplateRows: templateRows } : {}),
 	} as HTMLAttributes<HTMLElement>["style"];
 
 	return (
@@ -81,29 +115,38 @@ type GridHeaderProps = {
 	headers: string[];
 	className?: string;
 	cols?: ColCount;
+	rows?: ColCount;
+	flow?: GridProps["flow"];
 	gap?: string | number;
 	inline?: boolean;
 	fullWidth?: boolean;
 	templateCols?: string;
+	templateRows?: string;
 };
 
 export function GridHeader({
 	headers,
 	className,
 	cols,
+	rows,
+	flow,
 	gap,
 	inline,
 	fullWidth,
 	templateCols,
+	templateRows,
 }: GridHeaderProps) {
 	return (
 		<Grid
 			className={className}
 			cols={cols}
+			rows={rows}
+			flow={flow}
 			gap={gap}
 			inline={inline}
 			fullWidth={fullWidth}
 			templateCols={templateCols}
+			templateRows={templateRows}
 		>
 			{headers.map((h) => (
 				<div key={h} className="font-bold">
@@ -118,29 +161,38 @@ type GridRowProps = {
 	children: ReactNode;
 	className?: string;
 	cols?: ColCount;
+	rows?: ColCount;
+	flow?: GridProps["flow"];
 	gap?: string | number;
 	inline?: boolean;
 	fullWidth?: boolean;
 	templateCols?: string;
+	templateRows?: string;
 };
 
 export function GridRow({
 	children,
 	className,
 	cols,
+	rows,
+	flow,
 	gap,
 	inline,
 	fullWidth,
 	templateCols,
+	templateRows,
 }: GridRowProps) {
 	return (
 		<Grid
 			className={className}
 			cols={cols}
+			rows={rows}
+			flow={flow}
 			gap={gap}
 			inline={inline}
 			fullWidth={fullWidth}
 			templateCols={templateCols}
+			templateRows={templateRows}
 		>
 			{children}
 		</Grid>
