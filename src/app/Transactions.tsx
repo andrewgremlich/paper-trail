@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { Grid } from "./components/Grid";
 import { H1, Main } from "./components/HtmlElements";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
@@ -67,10 +66,8 @@ export const Transactions = () => {
 		<Main className="max-w-5xl">
 			<H1>Transactions</H1>
 
-			<Grid
-				as="form"
+			<form
 				className="pb-6"
-				colsClass="grid-cols-5"
 				onSubmit={(evt: FormEvent<HTMLFormElement>) => {
 					evt.preventDefault();
 					submitTransaction(new FormData(evt.currentTarget));
@@ -124,7 +121,7 @@ export const Transactions = () => {
 				<button type="submit" className="sr-only">
 					Submit
 				</button>
-			</Grid>
+			</form>
 
 			{!transactions || transactions.length === 0 ? (
 				<p>No transactions found.</p>

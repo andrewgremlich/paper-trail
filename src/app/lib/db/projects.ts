@@ -107,3 +107,45 @@ export const deleteProject = async (formData: FormData): Promise<void> => {
 		console.error(err);
 	}
 };
+
+export const updateProject = async ({
+	id,
+	name,
+	customerId,
+	rate_in_cents,
+	description,
+	active,
+}: Project): Promise<Project | null> => {
+	const db = await getDb();
+
+	let rate = rate_in_cents;
+
+	if (!rate) {
+		rate = 0;
+	}
+
+	try {
+		if (id) {
+			// Update existing project
+			await db.execute(
+				`UPDATE projects
+				SET name = $1, customerId = $2, rate_in_cents = $3, description = $4, active = $5, updatedAt = CURRENT_TIMESTAMP
+				WHERE id = $6`,
+				[name, customerId, rate * 100, description, active ? 1 : 0, id],
+			);
+			const updatedProject = (
+				await db.select<Project[]>(
+					`SELECT id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
+					FROM projects WHERE id = $1`,
+					[id],
+				)
+			)[0];
+			return { ...updatedProject, active: !!updatedProject.active };
+		} else {
+			throw new Error("Project ID is required for update");
+		}
+	} catch (err) {
+		console.error(err);
+		return null;
+	}
+};
