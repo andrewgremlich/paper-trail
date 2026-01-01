@@ -22,16 +22,18 @@ export const createTimesheetEntry = async ({
 	}
 };
 
-export const deleteTimesheetEntry = async (
-	id: number,
-): Promise<void> => {
+export const deleteTimesheetEntry = async (id: number): Promise<void> => {
 	const db = await getDb();
 	await db.execute(`DELETE FROM timesheet_entries WHERE id = $1`, [id]);
 };
 
-export const updateTimesheetEntry = async (
-	{ id, date, minutes, description, amount: amountInCents }: UpdateTimesheetEntry,
-): Promise<void> => {
+export const updateTimesheetEntry = async ({
+	id,
+	date,
+	minutes,
+	description,
+	amount: amountInCents,
+}: UpdateTimesheetEntry): Promise<void> => {
 	try {
 		const db = await getDb();
 

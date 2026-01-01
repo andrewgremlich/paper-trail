@@ -27,7 +27,10 @@ export type Timesheet = {
 	updatedAt: number;
 };
 
-export type CreateTimesheet = Pick<Timesheet, 'name' | 'projectId' | 'description'>
+export type CreateTimesheet = Pick<
+	Timesheet,
+	"name" | "projectId" | "description"
+>;
 
 export type MinimalTimesheet = Pick<
 	Timesheet,
@@ -58,7 +61,7 @@ export type CreateTimesheetEntry = Pick<
 export type UpdateTimesheetEntry = Pick<
 	TimesheetEntry,
 	"id" | "date" | "minutes" | "description" | "amount"
->
+>;
 
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];

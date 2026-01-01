@@ -83,7 +83,11 @@ export const generateProject = async ({
 			active: !!createdProjectRow.active,
 		};
 
-		const createdTimesheet = await generateTimesheet({ projectId: createdProject.id, name: `${new Date().toLocaleDateString()} Timesheet`, description: "Initial timesheet" });
+		const createdTimesheet = await generateTimesheet({
+			projectId: createdProject.id,
+			name: `${new Date().toLocaleDateString()} Timesheet`,
+			description: "Initial timesheet",
+		});
 
 		return { project: createdProject, timesheet: createdTimesheet };
 	} catch (err) {

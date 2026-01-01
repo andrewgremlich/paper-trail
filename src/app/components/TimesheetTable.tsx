@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
+import { normalizeDateInput } from "@/lib/db/utils";
 import { usePaperTrailStore } from "@/lib/store";
 import {
 	deleteTimesheetEntry,
@@ -12,7 +13,6 @@ import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { H2, Label, P } from "./HtmlElements";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
-import { normalizeDateInput } from "@/lib/db/utils";
 
 export const TimesheetTable = ({
 	entries,

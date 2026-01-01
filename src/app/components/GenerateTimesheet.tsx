@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
 import {
 	generateTimesheet,
-	Nullable,
+	type Nullable,
 	type ProjectWithTimesheets,
 } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";

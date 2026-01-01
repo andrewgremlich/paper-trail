@@ -74,9 +74,11 @@ export const getTimesheetById = async (
 	}
 };
 
-export const generateTimesheet = async (
-	{ name, projectId, description }: CreateTimesheet,
-): Promise<Timesheet> => {
+export const generateTimesheet = async ({
+	name,
+	projectId,
+	description,
+}: CreateTimesheet): Promise<Timesheet> => {
 	const db = await getDb();
 
 	const { lastInsertId } = await db.execute(
