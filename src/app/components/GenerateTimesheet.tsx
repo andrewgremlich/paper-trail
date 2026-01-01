@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
-import { generateTimesheet, type ProjectWithTimesheets } from "@/lib/db";
+import {
+	generateTimesheet,
+	Nullable,
+	type ProjectWithTimesheets,
+} from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
@@ -34,7 +38,12 @@ export const GenerateTimesheet = ({
 	const [form, dispatch] = useReducer(formReducer, initialForm);
 	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await generateTimesheet(formData);
+			const projectId = Number(formData.get("projectId") || "");
+			const name = String(formData.get("name") || "").trim();
+			const description = (formData.get("description") ||
+				"") as Nullable<string>;
+
+			await generateTimesheet({ projectId, name, description });
 			await queryClient.invalidateQueries({
 				queryKey: ["project", activeProjectId],
 			});

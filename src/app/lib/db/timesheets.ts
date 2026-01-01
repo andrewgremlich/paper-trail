@@ -1,6 +1,6 @@
 import { getDb } from "./client";
 import type {
-	Nullable,
+	CreateTimesheet,
 	Timesheet,
 	TimesheetDetails,
 	TimesheetEntry,
@@ -75,12 +75,9 @@ export const getTimesheetById = async (
 };
 
 export const generateTimesheet = async (
-	formData: FormData,
+	{ name, projectId, description }: CreateTimesheet,
 ): Promise<Timesheet> => {
 	const db = await getDb();
-	const projectId = String(formData.get("projectId") || "").trim();
-	const name = String(formData.get("name") || "").trim();
-	const description = (formData.get("description") || "") as Nullable<string>;
 
 	const { lastInsertId } = await db.execute(
 		`INSERT INTO timesheets (projectId, name, description, active)
@@ -104,9 +101,8 @@ export const generateTimesheet = async (
 	return { ...row, active: !!row.active };
 };
 
-export const deleteTimesheet = async (formData: FormData): Promise<void> => {
+export const deleteTimesheet = async (id: number): Promise<void> => {
 	const db = await getDb();
-	const id = String(formData.get("id") || "");
 	await db.execute(`DELETE FROM timesheets WHERE id = $1`, [id]);
 };
 

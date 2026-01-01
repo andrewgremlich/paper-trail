@@ -6,8 +6,14 @@ import { H1, Main } from "./components/HtmlElements";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { Table, TBody, TD, TR } from "./components/Table";
-import { getAllTransactions, upsertTransaction, updateTransaction, deleteTransaction } from "./lib/db";
+import {
+	deleteTransaction,
+	getAllTransactions,
+	updateTransaction,
+	upsertTransaction,
+} from "./lib/db";
 import { getAllProjects } from "./lib/db/projects";
+import { normalizeDateInput } from "./lib/db/utils";
 import { openAttachment, saveAttachment } from "./lib/fileStorage";
 import { formatDate } from "./lib/utils";
 
@@ -60,7 +66,21 @@ export const Transactions = () => {
 
 	const { mutateAsync: saveEdit } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await updateTransaction(formData);
+			const id = Number(formData.get("id") || 0);
+			const projectId = Number(formData.get("projectId") || 0);
+			const rawDate = String(formData.get("date") || "");
+			const date = normalizeDateInput(rawDate);
+			const description = String(formData.get("description") || "").trim();
+			const amountDollars = Number(formData.get("amount") || 0);
+			const amountInCents = Math.round(amountDollars * 100);
+
+			await updateTransaction({
+				id,
+				projectId,
+				date,
+				description,
+				amount: amountInCents,
+			});
 			await queryClient.invalidateQueries({ queryKey: ["transactions"] });
 		},
 		onSuccess: async () => {
@@ -70,7 +90,7 @@ export const Transactions = () => {
 
 	const { mutateAsync: removeTx } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = String(formData.get("id") || "");
+			const id = Number(formData.get("id") || 0);
 			await deleteTransaction(id);
 			await queryClient.invalidateQueries({ queryKey: ["transactions"] });
 		},
@@ -255,8 +275,9 @@ export const Transactions = () => {
 											<TD>{tx.description}</TD>
 											<TD>
 												{
-													projects?.find((project) => project.id === tx.projectId)
-														?.name
+													projects?.find(
+														(project) => project.id === tx.projectId,
+													)?.name
 												}
 											</TD>
 											<TD>${tx.amount.toFixed(2)}</TD>

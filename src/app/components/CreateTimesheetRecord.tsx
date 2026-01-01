@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
+import { normalizeDateInput } from "@/lib/db/utils";
 import { createTimesheetEntry } from "../lib/db";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
@@ -18,7 +19,24 @@ export const CreateTimesheetRecord = ({
 	const queryClient = useQueryClient();
 	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await createTimesheetEntry(formData);
+			const timesheetId = Number(formData.get("timesheetId") || 0);
+			const projectRate = Number(formData.get("projectRate") || 0);
+			const dateRaw = String(formData.get("date") || "");
+			const date = normalizeDateInput(dateRaw);
+			const hours = Number(formData.get("hours") || 0);
+			const minutes = Math.max(0, hours) * 60;
+			const description = String(formData.get("description") || "").trim();
+			const amountDollars =
+				(Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
+			const amountInCents = Math.round(amountDollars * 100);
+
+			await createTimesheetEntry({
+				date,
+				minutes,
+				description,
+				timesheetId,
+				amount: amountInCents,
+			});
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", timesheetId],
 			});

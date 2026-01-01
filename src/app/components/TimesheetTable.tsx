@@ -2,12 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { usePaperTrailStore } from "@/lib/store";
-import { deleteTimesheetEntry, updateTimesheetEntry, type TimesheetEntry } from "../lib/db";
+import {
+	deleteTimesheetEntry,
+	type TimesheetEntry,
+	updateTimesheetEntry,
+} from "../lib/db";
 import { formatDate } from "../lib/utils";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { H2, Label, P } from "./HtmlElements";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
+import { normalizeDateInput } from "@/lib/db/utils";
 
 export const TimesheetTable = ({
 	entries,
@@ -24,16 +29,32 @@ export const TimesheetTable = ({
 	const queryClient = useQueryClient();
 	const { mutate: deleteEntry } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await deleteTimesheetEntry(formData);
+			const id = Number(formData.get("id") || 0);
+			await deleteTimesheetEntry(id);
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
 		},
 	});
-
 	const { mutateAsync: saveEdit } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await updateTimesheetEntry(formData);
+			const id = Number(formData.get("id") || 0);
+			const projectRate = Number(formData.get("projectRate") || 0);
+			const dateRaw = String(formData.get("date") || "");
+			const date = normalizeDateInput(dateRaw);
+			const hours = Number(formData.get("hours") || 0);
+			const minutes = Math.max(0, hours) * 60;
+			const description = String(formData.get("description") || "").trim();
+			const amountDollars =
+				(Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
+			const amountInCents = Math.round(amountDollars * 100);
+			await updateTimesheetEntry({
+				id,
+				date,
+				minutes,
+				description,
+				amount: amountInCents,
+			});
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
@@ -108,8 +129,17 @@ export const TimesheetTable = ({
 												}}
 											>
 												<input type="hidden" name="id" value={entry.id} />
-												<input type="hidden" name="projectRate" value={projectRate} />
-												<Button type="submit" size="sm" variant="secondary" disabled={!active}>
+												<input
+													type="hidden"
+													name="projectRate"
+													value={projectRate}
+												/>
+												<Button
+													type="submit"
+													size="sm"
+													variant="secondary"
+													disabled={!active}
+												>
 													Save
 												</Button>
 											</form>

@@ -11,6 +11,11 @@ export type Project = {
 	updatedAt: number;
 };
 
+export type GenerateProject = Pick<
+	Project,
+	"name" | "customerId" | "rate_in_cents" | "description"
+>;
+
 export type Timesheet = {
 	id: number;
 	projectId: number;
@@ -21,6 +26,8 @@ export type Timesheet = {
 	createdAt: number;
 	updatedAt: number;
 };
+
+export type CreateTimesheet = Pick<Timesheet, 'name' | 'projectId' | 'description'>
 
 export type MinimalTimesheet = Pick<
 	Timesheet,
@@ -43,6 +50,16 @@ export type TimesheetEntry = {
 	updatedAt: number;
 };
 
+export type CreateTimesheetEntry = Pick<
+	TimesheetEntry,
+	"timesheetId" | "date" | "minutes" | "amount" | "description"
+>;
+
+export type UpdateTimesheetEntry = Pick<
+	TimesheetEntry,
+	"id" | "date" | "minutes" | "description" | "amount"
+>
+
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];
 	customerId: Nullable<string>;
@@ -63,4 +80,9 @@ export type Transaction = {
 export type SubmitTransaction = Pick<
 	Transaction,
 	"projectId" | "date" | "description" | "amount" | "filePath"
+>;
+
+export type UpdateTransaction = Pick<
+	Transaction,
+	"id" | "projectId" | "date" | "description" | "amount" | "filePath"
 >;

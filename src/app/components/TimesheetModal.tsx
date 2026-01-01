@@ -52,9 +52,10 @@ export const TimesheetModal = () => {
 					{timesheet?.id && (
 						<DeleteItem
 							deleteItemId={timesheet.id}
-							actionFn={async (formData: FormData) =>
-								await deleteTimesheet(formData)
-							}
+							actionFn={async (formData: FormData) => {
+								const id = Number(formData.get("id") || 0);
+								await deleteTimesheet(id);
+							}}
 							successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
 						/>
 					)}

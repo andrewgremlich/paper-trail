@@ -57,9 +57,10 @@ export const ProjectModal = () => {
 					{project?.id && (
 						<DeleteItem
 							deleteItemId={project.id}
-							actionFn={async (formData: FormData) =>
-								await deleteProject(formData)
-							}
+							actionFn={async (formData: FormData) => {
+								const id = Number(formData.get("id") || 0);
+								await deleteProject(id);
+							}}
 							successFn={() => toggleProjectModal({ projectId: undefined })}
 						/>
 					)}

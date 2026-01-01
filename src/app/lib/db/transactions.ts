@@ -1,6 +1,9 @@
 import { getDb } from "./client";
-import type { SubmitTransaction, Transaction } from "./types";
-import { normalizeDateInput } from "./utils";
+import type {
+	SubmitTransaction,
+	Transaction,
+	UpdateTransaction,
+} from "./types";
 
 // Create or update a transaction by id
 export const upsertTransaction = async (
@@ -27,15 +30,14 @@ export const upsertTransaction = async (
 	}
 };
 
-export const updateTransaction = async (formData: FormData): Promise<void> => {
+export const updateTransaction = async ({
+	id,
+	projectId,
+	date,
+	description,
+	amount: amountInCents,
+}: UpdateTransaction): Promise<void> => {
 	const db = await getDb();
-	const id = Number(formData.get("id") || 0);
-	const projectId = Number(formData.get("projectId") || 0);
-	const rawDate = String(formData.get("date") || "");
-	const date = normalizeDateInput(rawDate);
-	const description = String(formData.get("description") || "").trim();
-	const amountDollars = Number(formData.get("amount") || 0);
-	const amountInCents = Math.round(amountDollars * 100);
 
 	await db.execute(
 		`UPDATE transactions
@@ -83,7 +85,7 @@ export const getTransactionById = async (
 };
 
 // Delete: remove a transaction by id
-export const deleteTransaction = async (id: string): Promise<void> => {
+export const deleteTransaction = async (id: number): Promise<void> => {
 	const db = await getDb();
 	await db.execute(`DELETE FROM transactions WHERE id = $1`, [id]);
 };

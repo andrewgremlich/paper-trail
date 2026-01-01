@@ -72,8 +72,8 @@ export function Grid({
 	};
 
 	const flowClassMap: Record<NonNullable<GridProps["flow"]>, string> = {
-		"row": "grid-flow-row",
-		"col": "grid-flow-col",
+		row: "grid-flow-row",
+		col: "grid-flow-col",
 		"row-dense": "grid-flow-row-dense",
 		"col-dense": "grid-flow-col-dense",
 	};

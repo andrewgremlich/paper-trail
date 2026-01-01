@@ -1,6 +1,11 @@
 import { getDb } from "./client";
 import { generateTimesheet } from "./timesheets";
-import type { MinimalTimesheet, Project, Timesheet } from "./types";
+import type {
+	GenerateProject,
+	MinimalTimesheet,
+	Project,
+	Timesheet,
+} from "./types";
 
 export const getAllProjects = async (): Promise<Project[]> => {
 	const db = await getDb();
@@ -49,25 +54,21 @@ export const getProjectById = async (
 	}
 };
 
-export const generateProject = async (
-	incomingFormData: FormData,
-): Promise<{ project: Project; timesheet: Timesheet } | undefined> => {
+export const generateProject = async ({
+	name,
+	customerId,
+	rate_in_cents,
+	description,
+}: GenerateProject): Promise<
+	{ project: Project; timesheet: Timesheet } | undefined
+> => {
 	try {
 		const db = await getDb();
-		const name = String(incomingFormData.get("name") || "").trim() as string;
-		const rate = Number(incomingFormData.get("rate") || 0);
-		const customerId = (incomingFormData.get("customerId") || "") as string;
-		const description = (incomingFormData.get("description") || "") as string;
 
 		const { lastInsertId: createdProjectId } = await db.execute(
 			`INSERT INTO projects (name, customerId, rate_in_cents, description)
 		 VALUES ($1, $2, $3, $4)`,
-			[
-				name,
-				customerId,
-				rate * 100, // store in integer cents to avoid floating point errors
-				description,
-			],
+			[name, customerId, rate_in_cents, description],
 		);
 
 		const createdProjectRow = (
@@ -82,13 +83,7 @@ export const generateProject = async (
 			active: !!createdProjectRow.active,
 		};
 
-		const tsName = `${new Date().toLocaleDateString()} Timesheet`;
-		const tsDesc = "Initial timesheet";
-		const formData = new FormData();
-		formData.append("projectId", String(createdProject.id));
-		formData.append("name", tsName);
-		formData.append("description", tsDesc);
-		const createdTimesheet = await generateTimesheet(formData);
+		const createdTimesheet = await generateTimesheet({ projectId: createdProject.id, name: `${new Date().toLocaleDateString()} Timesheet`, description: "Initial timesheet" });
 
 		return { project: createdProject, timesheet: createdTimesheet };
 	} catch (err) {
@@ -97,9 +92,8 @@ export const generateProject = async (
 	}
 };
 
-export const deleteProject = async (formData: FormData): Promise<void> => {
+export const deleteProject = async (id: number): Promise<void> => {
 	const db = await getDb();
-	const id = String(formData.get("id") || "");
 
 	try {
 		await db.execute(`DELETE FROM projects WHERE id = $1`, [id]);

@@ -12,7 +12,17 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const { addProject, addTimesheet } = usePaperTrailStore();
 	const { mutate: mutateProject } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			return generateProject(formData);
+			const name = String(formData.get("name") || "").trim() as string;
+			const rate = Number(formData.get("rate") || 0);
+			const customerId = (formData.get("customerId") || "") as string;
+			const description = (formData.get("description") || "") as string;
+
+			return generateProject({
+				name,
+				rate_in_cents: rate * 100,
+				customerId,
+				description,
+			});
 		},
 		onSuccess: async (data) => {
 			if (!data) return;
