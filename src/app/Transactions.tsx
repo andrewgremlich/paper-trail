@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit } from "lucide-react";
+import { Ban, Edit, FolderOpen, Save, TrashIcon } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { Button } from "./components/Button";
 import { Grid } from "./components/Grid";
 import { H1, Main } from "./components/HtmlElements";
 import { Input } from "./components/Input";
@@ -63,7 +64,6 @@ export const Transactions = () => {
 			}
 		},
 	});
-
 	const { mutateAsync: saveEdit } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			const id = Number(formData.get("id") || 0);
@@ -87,7 +87,6 @@ export const Transactions = () => {
 			setEditingId(null);
 		},
 	});
-
 	const { mutateAsync: removeTx } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			const id = Number(formData.get("id") || 0);
@@ -108,6 +107,7 @@ export const Transactions = () => {
 
 			<Grid
 				cols={5}
+				gap={12}
 				as="form"
 				className="pb-6"
 				onSubmit={(evt: FormEvent<HTMLFormElement>) => {
@@ -130,7 +130,7 @@ export const Transactions = () => {
 				/>
 				<Select
 					label="Project"
-					labelClassName="font-semibold mb-1"
+					labelClassName="font-semibold"
 					name="projectId"
 					options={[
 						{ value: "", label: "Select Project" },
@@ -170,7 +170,7 @@ export const Transactions = () => {
 			) : null}
 
 			{
-				<Table>
+				<Table className="w-full">
 					<TBody>
 						{transactions?.map((tx) => {
 							const path = tx.filePath ?? "";
@@ -179,21 +179,19 @@ export const Transactions = () => {
 									{editingId === tx.id ? (
 										<>
 											<TD>
-												<input
+												<Input
 													name="date"
 													type="date"
 													defaultValue={tx.date}
-													className="border px-2 py-1 rounded-md"
 													form={`tx-edit-form-${tx.id}`}
 													required
 												/>
 											</TD>
 											<TD>
-												<input
+												<Input
 													name="description"
 													type="text"
 													defaultValue={tx.description}
-													className="border px-2 py-1 rounded-md w-full"
 													form={`tx-edit-form-${tx.id}`}
 													required
 												/>
@@ -208,33 +206,32 @@ export const Transactions = () => {
 															label: project.name,
 														})) ?? []
 													}
-													containerClassName=""
-													className="border rounded p-2"
 													form={`tx-edit-form-${tx.id}`}
 												/>
 											</TD>
 											<TD>
-												<input
+												<Input
 													name="amount"
 													type="number"
 													step="0.01"
+													className="w-32"
 													defaultValue={tx.amount}
-													className="border px-2 py-1 rounded-md w-28"
 													form={`tx-edit-form-${tx.id}`}
 													required
 												/>
 											</TD>
 											<TD>
 												{path.length > 0 ? (
-													<button
+													<Button
 														type="button"
+														variant="ghost"
 														className="text-blue-500 underline"
 														onClick={async () => {
 															await openAttachment(path);
 														}}
 													>
 														View File
-													</button>
+													</Button>
 												) : (
 													<span className="text-gray-500">No File</span>
 												)}
@@ -253,76 +250,85 @@ export const Transactions = () => {
 														}
 													}}
 												>
-													<button
-														type="submit"
-														className="cursor-pointer bg-blue-500 text-white px-3 py-2 rounded"
-													>
-														Save
-													</button>
-													<button
-														type="button"
-														className="cursor-pointer ml-2 px-3 py-2 rounded border"
-														onClick={() => setEditingId(null)}
-													>
-														Cancel
-													</button>
+													<Button type="submit" size="sm" variant="ghost">
+														<Save color="black" />
+													</Button>
 												</form>
+											</TD>
+											<TD>
+												<Button
+													type="button"
+													size="sm"
+													variant="ghost"
+													onClick={() => setEditingId(null)}
+												>
+													<Ban color="black" />
+												</Button>
 											</TD>
 										</>
 									) : (
 										<>
-											<TD>{formatDate(tx.date)}</TD>
-											<TD>{tx.description}</TD>
 											<TD>
-												{
-													projects?.find(
-														(project) => project.id === tx.projectId,
-													)?.name
-												}
+												<span>{formatDate(tx.date)}</span>
 											</TD>
-											<TD>${tx.amount.toFixed(2)}</TD>
+											<TD>
+												<span>{tx.description}</span>
+											</TD>
+											<TD>
+												<span>
+													{
+														projects?.find(
+															(project) => project.id === tx.projectId,
+														)?.name
+													}
+												</span>
+											</TD>
+											<TD>
+												<span>${tx.amount.toFixed(2)}</span>
+											</TD>
 											<TD>
 												{path.length > 0 ? (
-													<button
+													<Button
 														type="button"
-														className="text-blue-500 underline"
+														size="sm"
+														variant="ghost"
 														onClick={async () => {
 															await openAttachment(path);
 														}}
 													>
-														View File
-													</button>
+														<FolderOpen color="black" />
+													</Button>
 												) : (
 													<span className="text-gray-500">No File</span>
 												)}
+											</TD>
+											<TD>
+												<Button
+													variant="ghost"
+													type="button"
+													onClick={() => setEditingId(tx.id)}
+												>
+													<Edit color="black" />
+												</Button>
 											</TD>
 											<TD>
 												<form
 													onSubmit={async (evt) => {
 														evt.preventDefault();
 														const fd = new FormData(evt.currentTarget);
-														try {
-															await removeTx(fd);
-														} catch (e) {
-															console.error(e);
-														}
+														await removeTx(fd);
 													}}
 												>
 													<input type="hidden" name="id" value={tx.id} />
-													<button
+													<Button
+														variant="ghost"
+														size="icon"
 														type="submit"
-														className="cursor-pointer hover:bg-red-500 text-red-600 hover:text-white p-2 rounded border border-red-400"
+														aria-label="Delete Transaction"
 													>
-														Delete
-													</button>
+														<TrashIcon color="black" />
+													</Button>
 												</form>
-												<button
-													type="button"
-													className="cursor-pointer hover:bg-blue-500 p-2 rounded ml-2"
-													onClick={() => setEditingId(tx.id)}
-												>
-													<Edit size={24} />
-												</button>
 											</TD>
 										</>
 									)}
@@ -340,6 +346,7 @@ export const Transactions = () => {
 									?.reduce((acc, tx) => acc + tx.amount, 0)
 									.toFixed(2)}
 							</TD>
+							<TD></TD>
 							<TD></TD>
 							<TD></TD>
 						</TR>

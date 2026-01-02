@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { Ban, Edit, Save, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { normalizeDateInput } from "@/lib/db/utils";
 import { usePaperTrailStore } from "@/lib/store";
@@ -12,6 +12,7 @@ import { formatDate } from "../lib/utils";
 import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { H2, Label, P } from "./HtmlElements";
+import { Input } from "./Input";
 import { Table, TBody, TD, TH, THead, TR } from "./Table";
 
 export const TimesheetTable = ({
@@ -73,7 +74,8 @@ export const TimesheetTable = ({
 							<TH>Date</TH>
 							<TH>Hours</TH>
 							<TH>Description</TH>
-							<TH>Amount ($)</TH>
+							<TH className="text-nowrap">Amount ($)</TH>
+							<TH></TH>
 							<TH></TH>
 						</TR>
 					</THead>
@@ -83,49 +85,44 @@ export const TimesheetTable = ({
 								{editingId === entry.id ? (
 									<>
 										<TD>
-											<input
+											<Input
 												name="date"
 												type="date"
 												defaultValue={entry.date}
-												className="border px-2 py-1 rounded-md"
 												form={`edit-form-${entry.id}`}
 												required
 											/>
 										</TD>
 										<TD>
-											<input
+											<Input
 												name="hours"
 												type="number"
 												step="0.25"
 												defaultValue={entry.minutes / 60}
-												className="border px-2 py-1 rounded-md w-24"
+												className="w-24"
 												min={0}
 												form={`edit-form-${entry.id}`}
 												required
 											/>
 										</TD>
 										<TD>
-											<input
+											<Input
 												name="description"
 												type="text"
 												defaultValue={entry.description}
-												className="border px-2 py-1 rounded-md w-full"
+												className="w-full"
 												form={`edit-form-${entry.id}`}
 												required
 											/>
 										</TD>
 										<TD>${(entry.amount / 100).toFixed(2)}</TD>
-										<Flex as="td" justify="end" gap={8}>
+										<TD>
 											<form
 												id={`edit-form-${entry.id}`}
 												onSubmit={async (evt) => {
 													evt.preventDefault();
 													const formData = new FormData(evt.currentTarget);
-													try {
-														await saveEdit(formData);
-													} catch (e) {
-														console.error(e);
-													}
+													await saveEdit(formData);
 												}}
 											>
 												<input type="hidden" name="id" value={entry.id} />
@@ -137,29 +134,31 @@ export const TimesheetTable = ({
 												<Button
 													type="submit"
 													size="sm"
-													variant="secondary"
+													variant="ghost"
 													disabled={!active}
 												>
-													Save
+													<Save color="black" />
 												</Button>
 											</form>
+										</TD>
+										<TD>
 											<Button
 												type="button"
 												size="sm"
 												variant="ghost"
 												onClick={() => setEditingId(null)}
 											>
-												Cancel
+												<Ban color="black" />
 											</Button>
-										</Flex>
+										</TD>
 									</>
 								) : (
 									<>
-										<TD>{formatDate(entry.date)}</TD>
+										<TD className="text-nowrap">{formatDate(entry.date)}</TD>
 										<TD>{entry.minutes / 60}</TD>
 										<TD>{entry.description}</TD>
 										<TD>${(entry.amount / 100).toFixed(2)}</TD>
-										<Flex as="td" justify="end" gap={8}>
+										<TD>
 											<Button
 												type="button"
 												disabled={!active}
@@ -167,7 +166,7 @@ export const TimesheetTable = ({
 												size="sm"
 												onClick={() => setEditingId(entry.id)}
 											>
-												<PencilIcon color="black" className="h-4 w-4" />
+												<Edit color="black" />
 											</Button>
 											<form
 												onSubmit={(evt) => {
@@ -177,16 +176,18 @@ export const TimesheetTable = ({
 												}}
 											>
 												<input type="hidden" name="id" value={entry.id} />
-												<Button
-													disabled={!active}
-													variant="ghost"
-													size="sm"
-													type="submit"
-												>
-													<TrashIcon color="black" className="h-4 w-4" />
-												</Button>
 											</form>
-										</Flex>
+										</TD>
+										<TD>
+											<Button
+												disabled={!active}
+												variant="ghost"
+												size="sm"
+												type="submit"
+											>
+												<TrashIcon color="black" />
+											</Button>
+										</TD>
 									</>
 								)}
 							</TR>

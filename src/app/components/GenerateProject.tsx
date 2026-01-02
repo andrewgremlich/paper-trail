@@ -4,8 +4,8 @@ import { generateProject } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import type { Customer } from "../lib/types";
 import { Button } from "./Button";
-import { Label } from "./HtmlElements";
 import { Input } from "./Input";
+import { Select } from "./Select";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
@@ -62,23 +62,18 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				containerClassName="col-span-1"
 				className="w-full"
 			/>
-			<div className="col-span-2">
-				<Label htmlFor="customerId">Customer</Label>
-				<select
-					name="customerId"
-					required
-					className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
-				>
-					<option value="">Select a customer</option>
-					{customers &&
-						customers.length > 0 &&
-						customers.map((customer) => (
-							<option key={customer.id} value={customer.id}>
-								{customer.name} ({customer.email})
-							</option>
-						))}
-				</select>
-			</div>
+			<Select
+				name="customerId"
+				label="Customer"
+				containerClassName="col-span-2"
+				required
+				options={[{ value: "", label: "Select a customer" }].concat(
+					customers?.map((customer) => ({
+						value: customer.id,
+						label: `${customer.name} (${customer.email})`,
+					})) ?? [],
+				)}
+			/>
 			<Input
 				name="description"
 				placeholder="Awesome project description"

@@ -73,7 +73,7 @@ export const ProjectModal = () => {
 				/>
 			)}
 			{!isEditing && (
-				<Grid cols={2} gap={6}>
+				<Grid cols={2} columnGap={24}>
 					<P>{project?.description}</P>
 					<P>
 						Rate:{" "}

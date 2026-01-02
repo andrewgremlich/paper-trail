@@ -67,10 +67,7 @@ export const TH = React.forwardRef<HTMLTableCellElement, THProps>(
 		return (
 			<th
 				ref={ref}
-				className={cn(
-					"px-4 py-3 text-left text-sm font-medium text-gray-900",
-					className,
-				)}
+				className={cn("px-4 py-2 text-sm text-left text-black font-medium", className)}
 				{...props}
 			>
 				{children}
@@ -83,11 +80,7 @@ TH.displayName = "TH";
 export const TD = React.forwardRef<HTMLTableCellElement, TDProps>(
 	({ className, children, ...props }, ref) => {
 		return (
-			<td
-				ref={ref}
-				className={cn("px-4 py-3 text-sm text-gray-900", className)}
-				{...props}
-			>
+			<td ref={ref} className={cn("text-sm px-4 text-black", className)} {...props}>
 				{children}
 			</td>
 		);

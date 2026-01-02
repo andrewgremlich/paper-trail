@@ -68,7 +68,12 @@ export const TimesheetModal = () => {
 				/>
 			)}
 			{!isEditing && (
-				<Grid rows={4} flow="col" gap={6} className="mb-6">
+				<Grid
+					rows={timesheet?.invoiceId ? 4 : 3}
+					flow="col"
+					columnGap={24}
+					className="mb-6"
+				>
 					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
 					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}
 					{timesheet?.description ? (

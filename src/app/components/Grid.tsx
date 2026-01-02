@@ -13,6 +13,10 @@ export type GridProps = HTMLAttributes<HTMLElement> & {
 	flow?: "row" | "col" | "row-dense" | "col-dense";
 	/** Gap between grid items (inline style, e.g., 8 or "1rem"). */
 	gap?: string | number;
+	/** Gap between rows (inline style, e.g., 8 or "1rem"). */
+	rowGap?: string | number;
+	/** Gap between columns (inline style, e.g., 8 or "1rem"). */
+	columnGap?: string | number;
 	/** Set inline grid instead of block grid. */
 	inline?: boolean;
 	/** Apply full width utility. */
@@ -31,6 +35,8 @@ export function Grid({
 	rows,
 	flow,
 	gap,
+	rowGap,
+	columnGap,
 	inline = false,
 	fullWidth = true,
 	templateCols,
@@ -96,6 +102,12 @@ export function Grid({
 		...(gap !== undefined && gap !== null
 			? { gap: typeof gap === "number" ? `${gap}px` : gap }
 			: {}),
+		...(rowGap !== undefined && rowGap !== null
+			? { rowGap: typeof rowGap === "number" ? `${rowGap}px` : rowGap }
+			: {}),
+		...(columnGap !== undefined && columnGap !== null
+			? { columnGap: typeof columnGap === "number" ? `${columnGap}px` : columnGap }
+			: {}),
 		...(templateCols ? { gridTemplateColumns: templateCols } : {}),
 		...(templateRows ? { gridTemplateRows: templateRows } : {}),
 	} as HTMLAttributes<HTMLElement>["style"];
@@ -118,6 +130,8 @@ type GridHeaderProps = {
 	rows?: ColCount;
 	flow?: GridProps["flow"];
 	gap?: string | number;
+	rowGap?: string | number;
+	columnGap?: string | number;
 	inline?: boolean;
 	fullWidth?: boolean;
 	templateCols?: string;
@@ -131,6 +145,8 @@ export function GridHeader({
 	rows,
 	flow,
 	gap,
+	rowGap,
+	columnGap,
 	inline,
 	fullWidth,
 	templateCols,
@@ -143,6 +159,8 @@ export function GridHeader({
 			rows={rows}
 			flow={flow}
 			gap={gap}
+			rowGap={rowGap}
+			columnGap={columnGap}
 			inline={inline}
 			fullWidth={fullWidth}
 			templateCols={templateCols}
@@ -164,6 +182,8 @@ type GridRowProps = {
 	rows?: ColCount;
 	flow?: GridProps["flow"];
 	gap?: string | number;
+	rowGap?: string | number;
+	columnGap?: string | number;
 	inline?: boolean;
 	fullWidth?: boolean;
 	templateCols?: string;
@@ -177,6 +197,8 @@ export function GridRow({
 	rows,
 	flow,
 	gap,
+	rowGap,
+	columnGap,
 	inline,
 	fullWidth,
 	templateCols,
@@ -189,6 +211,8 @@ export function GridRow({
 			rows={rows}
 			flow={flow}
 			gap={gap}
+			rowGap={rowGap}
+			columnGap={columnGap}
 			inline={inline}
 			fullWidth={fullWidth}
 			templateCols={templateCols}

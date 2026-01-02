@@ -20,7 +20,6 @@ export const PayVoidButtons = ({
 		},
 		enabled: !!invoiceId,
 	});
-	// TODO: whenever an invoice is paid, add to transaction history
 	const { mutateAsync: markAsPaid, isPending: isMarkingAsPaid } = useMutation({
 		mutationFn: async (invoiceId: string | undefined) => {
 			if (invoiceId) {

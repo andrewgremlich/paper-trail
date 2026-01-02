@@ -1,4 +1,4 @@
-import { PencilIcon } from "lucide-react";
+import { Edit } from "lucide-react";
 import { Button } from "./Button";
 
 type EditToggleButtonProps = {
@@ -26,7 +26,7 @@ export const EditToggleButton = ({
 				onToggle();
 			}}
 		>
-			<PencilIcon className="w-6 h-6" />
+			<Edit className="w-6 h-6" />
 		</Button>
 	);
 };
