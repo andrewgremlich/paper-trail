@@ -5,32 +5,29 @@ import { useQuery } from "@tanstack/react-query";
 
 import { CardPreview } from "@/components/CardPreview";
 import { GenerateProject } from "@/components/GenerateProject";
-import { H1, H2, P, Section } from "@/components/HtmlElements";
-import { getAllProjects, getAllTimesheets } from "@/lib/dbClient";
+import { H1, H2, Main, P, Section } from "@/components/HtmlElements";
+import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { getAllCustomers } from "@/lib/stripeHttpClient";
-import { getStripeSecretKey } from "@/lib/stronghold";
+import { getAllCustomers } from "@/lib/stripeApi";
 
 export const Timesheet = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
-	const { data: dashboardData } = useQuery({
-		queryKey: ["dashboardData"],
-		queryFn: async () => {
-			const data = await Promise.all([getAllProjects(), getAllTimesheets()]);
-			return { projects: data[0], timesheets: data[1] };
-		},
+	const { data: projects } = useQuery({
+		queryKey: ["projects"],
+		queryFn: getAllProjects,
+	});
+	const { data: timesheets } = useQuery({
+		queryKey: ["timesheets"],
+		queryFn: getAllTimesheets,
 	});
 	const { data: customers } = useQuery({
 		queryKey: ["customers"],
 		queryFn: async () => {
-			const key = await getStripeSecretKey();
-			if (key) {
-				return getAllCustomers(key, 500);
-			}
-			return [];
+			return await getAllCustomers(50);
 		},
 	});
 
+	// TODO: potentially keep for seeing how to call Tauri commands
 	// const [greetMsg, setGreetMsg] = useState("");
 	// const [name, setName] = useState("");
 
@@ -40,7 +37,7 @@ export const Timesheet = () => {
 	// }
 
 	return (
-		<>
+		<Main className="max-w-3xl">
 			<H1>Paper Trail</H1>
 			{/* <input
 				onChange={(e) => setName(e.currentTarget.value)}
@@ -50,33 +47,42 @@ export const Timesheet = () => {
 				Greet
 			</button>
 			<p>{greetMsg}</p> */}
-			<Section>
-				<P>
-					A Paper Trail that integrates with Stripe in order to send invoices.
-				</P>
-			</Section>
+			<P>
+				A Paper Trail that integrates with Stripe in order to send invoices.
+			</P>
 
-			{dashboardData && dashboardData.timesheets.length > 0 && (
+			{timesheets && timesheets.length > 0 && (
 				<Section>
 					<H2>All Timesheets</H2>
 
-					{dashboardData.timesheets.map((timesheet) => (
-						<CardPreview
-							key={timesheet.id}
-							name={timesheet.name}
-							description={timesheet.description ?? "No description provided"}
-							action={() => {
-								toggleTimesheetModal({ timesheetId: timesheet.id });
-							}}
-						/>
-					))}
+					{projects &&
+						timesheets.map((timesheet) => (
+							<CardPreview
+								key={timesheet.id}
+								name={`${timesheet.name} ${
+									projects.find((p) => p.id === timesheet.projectId)?.name
+										? `(${
+												projects.find((p) => p.id === timesheet.projectId)?.name
+											})`
+										: ""
+								}`}
+								description={
+									timesheet.description
+										? `${timesheet.description} (#${timesheet.id})`
+										: "No description provided"
+								}
+								action={() => {
+									toggleTimesheetModal({ timesheetId: timesheet.id });
+								}}
+							/>
+						))}
 				</Section>
 			)}
 
-			{dashboardData && dashboardData.projects.length > 0 && (
+			{projects && projects.length > 0 && (
 				<Section>
 					<H2>Projects</H2>
-					{dashboardData.projects.map((project) => (
+					{projects.map((project) => (
 						<CardPreview
 							key={project.id}
 							name={project.name}
@@ -93,6 +99,6 @@ export const Timesheet = () => {
 				<H2>New Project</H2>
 				<GenerateProject customers={customers} />
 			</Section>
-		</>
+		</Main>
 	);
 };

@@ -1,25 +1,36 @@
-// Shared app types based on usage across components
-
-// Stripe customer subset used in forms and selectors
 export type Customer = {
 	id: string;
 	name: string | null;
 	email: string | null;
 };
 
-// App navigation tabs used by Nav and App switch
 export enum ProjectPageTab {
 	Timesheet = "Timesheet",
 	FileStorage = "FileStorage",
-	Accounting = "Accounting",
+	Transactions = "Transactions",
 }
 
-// Timesheet table row shape used by TimesheetTable
-export type TimesheetRecord = {
+export interface StripeInvoiceMinimal {
+	id: string;
+	status: string | null;
+	pdf?: string | null;
+	disabled?: boolean;
+	[key: string]: unknown;
+}
+
+export interface StripeCustomerMinimal {
+	id: string;
+	name: string | null;
+	email: string | null;
+}
+
+export type Transaction = {
 	id: string;
 	date: string; // ISO date string
-	hours: number;
 	description: string;
-	rate: number; // $/hr
-	amount: number; // computed: hours * rate
+	account: number; // account id or number
+	category: string;
+	amount: number; // positive for income, negative for expense
+	file: File | null; // in-memory selection (not persisted)
+	filePath?: string | null; // persisted relative path under AppData
 };

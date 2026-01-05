@@ -1,52 +1,33 @@
 import { create } from "zustand";
-
-type Id = string | undefined;
+import type { Project, Timesheet } from "./db";
+import { ProjectPageTab } from "./types";
 
 type PaperTrailState = {
-	// Modal state
 	projectModalActive: boolean;
 	timesheetModalActive: boolean;
 	settingsModalActive: boolean;
-
-	// Currently selected entities
-	activeProjectId: Id;
-	activeTimesheetId: Id;
-
-	// Optional client-side caches (used by UI helpers)
-	projects: unknown[];
-	timesheets: unknown[];
-
-	// Navigation
-	// Keep type flexible to avoid coupling to enum definition location
-	activeTab: unknown;
-
-	// Actions
-	toggleProjectModal: (args?: { projectId?: string }) => void;
-	toggleTimesheetModal: (args?: { timesheetId?: string }) => void;
+	activeProjectId: number | undefined;
+	activeTimesheetId: number | undefined;
+	projects: Project[];
+	timesheets: Timesheet[];
+	activeTab: ProjectPageTab;
+	toggleProjectModal: (args?: { projectId?: number }) => void;
+	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
-	changeActiveTab: (tab: unknown) => void;
-	addProject: (project: unknown) => void;
-	addTimesheet: (timesheet: unknown) => void;
+	changeActiveTab: (tab: ProjectPageTab) => void;
+	addProject: (project: Project) => void;
+	addTimesheet: (timesheet: Timesheet) => void;
 };
 
 export const usePaperTrailStore = create<PaperTrailState>((set) => ({
-	// Modal state
 	projectModalActive: false,
 	timesheetModalActive: false,
 	settingsModalActive: false,
-
-	// Selected entities
 	activeProjectId: undefined,
 	activeTimesheetId: undefined,
-
-	// Client-side caches
 	projects: [],
 	timesheets: [],
-
-	// Navigation (default to Timesheet-like tab; value is app-controlled)
-	activeTab: undefined,
-
-	// Actions
+	activeTab: ProjectPageTab.Timesheet,
 	toggleProjectModal: (args) =>
 		set((state) => ({
 			projectModalActive:
@@ -55,7 +36,6 @@ export const usePaperTrailStore = create<PaperTrailState>((set) => ({
 					: !state.projectModalActive,
 			activeProjectId: args?.projectId,
 		})),
-
 	toggleTimesheetModal: (args) =>
 		set((state) => ({
 			timesheetModalActive:
@@ -64,15 +44,11 @@ export const usePaperTrailStore = create<PaperTrailState>((set) => ({
 					: !state.timesheetModalActive,
 			activeTimesheetId: args?.timesheetId,
 		})),
-
 	toggleSettingsModal: () =>
 		set((state) => ({ settingsModalActive: !state.settingsModalActive })),
-
 	changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
-
 	addProject: (project) =>
 		set((state) => ({ projects: [project, ...state.projects] })),
-
 	addTimesheet: (timesheet) =>
 		set((state) => ({ timesheets: [timesheet, ...state.timesheets] })),
 }));

@@ -13,9 +13,10 @@ export const SettingsModal = () => {
 	return (
 		<Dialog
 			isOpen={settingsModalActive}
+			variant="liquidGlass"
 			onClose={toggleSettingsModal}
 			titleId={headingId}
-			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>} // Fallback focus
+			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>}
 		>
 			<header className="flex items-center justify-between">
 				<H2 id={headingId}>Settings</H2>
@@ -38,7 +39,7 @@ export const SettingsModal = () => {
 				<button
 					type="button"
 					onClick={toggleSettingsModal}
-					className="dark:text-white text-black px-3 py-1.5 rounded border text-sm border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+					className="dark:text-primary-foreground text-black px-3 py-1.5 rounded border text-sm border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
 				>
 					Close
 				</button>

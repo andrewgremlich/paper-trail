@@ -1,35 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer } from "react";
-import { TrashIcon } from "lucide-react";
-import { deleteProject, generateTimesheet, getProjectById } from "../lib/dbClient";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { deleteProject, getProjectById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
-import { CardContent, CardHeader } from "./Card";
 import { CardPreview } from "./CardPreview";
+import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
-import { H2, P, Section } from "./HtmlElements";
-import { Label } from "./Label";
-
-type FormState = { name: string; description: string };
-type FormAction =
-	| { type: "set"; field: keyof FormState; value: string }
-	| { type: "reset" };
-
-const initialForm: FormState = { name: "", description: "" };
-
-const formReducer = (state: FormState, action: FormAction): FormState => {
-	switch (action.type) {
-		case "set":
-			return { ...state, [action.field]: action.value };
-		case "reset":
-			return initialForm;
-		default:
-			return state;
-	}
-};
+import { EditToggleButton } from "./EditToggleButton";
+import { Flex } from "./Flex";
+import { GenerateTimesheet } from "./GenerateTimesheet";
+import { Grid } from "./Grid";
+import { H2, P } from "./HtmlElements";
+import { ProjectEditForm } from "./ProjectEditForm";
 
 export const ProjectModal = () => {
-	const [form, dispatch] = useReducer(formReducer, initialForm);
-	const queryClient = useQueryClient();
+	const [isEditing, setIsEditing] = useState(false);
 	const {
 		projectModalActive,
 		toggleProjectModal,
@@ -46,63 +30,64 @@ export const ProjectModal = () => {
 		},
 		enabled: !!activeProjectId,
 	});
-	const { mutateAsync: generateProject } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await generateTimesheet(formData);
-			await queryClient.invalidateQueries({
-				queryKey: ["project", activeProjectId],
-			});
-			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-		},
-	});
-	const { mutateAsync: mutateDeleteProject } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await deleteProject(formData);
-		},
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-			toggleProjectModal({ projectId: undefined });
-		},
-	});
+	// editing logic moved to ProjectEditForm
 
 	return (
 		<Dialog
+			className="px-10 py-8"
+			variant="liquidGlass"
 			isOpen={projectModalActive}
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 		>
-			<CardHeader>
-				<div className="w-full flex justify-between items-start">
-					<H2>{project?.name}</H2>
-					<form
-						onSubmit={async (evt) => {
-							evt.preventDefault();
-							const formData = new FormData(evt.currentTarget);
-							await mutateDeleteProject(formData);
+			<Flex className="w-full" justify="between" items="start">
+				<H2>{project?.name}</H2>
+				{/* TODO: abstract editing so it's reusable */}
+				<Flex gap={2} items="center">
+					<EditToggleButton
+						enabled={!!project?.id}
+						isEditing={isEditing}
+						ariaLabel="Edit project"
+						onToggle={() => {
+							if (project?.id) {
+								console.log("Edit project", project.id);
+							}
+							setIsEditing(!isEditing);
 						}}
-					>
-						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<button
-							className="hover:cursor-pointer p-2 rounded"
-							type="submit"
-							aria-label="Delete project"
-						>
-							<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-						</button>
-					</form>
-				</div>
-				<P>
-					Started:{" "}
-					{project?.createdAt
-						? new Date(project?.createdAt).toLocaleDateString()
-						: "N/A"}
-				</P>
-				<P>Active: {project?.status}</P>
-				<P>{project?.description}</P>
-				<P>Rate: {project?.rate ? `$${project.rate}/hr` : "N/A"}</P>
-				{project?.customerId && <P>Customer: {project?.customerId}</P>}
-			</CardHeader>
-			<CardContent>
+					/>
+					{project?.id && (
+						<DeleteItem
+							deleteItemId={project.id}
+							actionFn={async (formData: FormData) => {
+								const id = Number(formData.get("id") || 0);
+								await deleteProject(id);
+							}}
+							successFn={() => toggleProjectModal({ projectId: undefined })}
+						/>
+					)}
+				</Flex>
+			</Flex>
+			{isEditing && project && (
+				<ProjectEditForm
+					project={project}
+					onSaved={() => setIsEditing(false)}
+				/>
+			)}
+			{!isEditing && (
+				<Grid cols={2} columnGap={24}>
+					<P>{project?.description}</P>
+					<P>
+						Rate:{" "}
+						{project?.rate_in_cents
+							? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
+							: "N/A"}
+					</P>
+					{project?.customerId && <P>Customer: {project?.customerId}</P>}
+					<P>Active: {project?.active ? "Yes" : "No"}</P>
+				</Grid>
+			)}
+			{project?.timesheets && project.timesheets.length > 0 && (
 				<div className="mb-6">
+					<H2 className="mt-8 mb-4">Timesheets</H2>
 					{project?.timesheets.map((timesheet) => (
 						<CardPreview
 							key={timesheet.id}
@@ -115,79 +100,8 @@ export const ProjectModal = () => {
 						/>
 					))}
 				</div>
-				<hr />
-				<Section>
-					<H2>Generate Timesheet for {project?.name}</H2>
-					<form
-						onSubmit={async (evt) => {
-							evt.preventDefault();
-							const formData = new FormData(evt.currentTarget);
-							await generateProject(formData);
-							dispatch({ type: "reset" });
-						}}
-					>
-						<input type="hidden" name="projectId" defaultValue={project?.id} />
-						<div className="grid gap-4 grid-cols-3">
-							<div className="col-span-3">
-								<Label htmlFor="name">Timesheet Name</Label>
-								<div className="flex flex-row items-center">
-									<input
-										type="text"
-										name="name"
-										placeholder="Timesheet Name"
-										required
-										className="flex h-10 rounded-md border border-input bg-white px-3 text-sm placeholder:text-slate-500 text-slate-900"
-										value={form.name}
-										onChange={(e) =>
-											dispatch({
-												type: "set",
-												field: "name",
-												value: e.target.value,
-											})
-										}
-									/>
-									<button
-										type="button"
-										className="cursor-pointer ml-2 p-2 rounded hover:bg-gray-500"
-										onClick={() => {
-											dispatch({
-												type: "set",
-												field: "name",
-												value: `${new Date().toLocaleDateString()} Timesheet`,
-											});
-										}}
-									>
-										Autogen Name
-									</button>
-								</div>
-							</div>
-							<div className="col-span-3">
-								<Label htmlFor="description">Timesheet Description</Label>
-								<input
-									type="text"
-									name="description"
-									placeholder="Timesheet Description"
-									className="flex h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900"
-									value={form.description}
-									onChange={(e) =>
-										dispatch({
-											type: "set",
-											field: "description",
-											value: e.target.value,
-										})
-									}
-								/>
-							</div>
-							<button
-								type="submit"
-								className="mt-2 p-2 bg-blue-500 text-white rounded grid-span-3 cursor-pointer"
-							>
-								Generate Timesheet
-							</button>
-						</div>
-					</form>
-				</Section>
-			</CardContent>
+			)}
+			{project && <GenerateTimesheet project={project} />}
 		</Dialog>
 	);
 };

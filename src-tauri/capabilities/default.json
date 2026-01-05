@@ -20,13 +20,41 @@
 		},
 		{
 			"identifier": "fs:allow-exists",
-			"allow": [{ "path": "$APPDATA/*" }]
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }]
 		},
 		{
 			"identifier": "fs:allow-read-dir",
 			"allow": [
-				{ "path": "$APPDATA" },
-				{ "path": "$APPDATA/**/*" },
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
+			"identifier": "fs:allow-mkdir",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
+			"identifier": "fs:allow-write-file",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
+			"identifier": "opener:allow-open-path",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
+			"identifier": "fs:allow-remove",
+			"allow": [
 				{ "path": "$DOCUMENT/**/*" },
 				{ "path": "$DOCUMENT" }
 			]

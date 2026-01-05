@@ -1,4 +1,4 @@
-import { appDataDir, join } from "@tauri-apps/api/path";
+import { documentDir, join } from "@tauri-apps/api/path";
 import {
 	BaseDirectory,
 	exists,
@@ -7,26 +7,29 @@ import {
 	writeFile,
 } from "@tauri-apps/plugin-fs";
 import { openPath } from "@tauri-apps/plugin-opener";
+import sanitize from "sanitize-filename";
 
-export const saveAttachment = async (file: File): Promise<string> => {
-	const relDir = "attachments";
+export const saveAttachment = async (file: File, projectName: string) => {
+	const relDir = `paper-trail/${sanitize(projectName)}/attachments`;
 	const fname = `${crypto.randomUUID()}-${file.name}`;
 	const relPath = `${relDir}/${fname}`;
+	const hasDir = await exists(relDir, { baseDir: BaseDirectory.Document });
 
-	const hasDir = await exists(relDir, { baseDir: BaseDirectory.AppData });
 	if (!hasDir) {
-		await mkdir(relDir, { baseDir: BaseDirectory.AppData, recursive: true });
+		await mkdir(relDir, { baseDir: BaseDirectory.Document, recursive: true });
 	}
 
 	const buf = new Uint8Array(await file.arrayBuffer());
-	await writeFile(relPath, buf, { baseDir: BaseDirectory.AppData });
+
+	await writeFile(relPath, buf, { baseDir: BaseDirectory.Document });
+
 	return relPath;
 };
 
 export const resolveAttachmentPath = async (
 	relPath: string,
 ): Promise<string> => {
-	const base = await appDataDir();
+	const base = await documentDir();
 	return join(base, relPath);
 };
 

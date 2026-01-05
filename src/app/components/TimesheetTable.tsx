@@ -1,112 +1,212 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { TrashIcon } from "lucide-react";
+import { Ban, Edit, Save, TrashIcon } from "lucide-react";
+import { useState } from "react";
+import { normalizeDateInput } from "@/lib/db/utils";
 import { usePaperTrailStore } from "@/lib/store";
-import { deleteTimesheetRecord } from "../lib/dbClient";
-import type { TimesheetRecord } from "../lib/types";
+import {
+	deleteTimesheetEntry,
+	type TimesheetEntry,
+	updateTimesheetEntry,
+} from "../lib/db";
 import { formatDate } from "../lib/utils";
+import { Button } from "./Button";
+import { Flex } from "./Flex";
+import { H2, Label, P } from "./HtmlElements";
+import { Input } from "./Input";
+import { Table, TBody, TD, TH, THead, TR } from "./Table";
 
 export const TimesheetTable = ({
 	entries,
-	closed,
+	active,
+	projectRate,
 }: {
-	entries: TimesheetRecord[];
-	closed: boolean;
+	entries: TimesheetEntry[];
+	active: boolean;
+	projectRate: number;
 }) => {
+	const [editingId, setEditingId] = useState<number | null>(null);
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
 	const { activeTimesheetId } = usePaperTrailStore();
 	const queryClient = useQueryClient();
-	const { mutate } = useMutation({
+	const { mutate: deleteEntry } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			await deleteTimesheetRecord(formData);
+			const id = Number(formData.get("id") || 0);
+			await deleteTimesheetEntry(id);
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
 		},
 	});
+	const { mutateAsync: saveEdit } = useMutation({
+		mutationFn: async (formData: FormData) => {
+			const id = Number(formData.get("id") || 0);
+			const projectRate = Number(formData.get("projectRate") || 0);
+			const dateRaw = String(formData.get("date") || "");
+			const date = normalizeDateInput(dateRaw);
+			const hours = Number(formData.get("hours") || 0);
+			const minutes = Math.max(0, hours) * 60;
+			const description = String(formData.get("description") || "").trim();
+			const amountDollars =
+				(Math.max(0, projectRate) * Math.max(0, minutes)) / 60;
+			const amountInCents = Math.round(amountDollars * 100);
+			await updateTimesheetEntry({
+				id,
+				date,
+				minutes,
+				description,
+				amount: amountInCents,
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ["timesheet", activeTimesheetId],
+			});
+		},
+		onSuccess: async () => {
+			setEditingId(null);
+		},
+	});
 
 	return (
-		<div className="mt-8 space-y-4">
+		<div className="my-4">
 			{entries.length > 0 ? (
-				<div className="overflow-hidden border rounded-lg">
-					<table className="w-full">
-						<thead className="bg-gray-50">
-							<tr>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Date
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Hours
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Description
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Rate ($/hr)
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-									Amount ($)
-								</th>
-								<th className="px-4 py-3 text-left text-sm font-medium text-gray-900"></th>
-							</tr>
-						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
-							{entries.map((entry) => (
-								<tr key={entry.id}>
-									<td className="px-4 py-3 text-sm text-gray-900">
-										{formatDate(entry.date)}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-center">
-										{entry.hours}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 max-w-[200px] truncate">
-										{entry.description}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										${entry.rate.toFixed(2)}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-										${entry.amount.toFixed(2)}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										<form
-											onSubmit={(evt) => {
-												evt.preventDefault();
-												const formData = new FormData(evt.currentTarget);
-												mutate(formData);
-											}}
-											className="inline"
-										>
-											<input type="hidden" name="id" value={entry.id} />
-											<button
-												disabled={closed}
-												type="submit"
-												className="disabled:opacity-50 disabled:cursor-not-allowed h-8 w-8 p-0 flex items-center justify-center hover:bg-gray-100 rounded "
+				<Table>
+					<THead>
+						<TR>
+							<TH>Date</TH>
+							<TH>Hours</TH>
+							<TH>Description</TH>
+							<TH className="text-nowrap">Amount ($)</TH>
+							<TH></TH>
+							<TH></TH>
+						</TR>
+					</THead>
+					<TBody>
+						{entries.map((entry) => (
+							<TR key={entry.id}>
+								{editingId === entry.id ? (
+									<>
+										<TD>
+											<Input
+												name="date"
+												type="date"
+												defaultValue={entry.date}
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>
+											<Input
+												name="hours"
+												type="number"
+												step="0.25"
+												defaultValue={entry.minutes / 60}
+												className="w-24"
+												min={0}
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>
+											<Input
+												name="description"
+												type="text"
+												defaultValue={entry.description}
+												className="w-full"
+												form={`edit-form-${entry.id}`}
+												required
+											/>
+										</TD>
+										<TD>${(entry.amount / 100).toFixed(2)}</TD>
+										<TD>
+											<form
+												id={`edit-form-${entry.id}`}
+												onSubmit={async (evt) => {
+													evt.preventDefault();
+													const formData = new FormData(evt.currentTarget);
+													await saveEdit(formData);
+												}}
 											>
-												<span className="sr-only">Delete entry</span>
-												<TrashIcon color="black" className="h-4 w-4" />
-											</button>
-										</form>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
+												<input type="hidden" name="id" value={entry.id} />
+												<input
+													type="hidden"
+													name="projectRate"
+													value={projectRate}
+												/>
+												<Button
+													type="submit"
+													size="sm"
+													variant="ghost"
+													disabled={!active}
+												>
+													<Save color="black" />
+												</Button>
+											</form>
+										</TD>
+										<TD>
+											<Button
+												type="button"
+												size="sm"
+												variant="ghost"
+												onClick={() => setEditingId(null)}
+											>
+												<Ban color="black" />
+											</Button>
+										</TD>
+									</>
+								) : (
+									<>
+										<TD className="text-nowrap">{formatDate(entry.date)}</TD>
+										<TD>{entry.minutes / 60}</TD>
+										<TD>{entry.description}</TD>
+										<TD>${(entry.amount / 100).toFixed(2)}</TD>
+										<TD>
+											<Button
+												type="button"
+												disabled={!active}
+												variant="ghost"
+												size="sm"
+												onClick={() => setEditingId(entry.id)}
+											>
+												<Edit color="black" />
+											</Button>
+											<form
+												onSubmit={(evt) => {
+													evt.preventDefault();
+													const formData = new FormData(evt.currentTarget);
+													deleteEntry(formData);
+												}}
+											>
+												<input type="hidden" name="id" value={entry.id} />
+											</form>
+										</TD>
+										<TD>
+											<Button
+												disabled={!active}
+												variant="ghost"
+												size="sm"
+												type="submit"
+											>
+												<TrashIcon color="black" />
+											</Button>
+										</TD>
+									</>
+								)}
+							</TR>
+						))}
+					</TBody>
+				</Table>
 			) : (
-				<div className="text-center py-8 text-gray-500">
-					No timesheet entries yet. Add your first entry above.
-				</div>
+				<Flex justify="center" className="py-8">
+					<P>No timesheet entries yet! Add your first entry above.</P>
+				</Flex>
 			)}
 
 			{entries.length > 0 && (
-				<div className="flex justify-end">
+				<Flex justify="end">
 					<div className="text-right">
-						<div className="text-sm text-gray-500">Total Amount</div>
-						<div className="text-2xl font-bold dark:text-white text-black">
-							${totalAmount.toFixed(2)}
-						</div>
+						<Label>Total Amount</Label>
+						<H2>${(totalAmount / 100).toFixed(2)}</H2>
 					</div>
-				</div>
+				</Flex>
 			)}
 		</div>
 	);

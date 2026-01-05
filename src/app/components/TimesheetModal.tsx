@@ -1,208 +1,114 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrashIcon } from "lucide-react";
-
-import {
-	deleteTimesheet,
-	generateInvoice,
-	getTimesheetById,
-} from "../lib/dbClient";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
-import { getInvoice, markInvoiceAsPaid } from "../lib/stripeHttpClient";
-import { Card, CardContent, CardFooter, CardHeader } from "./Card";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
+import { DeleteItem } from "./DeleteItem";
 import { Dialog } from "./Dialog";
-import { H1, P } from "./HtmlElements";
+import { EditToggleButton } from "./EditToggleButton";
+import { Flex } from "./Flex";
+import { GenerateInvoice } from "./GenerateInvoice";
+import { Grid } from "./Grid";
+import { H2, P } from "./HtmlElements";
+import { PayVoidButtons } from "./PayVoidButtons";
+import { TimesheetEditForm } from "./TimesheetEditForm";
 import { TimesheetTable } from "./TimesheetTable";
 
 export const TimesheetModal = () => {
-	const queryClient = useQueryClient();
+	const [isEditing, setIsEditing] = useState(false);
 	const { timesheetModalActive, toggleTimesheetModal, activeTimesheetId } =
 		usePaperTrailStore();
 	const { data: timesheet } = useQuery({
 		queryKey: ["timesheet", activeTimesheetId],
-		queryFn: () =>
-			activeTimesheetId ? getTimesheetById(activeTimesheetId) : null,
-		enabled: !!activeTimesheetId,
-	});
-	const { data: invoiceData } = useQuery({
-		queryKey: ["invoice", timesheet?.invoiceId],
 		queryFn: async () => {
-			if (!timesheet?.invoiceId) {
-				return null;
-			}
-
-			const invoiceData = await getInvoice(timesheet.invoiceId);
-			return invoiceData.invoice;
-		},
-		// enabled: !!timesheet?.invoiceId,
-	});
-	const {
-		mutate: mutateInvoice,
-		isPending,
-		isSuccess,
-		isError,
-	} = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await generateInvoice(formData);
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: ["timesheet", activeTimesheetId],
-			});
-		},
-	});
-	const { mutate: mutateDeleteTimesheet } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await deleteTimesheet(formData);
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-			toggleTimesheetModal({ timesheetId: undefined });
-		},
-	});
-	const { mutate: markAsPaid } = useMutation({
-		mutationFn: async (invoiceId: string | undefined) => {
-			if (invoiceId) {
-				await markInvoiceAsPaid(invoiceId);
+			if (activeTimesheetId) {
+				return await getTimesheetById(activeTimesheetId);
 			}
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: ["invoice", timesheet?.invoiceId],
-			});
-		},
+		enabled: !!activeTimesheetId,
 	});
 
 	return (
 		<Dialog
+			className="px-10 py-8"
+			variant="liquidGlass"
 			isOpen={timesheetModalActive}
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
 		>
-			{isSuccess && (
-				<div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-					{timesheet?.invoiceId
-						? `Invoice ${timesheet.invoiceId} generated successfully!`
-						: "Action completed successfully!"}
-				</div>
-			)}
-			{isError && (
-				<div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-					Error: {isError}
-				</div>
-			)}
-
-			<Card>
-				<CardHeader>
-					<div className="w-full flex justify-between">
-						<H1>
-							{timesheet?.name ?? "Timesheet Invoice Generator"}
-							{timesheet?.closed && " (Closed)"}
-						</H1>
-						<form
-							onSubmit={async (evt) => {
-								evt.preventDefault();
-								const formData = new FormData(evt.currentTarget);
-								await mutateDeleteTimesheet(formData);
+			<Flex justify="between">
+				<H2>
+					{timesheet?.name ?? "Timesheet Invoice Generator"}
+					{!timesheet?.active && " (Closed)"}
+				</H2>
+				<Flex gap={2} items="center">
+					<EditToggleButton
+						enabled={!!timesheet?.id}
+						isEditing={isEditing}
+						ariaLabel="Edit timesheet"
+						onToggle={async () => {
+							setIsEditing((prev) => !prev);
+						}}
+					/>
+					{timesheet?.id && (
+						<DeleteItem
+							deleteItemId={timesheet.id}
+							actionFn={async (formData: FormData) => {
+								const id = Number(formData.get("id") || 0);
+								await deleteTimesheet(id);
 							}}
-						>
-							<input type="hidden" name="id" defaultValue={timesheet?.id} />
-							<button
-								className="hover:cursor-pointer p-2 rounded"
-								type="submit"
-								aria-label="Delete timesheet"
-							>
-								<TrashIcon className="w-6 h-6 hover:text-blue-500" />
-							</button>
-						</form>
-					</div>
-					{timesheet?.description ? <P>{timesheet?.description}</P> : null}
+							successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
+						/>
+					)}
+				</Flex>
+			</Flex>
+			{isEditing && timesheet && (
+				<TimesheetEditForm
+					timesheet={timesheet}
+					onSaved={() => setIsEditing(false)}
+				/>
+			)}
+			{!isEditing && (
+				<Grid
+					rows={timesheet?.invoiceId ? 4 : 3}
+					flow="col"
+					columnGap={24}
+					className="mb-6"
+				>
+					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
+					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}
+					{timesheet?.description ? (
+						<P>Description: {timesheet?.description}</P>
+					) : null}
+					{timesheet?.projectRate && (
+						<P>
+							Project Rate: ${(timesheet.projectRate / 100).toFixed(2)}/hour
+						</P>
+					)}
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
-					{timesheet?.invoiceId && (
-						<form
-							onSubmit={async (evt) => {
-								evt.preventDefault();
-								const formData = new FormData(evt.currentTarget);
-								const invoiceId = formData.get("invoiceId");
-								await markAsPaid(invoiceId?.toString());
-							}}
-						>
-							<P>Invoice ID: {timesheet?.invoiceId}</P>
-							{invoiceData?.status === "paid" && (
-								<P>Invoice has been marked as paid.</P>
-							)}
-							<input
-								type="hidden"
-								name="invoiceId"
-								defaultValue={timesheet?.invoiceId}
-							/>
-							<button
-								disabled={invoiceData?.status === "paid"}
-								type="submit"
-								className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md  ${
-									invoiceData?.status === "paid"
-										? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
-										: "cursor-pointer"
-								}`}
-							>
-								{invoiceData?.status === "paid"
-									? "Has been paid"
-									: "Mark as Paid"}
-							</button>
-						</form>
-					)}
-				</CardHeader>
-				<CardContent>
-					{timesheet && (
-						<>
-							<CreateTimesheetRecord
-								closed={timesheet.closed}
-								timesheetId={timesheet.id}
-								projectRate={timesheet.projectRate ?? 25}
-							/>
-							<TimesheetTable
-								entries={timesheet.records || []}
-								closed={timesheet.closed}
-							/>
-						</>
-					)}
-				</CardContent>
-				<CardFooter>
-					<form
-						onSubmit={async (e) => {
-							e.preventDefault();
-							const formData = new FormData(e.currentTarget);
-							await mutateInvoice(formData);
-						}}
-						className="flex gap-2"
-					>
-						<input
-							type="hidden"
-							name="timesheetId"
-							defaultValue={timesheet?.id}
-						/>
-						{timesheet?.customerId && (
-							<input
-								type="hidden"
-								name="customerId"
-								defaultValue={timesheet?.customerId}
-							/>
-						)}
-						<button
-							type="submit"
-							disabled={timesheet?.closed}
-							className={`shrink-0 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md cursor-pointer`}
-						>
-							{isPending
-								? "Generating..."
-								: !timesheet?.closed
-									? "Generate Invoice"
-									: "Invoice Closed"}
-						</button>
-					</form>
-				</CardFooter>
-			</Card>
+				</Grid>
+			)}
+			{timesheet && (
+				<>
+					<CreateTimesheetRecord
+						active={timesheet.active}
+						timesheetId={timesheet.id}
+						projectRate={timesheet.projectRate ?? 25}
+					/>
+					<TimesheetTable
+						entries={timesheet.entries || []}
+						active={timesheet.active}
+						projectRate={timesheet.projectRate ?? 25}
+					/>
+				</>
+			)}
+			{activeTimesheetId && timesheet && (
+				<GenerateInvoice
+					timesheet={timesheet}
+					activeTimesheetId={activeTimesheetId}
+				/>
+			)}
 		</Dialog>
 	);
 };
