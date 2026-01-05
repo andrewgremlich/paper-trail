@@ -1,4 +1,3 @@
-import { FileStorage } from "./FileStorage";
 import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
 import { Timesheet } from "./Timesheet";
@@ -10,8 +9,6 @@ export const App = () => {
 	switch (activeTab) {
 		case ProjectPageTab.Timesheet:
 			return <Timesheet />;
-		case ProjectPageTab.FileStorage:
-			return <FileStorage />;
 		case ProjectPageTab.Transactions:
 			return <Transactions />;
 		default:

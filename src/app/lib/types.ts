@@ -6,7 +6,6 @@ export type Customer = {
 
 export enum ProjectPageTab {
 	Timesheet = "Timesheet",
-	FileStorage = "FileStorage",
 	Transactions = "Transactions",
 }
 

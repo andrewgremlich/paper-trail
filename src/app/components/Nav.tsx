@@ -1,4 +1,4 @@
-import { HardDrive, Settings, Table, Timer } from "lucide-react";
+import { Settings, Table, Timer } from "lucide-react";
 import { ProjectPageTab } from "@/lib/types";
 import { usePaperTrailStore } from "../lib/store";
 import { Button } from "./Button";
@@ -34,16 +34,6 @@ export const Nav = () => {
 					aria-pressed={activeTab === ProjectPageTab.Transactions}
 				>
 					<Table size={40} />
-				</Button>
-				<Button
-					type="button"
-					variant="liquidGlass"
-					size="icon"
-					onClick={() => changeActiveTab(ProjectPageTab.FileStorage)}
-					className={`${activeTab === ProjectPageTab.FileStorage ? "bg-blue-600/20" : ""}`}
-					aria-pressed={activeTab === ProjectPageTab.FileStorage}
-				>
-					<HardDrive size={40} />
 				</Button>
 			</div>
 
