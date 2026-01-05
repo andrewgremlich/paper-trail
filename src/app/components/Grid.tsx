@@ -106,7 +106,10 @@ export function Grid({
 			? { rowGap: typeof rowGap === "number" ? `${rowGap}px` : rowGap }
 			: {}),
 		...(columnGap !== undefined && columnGap !== null
-			? { columnGap: typeof columnGap === "number" ? `${columnGap}px` : columnGap }
+			? {
+					columnGap:
+						typeof columnGap === "number" ? `${columnGap}px` : columnGap,
+				}
 			: {}),
 		...(templateCols ? { gridTemplateColumns: templateCols } : {}),
 		...(templateRows ? { gridTemplateRows: templateRows } : {}),

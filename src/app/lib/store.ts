@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { Project, Timesheet } from "./db";
 import { ProjectPageTab } from "./types";
 
@@ -19,36 +20,44 @@ type PaperTrailState = {
 	addTimesheet: (timesheet: Timesheet) => void;
 };
 
-export const usePaperTrailStore = create<PaperTrailState>((set) => ({
-	projectModalActive: false,
-	timesheetModalActive: false,
-	settingsModalActive: false,
-	activeProjectId: undefined,
-	activeTimesheetId: undefined,
-	projects: [],
-	timesheets: [],
-	activeTab: ProjectPageTab.Timesheet,
-	toggleProjectModal: (args) =>
-		set((state) => ({
-			projectModalActive:
-				args && "projectId" in args
-					? !!args.projectId
-					: !state.projectModalActive,
-			activeProjectId: args?.projectId,
-		})),
-	toggleTimesheetModal: (args) =>
-		set((state) => ({
-			timesheetModalActive:
-				args && "timesheetId" in args
-					? !!args.timesheetId
-					: !state.timesheetModalActive,
-			activeTimesheetId: args?.timesheetId,
-		})),
-	toggleSettingsModal: () =>
-		set((state) => ({ settingsModalActive: !state.settingsModalActive })),
-	changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
-	addProject: (project) =>
-		set((state) => ({ projects: [project, ...state.projects] })),
-	addTimesheet: (timesheet) =>
-		set((state) => ({ timesheets: [timesheet, ...state.timesheets] })),
-}));
+export const usePaperTrailStore = create<PaperTrailState>()(
+	persist(
+		(set) => ({
+			projectModalActive: false,
+			timesheetModalActive: false,
+			settingsModalActive: false,
+			activeProjectId: undefined,
+			activeTimesheetId: undefined,
+			projects: [],
+			timesheets: [],
+			activeTab: ProjectPageTab.Timesheet,
+			toggleProjectModal: (args) =>
+				set((state) => ({
+					projectModalActive:
+						args && "projectId" in args
+							? !!args.projectId
+							: !state.projectModalActive,
+					activeProjectId: args?.projectId,
+				})),
+			toggleTimesheetModal: (args) =>
+				set((state) => ({
+					timesheetModalActive:
+						args && "timesheetId" in args
+							? !!args.timesheetId
+							: !state.timesheetModalActive,
+					activeTimesheetId: args?.timesheetId,
+				})),
+			toggleSettingsModal: () =>
+				set((state) => ({ settingsModalActive: !state.settingsModalActive })),
+			changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
+			addProject: (project) =>
+				set((state) => ({ projects: [project, ...state.projects] })),
+			addTimesheet: (timesheet) =>
+				set((state) => ({ timesheets: [timesheet, ...state.timesheets] })),
+		}),
+		{
+			name: "paper-trail-storage",
+			storage: createJSONStorage(() => localStorage),
+		},
+	),
+);
