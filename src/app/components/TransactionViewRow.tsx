@@ -1,4 +1,4 @@
-import { Edit, FolderOpen, TrashIcon } from "lucide-react";
+import { Edit, FolderOpen, Globe, TrashIcon } from "lucide-react";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
 import { formatDate } from "@/lib/utils";
@@ -45,7 +45,11 @@ export const TransactionViewRow = ({
 						await openAttachment(path);
 					}}
 				>
-					<FolderOpen color="black" />
+					{path.startsWith("http://") || path.startsWith("https://") ? (
+						<Globe color="black" />
+					) : (
+						<FolderOpen color="black" />
+					)}
 				</Button>
 			) : (
 				<span className="text-gray-500">No File</span>

@@ -10,7 +10,7 @@ import { TransactionEditRow } from "./components/TransactionEditRow";
 import { TransactionViewRow } from "./components/TransactionViewRow";
 import {
 	deleteTransaction,
-	getAllTransactions,
+	getTransactionsByProject,
 	updateTransaction,
 	upsertTransaction,
 } from "./lib/db";
@@ -32,7 +32,7 @@ export const Transactions = () => {
 		error: transactionsError,
 	} = useQuery({
 		queryKey: ["transactions", activeProjectId],
-		queryFn: getAllTransactions,
+		queryFn: () => getTransactionsByProject(activeProjectId!),
 		enabled: activeProjectId !== null,
 	});
 	const { mutate: submitTransaction } = useMutation({
