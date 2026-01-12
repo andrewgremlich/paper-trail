@@ -46,6 +46,20 @@
 			]
 		},
 		{
+			"identifier": "fs:allow-write-text-file",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
+			"identifier": "dialog:allow-open",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
 			"identifier": "opener:allow-open-path",
 			"allow": [
 				{ "path": "$DOCUMENT/**/*" },
