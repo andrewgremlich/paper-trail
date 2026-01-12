@@ -127,6 +127,35 @@ export async function markInvoiceAsPaid(
 		paid_out_of_band: true,
 	});
 
+	// Create a transaction entry for the paid invoice
+	try {
+		const db = await getDb();
+		const { upsertTransaction } = await import("./db/transactions");
+
+		// Get the timesheet associated with this invoice
+		const timesheetRows = await db.select<Array<{ projectId: number }>>(
+			"SELECT projectId FROM timesheets WHERE invoiceId = $1",
+			[invoiceId],
+		);
+
+		if (timesheetRows.length > 0) {
+			const projectId = timesheetRows[0].projectId;
+			const amountInDollars = (invoice.amount_paid ?? 0) / 100;
+			const pdfUrl = invoice.invoice_pdf ?? undefined;
+
+			await upsertTransaction({
+				projectId,
+				date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+				description: `Invoice ${invoiceId} marked as paid`,
+				amount: amountInDollars,
+				filePath: pdfUrl,
+			});
+		}
+	} catch (error) {
+		console.error("Error creating transaction for paid invoice:", error);
+		// Don't throw - we still want to return the invoice even if transaction creation fails
+	}
+
 	return toMinimalInvoice(invoice);
 }
 
