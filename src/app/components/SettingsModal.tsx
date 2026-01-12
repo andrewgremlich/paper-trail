@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { useId, useRef } from "react";
 import { usePaperTrailStore } from "../lib/store";
 import { Dialog } from "./Dialog";
+import { ExportImportSection } from "./ExportImportSection";
 import { H2, P } from "./HtmlElements";
 import { StripeSecretSection } from "./StripeSecretSection";
 
@@ -35,6 +36,7 @@ export const SettingsModal = () => {
 				exposed outside the local vault).
 			</P>
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
+			<ExportImportSection />
 			<div className="flex justify-end gap-2 pt-2">
 				<button
 					type="button"

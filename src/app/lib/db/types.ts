@@ -89,3 +89,12 @@ export type UpdateTransaction = Pick<
 	Transaction,
 	"id" | "projectId" | "date" | "description" | "amount" | "filePath"
 >;
+
+export type ExportData = {
+	version: string;
+	exportDate: string;
+	projects: Project[];
+	timesheets: Timesheet[];
+	timesheetEntries: TimesheetEntry[];
+	transactions: Transaction[];
+};
