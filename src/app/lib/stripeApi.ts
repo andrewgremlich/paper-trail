@@ -145,7 +145,7 @@ export async function markInvoiceAsPaid(
 
 			await upsertTransaction({
 				projectId,
-				date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+				date: new Date().toISOString().split("T")[0], // Current date in YYYY-MM-DD format
 				description: `Invoice ${invoiceId} marked as paid`,
 				amount: amountInDollars,
 				filePath: pdfUrl,

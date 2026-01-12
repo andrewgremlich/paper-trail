@@ -1,5 +1,11 @@
 import { getDb } from "./client";
-import type { ExportData, Project, Timesheet, TimesheetEntry, Transaction } from "./types";
+import type {
+	ExportData,
+	Project,
+	Timesheet,
+	TimesheetEntry,
+	Transaction,
+} from "./types";
 
 /**
  * Exports all data from the database to a JSON-serializable object
