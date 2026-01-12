@@ -6,7 +6,7 @@ import {
 	remove,
 	writeFile,
 } from "@tauri-apps/plugin-fs";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import sanitize from "sanitize-filename";
 
 export const saveAttachment = async (file: File, projectName: string) => {
@@ -34,8 +34,14 @@ export const resolveAttachmentPath = async (
 };
 
 export const openAttachment = async (relPath: string): Promise<void> => {
-	const abs = await resolveAttachmentPath(relPath);
-	await openPath(abs);
+	const isUrl = /^https?:\/\//i.test(relPath);
+
+	if (isUrl) {
+		await openUrl(relPath);
+	} else {
+		const abs = await resolveAttachmentPath(relPath);
+		await openPath(abs);
+	}
 };
 
 export const removeAttachment = async (relPath: string): Promise<void> => {

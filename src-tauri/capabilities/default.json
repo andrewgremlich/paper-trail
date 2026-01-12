@@ -60,6 +60,13 @@
 			]
 		},
 		{
+			"identifier": "dialog:allow-confirm",
+			"allow": [
+				{ "path": "$DOCUMENT/**/*" },
+				{ "path": "$DOCUMENT" }
+			]
+		},
+		{
 			"identifier": "opener:allow-open-path",
 			"allow": [
 				{ "path": "$DOCUMENT/**/*" },

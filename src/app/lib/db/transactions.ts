@@ -35,9 +35,10 @@ export const updateTransaction = async ({
 	projectId,
 	date,
 	description,
-	amount: amountInCents,
+	amount,
 }: UpdateTransaction): Promise<void> => {
 	const db = await getDb();
+	const amountInCents = Math.round(amount * 100);
 
 	await db.execute(
 		`UPDATE transactions
