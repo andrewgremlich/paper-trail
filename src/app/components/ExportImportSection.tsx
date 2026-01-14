@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Upload } from "lucide-react";
 import { handleExportData, handleImportData } from "@/lib/exportImport";
-import { Button } from "./Button";
 import { H3, P } from "./HtmlElements";
+import { Button } from "./ui/Button";
 
 export const ExportImportSection = () => {
 	const queryClient = useQueryClient();

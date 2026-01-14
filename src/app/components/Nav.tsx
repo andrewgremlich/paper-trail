@@ -1,8 +1,8 @@
 import { Settings, Table, Timer } from "lucide-react";
 import { ProjectPageTab } from "@/lib/types";
 import { usePaperTrailStore } from "../lib/store";
-import { Button } from "./Button";
 import { Flex } from "./Flex";
+import { Button } from "./ui/Button";
 
 export const Nav = () => {
 	const { toggleSettingsModal, changeActiveTab, activeTab } =

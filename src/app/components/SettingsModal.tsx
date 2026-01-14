@@ -1,10 +1,10 @@
 import { X } from "lucide-react";
 import { useId, useRef } from "react";
 import { usePaperTrailStore } from "../lib/store";
-import { Dialog } from "./Dialog";
 import { ExportImportSection } from "./ExportImportSection";
 import { H2, P } from "./HtmlElements";
 import { StripeSecretSection } from "./StripeSecretSection";
+import { Dialog } from "./ui/Dialog";
 
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();

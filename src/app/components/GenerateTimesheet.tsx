@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
+import { Input } from "@/components/ui/Input";
 import {
 	generateTimesheet,
 	type Nullable,
 	type ProjectWithTimesheets,
 } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { H2, Section } from "./HtmlElements";
-import { Input } from "./Input";
+import { Button } from "./ui/Button";
 
 type FormState = { name: string; description: string };
 type FormAction =

@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TimesheetDetails } from "@/lib/db/types";
 import { getInvoice, markInvoiceAsPaid, voidInvoice } from "@/lib/stripeApi";
-import { Button } from "./Button";
 import { Flex } from "./Flex";
 import { P } from "./HtmlElements";
+import { Button } from "./ui/Button";
 
 export const PayVoidButtons = ({
 	timesheet,

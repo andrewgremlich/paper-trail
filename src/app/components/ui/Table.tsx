@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 
 type TableProps = React.TableHTMLAttributes<HTMLTableElement>;
 type THeadProps = React.HTMLAttributes<HTMLTableSectionElement>;

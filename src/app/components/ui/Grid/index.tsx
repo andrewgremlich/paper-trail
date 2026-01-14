@@ -1,15 +1,16 @@
 import type { HTMLAttributes, JSX, ReactNode } from "react";
+import styles from "./Grid.module.css";
 
 type ColCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 export type GridProps = HTMLAttributes<HTMLElement> & {
 	as?: keyof JSX.IntrinsicElements;
 	className?: string;
-	/** Number of columns (Tailwind mapped 1-12). */
+	/** Number of columns (1-12). */
 	cols?: ColCount;
-	/** Number of rows (Tailwind mapped 1-12). */
+	/** Number of rows (1-12). */
 	rows?: ColCount;
-	/** Grid auto-flow direction (Tailwind mapped). */
+	/** Grid auto-flow direction. */
 	flow?: "row" | "col" | "row-dense" | "col-dense";
 	/** Gap between grid items (inline style, e.g., 8 or "1rem"). */
 	gap?: string | number;
@@ -46,56 +47,54 @@ export function Grid({
 }: GridProps) {
 	const Comp: keyof JSX.IntrinsicElements = as;
 
-	// Explicit class map so Tailwind can statically detect classes
 	const colsClassMap: Record<ColCount, string> = {
-		1: "grid-cols-1",
-		2: "grid-cols-2",
-		3: "grid-cols-3",
-		4: "grid-cols-4",
-		5: "grid-cols-5",
-		6: "grid-cols-6",
-		7: "grid-cols-7",
-		8: "grid-cols-8",
-		9: "grid-cols-9",
-		10: "grid-cols-10",
-		11: "grid-cols-11",
-		12: "grid-cols-12",
+		1: styles.cols1,
+		2: styles.cols2,
+		3: styles.cols3,
+		4: styles.cols4,
+		5: styles.cols5,
+		6: styles.cols6,
+		7: styles.cols7,
+		8: styles.cols8,
+		9: styles.cols9,
+		10: styles.cols10,
+		11: styles.cols11,
+		12: styles.cols12,
 	};
 
 	const rowsClassMap: Record<ColCount, string> = {
-		1: "grid-rows-1",
-		2: "grid-rows-2",
-		3: "grid-rows-3",
-		4: "grid-rows-4",
-		5: "grid-rows-5",
-		6: "grid-rows-6",
-		7: "grid-rows-7",
-		8: "grid-rows-8",
-		9: "grid-rows-9",
-		10: "grid-rows-10",
-		11: "grid-rows-11",
-		12: "grid-rows-12",
+		1: styles.rows1,
+		2: styles.rows2,
+		3: styles.rows3,
+		4: styles.rows4,
+		5: styles.rows5,
+		6: styles.rows6,
+		7: styles.rows7,
+		8: styles.rows8,
+		9: styles.rows9,
+		10: styles.rows10,
+		11: styles.rows11,
+		12: styles.rows12,
 	};
 
 	const flowClassMap: Record<NonNullable<GridProps["flow"]>, string> = {
-		row: "grid-flow-row",
-		col: "grid-flow-col",
-		"row-dense": "grid-flow-row-dense",
-		"col-dense": "grid-flow-col-dense",
+		row: styles.flowRow,
+		col: styles.flowCol,
+		"row-dense": styles.flowRowDense,
+		"col-dense": styles.flowColDense,
 	};
 
 	const classes = [
-		inline ? "inline-grid" : "grid",
+		inline ? styles.inlineGrid : styles.grid,
 		cols ? colsClassMap[cols] : null,
 		rows ? rowsClassMap[rows] : null,
 		flow ? flowClassMap[flow] : null,
-		fullWidth ? "w-full" : null,
+		fullWidth ? styles.fullWidth : null,
 		className,
 	]
 		.filter(Boolean)
 		.join(" ");
 
-	// Prefer inline style for gap/template to avoid dynamic class generation
 	const { style, ...restProps } = rest as HTMLAttributes<HTMLElement>;
 	const mergedStyle = {
 		...style,
@@ -170,7 +169,7 @@ export function GridHeader({
 			templateRows={templateRows}
 		>
 			{headers.map((h) => (
-				<div key={h} className="font-bold">
+				<div key={h} className={styles.headerCell}>
 					{h}
 				</div>
 			))}

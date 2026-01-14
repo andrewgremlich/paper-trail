@@ -1,10 +1,10 @@
 import { Ban, Save } from "lucide-react";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
-import { Button } from "./Button";
-import { Input } from "./Input";
-import { Select } from "./Select";
-import { TD } from "./Table";
+import { Button } from "./ui/Button";
 
 interface TransactionEditRowProps {
 	tx: Transaction;

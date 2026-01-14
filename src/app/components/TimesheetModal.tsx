@@ -4,15 +4,15 @@ import { deleteTimesheet, getTimesheetById } from "../lib/db";
 import { usePaperTrailStore } from "../lib/store";
 import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
 import { DeleteItem } from "./DeleteItem";
-import { Dialog } from "./Dialog";
-import { EditToggleButton } from "./EditToggleButton";
 import { Flex } from "./Flex";
 import { GenerateInvoice } from "./GenerateInvoice";
-import { Grid } from "./Grid";
 import { H2, P } from "./HtmlElements";
 import { PayVoidButtons } from "./PayVoidButtons";
+import { EditToggleButton } from "./shared/EditToggleButton";
 import { TimesheetEditForm } from "./TimesheetEditForm";
 import { TimesheetTable } from "./TimesheetTable";
+import { Dialog } from "./ui/Dialog";
+import { Grid } from "./ui/Grid";
 
 export const TimesheetModal = () => {
 	const [isEditing, setIsEditing] = useState(false);

@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
-import { Button } from "./components/Button";
-import { Grid } from "./components/Grid";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Table, TBody, TD, TR } from "@/components/ui/Table";
 import { H1, Main } from "./components/HtmlElements";
-import { Input } from "./components/Input";
-import { Select } from "./components/Select";
-import { Table, TBody, TD, TR } from "./components/Table";
 import { TransactionEditRow } from "./components/TransactionEditRow";
 import { TransactionViewRow } from "./components/TransactionViewRow";
+import { Button } from "./components/ui/Button";
+import { Grid } from "./components/ui/Grid";
 import {
 	deleteTransaction,
 	getTransactionsByProject,
@@ -32,7 +32,7 @@ export const Transactions = () => {
 		error: transactionsError,
 	} = useQuery({
 		queryKey: ["transactions", activeProjectId],
-		queryFn: () => getTransactionsByProject(activeProjectId!),
+		queryFn: () => getTransactionsByProject(activeProjectId as number),
 		enabled: activeProjectId !== null,
 	});
 	const { mutate: submitTransaction } = useMutation({
