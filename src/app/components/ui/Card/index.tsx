@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "../../lib/utils";
+import styles from "./Card.module.css";
 
 const Card = React.forwardRef<
 	HTMLDivElement,
@@ -7,10 +7,7 @@ const Card = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={cn(
-			"transition-colors rounded-lg border hover:border-border bg-card text-card-foreground shadow-sm",
-			className,
-		)}
+		className={className ? `${styles.card} ${className}` : styles.card}
 		{...props}
 	/>
 ));
@@ -22,7 +19,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={cn("flex flex-col space-y-1.5 p-6", className)}
+		className={className ? `${styles.cardHeader} ${className}` : styles.cardHeader}
 		{...props}
 	/>
 ));
@@ -32,7 +29,11 @@ const CardContent = React.forwardRef<
 	HTMLDivElement,
 	React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-	<div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+	<div
+		ref={ref}
+		className={className ? `${styles.cardContent} ${className}` : styles.cardContent}
+		{...props}
+	/>
 ));
 CardContent.displayName = "CardContent";
 
@@ -42,7 +43,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={cn("flex items-center p-6 pt-0", className)}
+		className={className ? `${styles.cardFooter} ${className}` : styles.cardFooter}
 		{...props}
 	/>
 ));
