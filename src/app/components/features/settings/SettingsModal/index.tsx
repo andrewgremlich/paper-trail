@@ -3,8 +3,9 @@ import { useId, useRef } from "react";
 import { H2, P } from "@/components/layout/HtmlElements";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
-import { ExportImportSection } from "./ExportImportSection";
-import { StripeSecretSection } from "./StripeSecretSection";
+import { ExportImportSection } from "../ExportImportSection";
+import { StripeSecretSection } from "../StripeSecretSection";
+import styles from "./index.module.css";
 
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
@@ -19,14 +20,14 @@ export const SettingsModal = () => {
 			titleId={headingId}
 			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>}
 		>
-			<header className="flex items-center justify-between">
+			<header className={styles.header}>
 				<H2 id={headingId}>Settings</H2>
 				<button
 					ref={closeButtonRef}
 					type="button"
 					onClick={toggleSettingsModal}
 					aria-label="Close settings"
-					className="cursor-pointer text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+					className={styles.closeButton}
 				>
 					<X />
 				</button>
@@ -37,11 +38,11 @@ export const SettingsModal = () => {
 			</P>
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
 			<ExportImportSection />
-			<div className="flex justify-end gap-2 pt-2">
+			<div className={styles.footer}>
 				<button
 					type="button"
 					onClick={toggleSettingsModal}
-					className="dark:text-primary-foreground text-black px-3 py-1.5 rounded border text-sm border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+					className={styles.footerButton}
 				>
 					Close
 				</button>

@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/Select";
 import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
+import styles from "./index.module.css";
 
 interface TransactionEditRowProps {
 	tx: Transaction;
@@ -58,7 +59,7 @@ export const TransactionEditRow = ({
 				name="amount"
 				type="number"
 				step="0.01"
-				className="w-32"
+				className={styles.amountInput}
 				defaultValue={tx.amount.toFixed(2)}
 				form={`tx-edit-form-${tx.id}`}
 				required
@@ -69,7 +70,7 @@ export const TransactionEditRow = ({
 				<Button
 					type="button"
 					variant="ghost"
-					className="text-blue-500 underline"
+					className={styles.viewFileButton}
 					onClick={async () => {
 						await openAttachment(path);
 					}}
@@ -77,7 +78,7 @@ export const TransactionEditRow = ({
 					View File
 				</Button>
 			) : (
-				<span className="text-gray-500">No File</span>
+				<span className={styles.noFile}>No File</span>
 			)}
 		</TD>
 		<TD>

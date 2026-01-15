@@ -7,6 +7,7 @@ import {
 	type SyncConfig,
 	syncNow,
 } from "@/lib/db/syncConfig";
+import styles from "./index.module.css";
 
 export function SyncSettings() {
 	const [syncUrl, setSyncUrl] = useState("");
@@ -76,32 +77,34 @@ export function SyncSettings() {
 	if (!config) return <div>Loading...</div>;
 
 	return (
-		<div className="p-6 bg-white rounded-lg shadow">
-			<h2 className="text-2xl font-bold mb-4">Turso Sync Settings</h2>
+		<div className={styles.container}>
+			<h2 className={styles.heading}>Turso Sync Settings</h2>
 
 			{config.isPaidFeature && (
-				<div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
-					<p className="text-yellow-800">
+				<div className={styles.banner}>
+					<p className={styles.bannerText}>
 						Note: Sync is a paid feature. Upgrade your subscription to enable
 						cloud synchronization.
 					</p>
 				</div>
 			)}
 
-			<div className="mb-4">
-				<p className="text-sm text-gray-600 mb-2">
+			<div className={styles.statusContainer}>
+				<p className={styles.statusText}>
 					Status:{" "}
 					<span
-						className={`font-semibold ${config.enableSync ? "text-green-600" : "text-red-600"}`}
+						className={
+							config.enableSync ? styles.statusEnabled : styles.statusDisabled
+						}
 					>
 						{config.enableSync ? "Enabled" : "Disabled"}
 					</span>
 				</p>
 			</div>
 
-			<div className="space-y-4">
-				<div>
-					<label className="block text-sm font-medium mb-1" htmlFor="syncUrl">
+			<div className={styles.formContainer}>
+				<div className={styles.inputGroup}>
+					<label className={styles.inputLabel} htmlFor="syncUrl">
 						Turso Sync URL
 					</label>
 					<input
@@ -110,15 +113,15 @@ export function SyncSettings() {
 						value={syncUrl}
 						onChange={(e) => setSyncUrl(e.target.value)}
 						placeholder="libsql://your-database.turso.io"
-						className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className={styles.input}
 					/>
-					<p className="text-xs text-gray-500 mt-1">
+					<p className={styles.inputHelp}>
 						Your Turso database URL (e.g., libsql://[db-name]-[org].turso.io)
 					</p>
 				</div>
 
-				<div>
-					<label className="block text-sm font-medium mb-1" htmlFor="authToken">
+				<div className={styles.inputGroup}>
+					<label className={styles.inputLabel} htmlFor="authToken">
 						Auth Token
 					</label>
 					<input
@@ -127,19 +130,19 @@ export function SyncSettings() {
 						value={authToken}
 						onChange={(e) => setAuthToken(e.target.value)}
 						placeholder="your-turso-auth-token"
-						className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className={styles.input}
 					/>
-					<p className="text-xs text-gray-500 mt-1">
+					<p className={styles.inputHelp}>
 						Your Turso database authentication token
 					</p>
 				</div>
 
-				<div className="flex gap-2">
+				<div className={styles.buttonGroup}>
 					<button
 						type="button"
 						onClick={handleConfigureSync}
 						disabled={!syncUrl || !authToken || configureMutation.isPending}
-						className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+						className={styles.buttonPrimary}
 					>
 						{configureMutation.isPending ? "Configuring..." : "Configure Sync"}
 					</button>
@@ -150,7 +153,7 @@ export function SyncSettings() {
 								type="button"
 								onClick={handleSyncNow}
 								disabled={syncMutation.isPending}
-								className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+								className={styles.buttonSuccess}
 							>
 								{syncMutation.isPending ? "Syncing..." : "Sync Now"}
 							</button>
@@ -159,7 +162,7 @@ export function SyncSettings() {
 								type="button"
 								onClick={handleDisableSync}
 								disabled={disableMutation.isPending}
-								className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400"
+								className={styles.buttonDanger}
 							>
 								{disableMutation.isPending ? "Disabling..." : "Disable Sync"}
 							</button>
@@ -169,27 +172,29 @@ export function SyncSettings() {
 
 				{message && (
 					<div
-						className={`p-3 rounded ${
+						className={
 							message.startsWith("Error")
-								? "bg-red-100 text-red-700"
-								: "bg-green-100 text-green-700"
-						}`}
+								? styles.messageError
+								: styles.messageSuccess
+						}
 					>
 						{message}
 					</div>
 				)}
 			</div>
 
-			<div className="mt-6 p-4 bg-gray-50 rounded">
-				<h3 className="font-semibold mb-2">How to set up Turso sync:</h3>
-				<ol className="list-decimal list-inside space-y-1 text-sm text-gray-700">
+			<div className={styles.instructionsContainer}>
+				<h3 className={styles.instructionsHeading}>
+					How to set up Turso sync:
+				</h3>
+				<ol className={styles.instructionsList}>
 					<li>
 						Create a Turso account at{" "}
 						<a
 							href="https://turso.tech"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="text-blue-600 hover:underline"
+							className={styles.instructionsLink}
 						>
 							turso.tech
 						</a>

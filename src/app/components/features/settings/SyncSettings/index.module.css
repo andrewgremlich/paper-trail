@@ -1,0 +1,179 @@
+.container {
+	padding: 1.5rem;
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow:
+		0 1px 3px 0 rgb(0 0 0 / 0.1),
+		0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.heading {
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-bottom: 1rem;
+}
+
+.banner {
+	margin-bottom: 1rem;
+	padding: 1rem;
+	background-color: rgb(254, 249, 195);
+	border: 1px solid rgb(250, 204, 21);
+	border-radius: 0.375rem;
+}
+
+.bannerText {
+	color: rgb(133, 77, 14);
+}
+
+.statusContainer {
+	margin-bottom: 1rem;
+}
+
+.statusText {
+	font-size: 0.875rem;
+	color: rgb(75, 85, 99);
+	margin-bottom: 0.5rem;
+}
+
+.statusEnabled {
+	font-weight: 600;
+	color: rgb(22, 163, 74);
+}
+
+.statusDisabled {
+	font-weight: 600;
+	color: rgb(220, 38, 38);
+}
+
+.formContainer {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.inputGroup {
+	display: flex;
+	flex-direction: column;
+}
+
+.inputLabel {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	margin-bottom: 0.25rem;
+}
+
+.input {
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid rgb(209, 213, 219);
+	border-radius: 0.375rem;
+}
+
+.input:focus {
+	outline: none;
+	box-shadow: 0 0 0 2px rgb(59, 130, 246);
+}
+
+.inputHelp {
+	font-size: 0.75rem;
+	color: rgb(107, 114, 128);
+	margin-top: 0.25rem;
+}
+
+.buttonGroup {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.buttonPrimary {
+	padding: 0.5rem 1rem;
+	color: white;
+	border-radius: 0.375rem;
+	background-color: rgb(37, 99, 235);
+}
+
+.buttonPrimary:disabled {
+	background-color: rgb(156, 163, 175);
+	cursor: not-allowed;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+	background-color: rgb(29, 78, 216);
+}
+
+.buttonSuccess {
+	padding: 0.5rem 1rem;
+	color: white;
+	border-radius: 0.375rem;
+	background-color: rgb(22, 163, 74);
+}
+
+.buttonSuccess:disabled {
+	background-color: rgb(156, 163, 175);
+	cursor: not-allowed;
+}
+
+.buttonSuccess:hover:not(:disabled) {
+	background-color: rgb(21, 128, 61);
+}
+
+.buttonDanger {
+	padding: 0.5rem 1rem;
+	color: white;
+	border-radius: 0.375rem;
+	background-color: rgb(220, 38, 38);
+}
+
+.buttonDanger:disabled {
+	background-color: rgb(156, 163, 175);
+	cursor: not-allowed;
+}
+
+.buttonDanger:hover:not(:disabled) {
+	background-color: rgb(185, 28, 28);
+}
+
+.messageSuccess {
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	background-color: rgb(220, 252, 231);
+	color: rgb(21, 128, 61);
+}
+
+.messageError {
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	background-color: rgb(254, 226, 226);
+	color: rgb(185, 28, 28);
+}
+
+.instructionsContainer {
+	margin-top: 1.5rem;
+	padding: 1rem;
+	background-color: rgb(249, 250, 251);
+	border-radius: 0.375rem;
+}
+
+.instructionsHeading {
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+.instructionsList {
+	list-style-type: decimal;
+	list-style-position: inside;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.875rem;
+	color: rgb(55, 65, 81);
+}
+
+.instructionsLink {
+	color: rgb(37, 99, 235);
+}
+
+.instructionsLink:hover {
+	text-decoration: underline;
+}

@@ -4,6 +4,7 @@ import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
 import { formatDate } from "@/lib/utils";
+import styles from "./index.module.css";
 
 interface TransactionViewRowProps {
 	tx: Transaction;
@@ -52,7 +53,7 @@ export const TransactionViewRow = ({
 					)}
 				</Button>
 			) : (
-				<span className="text-gray-500">No File</span>
+				<span className={styles.noFile}>No File</span>
 			)}
 		</TD>
 		<TD>

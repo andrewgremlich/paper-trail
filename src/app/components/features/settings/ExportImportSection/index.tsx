@@ -3,6 +3,7 @@ import { Download, Upload } from "lucide-react";
 import { H3, P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { handleExportData, handleImportData } from "@/lib/exportImport";
+import styles from "./index.module.css";
 
 export const ExportImportSection = () => {
 	const queryClient = useQueryClient();
@@ -20,16 +21,16 @@ export const ExportImportSection = () => {
 	const isLoading = exportMutation.isPending || importMutation.isPending;
 
 	return (
-		<div className="space-y-4 border-t border-neutral-200 dark:border-neutral-700 pt-4 mt-4">
-			<div>
+		<div className={styles.container}>
+			<div className={styles.header}>
 				<H3>Backup & Restore</H3>
-				<P className="text-sm text-neutral-600 dark:text-neutral-400">
+				<P className={styles.description}>
 					Export all your data to a JSON file for backup, or import a previously
 					exported backup file.
 				</P>
 			</div>
 
-			<div className="flex gap-3">
+			<div className={styles.buttonGroup}>
 				<Button
 					onClick={() => {
 						exportMutation.reset();
@@ -58,13 +59,13 @@ export const ExportImportSection = () => {
 			</div>
 
 			{exportMutation.isSuccess && exportMutation.data && (
-				<div className="p-3 rounded text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+				<div className={styles.successMessage}>
 					Data exported successfully to {exportMutation.data.fileName}
 				</div>
 			)}
 
 			{exportMutation.isError && exportMutation.error && (
-				<div className="p-3 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200">
+				<div className={styles.errorMessage}>
 					Export failed:{" "}
 					{exportMutation.error instanceof Error
 						? exportMutation.error.message
@@ -73,7 +74,7 @@ export const ExportImportSection = () => {
 			)}
 
 			{importMutation.isSuccess && importMutation.data && (
-				<div className="p-3 rounded text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+				<div className={styles.successMessage}>
 					Data imported successfully! {importMutation.data.projectsCount}{" "}
 					projects, {importMutation.data.timesheetsCount} timesheets,{" "}
 					{importMutation.data.entriesCount} entries,{" "}
@@ -82,7 +83,7 @@ export const ExportImportSection = () => {
 			)}
 
 			{importMutation.isError && importMutation.error && (
-				<div className="p-3 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200">
+				<div className={styles.errorMessage}>
 					Import failed:{" "}
 					{importMutation.error instanceof Error
 						? importMutation.error.message

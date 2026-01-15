@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
 
 import { getStripeSecretKey, setStripeSecretKey } from "@/lib/stronghold";
+import styles from "./index.module.css";
 
 interface StripeSecretSectionProps {
 	active: boolean;
@@ -31,7 +32,7 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 
 	return (
 		<form
-			className="space-y-1"
+			className={styles.form}
 			aria-labelledby={`${baseId}-stripe-label`}
 			onSubmit={(e) => {
 				e.preventDefault();
@@ -46,11 +47,11 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 			<label
 				id={`${baseId}-stripe-label`}
 				htmlFor={inputId}
-				className="block text-xs font-medium text-neutral-500 dark:text-neutral-400"
+				className={styles.label}
 			>
 				Stripe Secret Key
 			</label>
-			<div className="flex gap-2">
+			<div className={styles.inputGroup}>
 				<input
 					id={inputId}
 					name="stripeKey"
@@ -58,20 +59,18 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 					spellCheck={false}
 					placeholder="sk_live_..."
 					defaultValue={stripeKey ?? ""}
-					className="w-full rounded border border-neutral-300 dark:border-neutral-600 bg-white text-black dark:bg-neutral-800 dark:text-primary-foreground px-2 py-1 text-sm"
+					className={styles.input}
 				/>
 				<button
 					type="submit"
-					className={`px-3 py-1.5 rounded ${isSuccess ? "bg-emerald-600 hover:bg-emerald-500" : "bg-blue-600 hover:bg-blue-500"} text-primary-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+					className={
+						isSuccess ? styles.submitButtonSuccess : styles.submitButton
+					}
 				>
 					{isPending ? "Saving" : isSuccess ? "Saved" : "Save"}
 				</button>
 			</div>
-			{isError && (
-				<span className="text-xs text-red-600 dark:text-red-400">
-					Error saving key
-				</span>
-			)}
+			{isError && <span className={styles.error}>Error saving key</span>}
 		</form>
 	);
 };

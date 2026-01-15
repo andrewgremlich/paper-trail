@@ -1,0 +1,12 @@
+.viewFileButton {
+	color: rgb(59, 130, 246);
+	text-decoration: underline;
+}
+
+.noFile {
+	color: rgb(107, 114, 128);
+}
+
+.amountInput {
+	width: 8rem;
+}
