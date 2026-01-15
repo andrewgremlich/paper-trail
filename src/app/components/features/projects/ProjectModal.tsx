@@ -1,16 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { GenerateTimesheet } from "@/components/features/timesheets/GenerateTimesheet";
+import { Flex } from "@/components/layout/Flex";
+import { H2, P } from "@/components/layout/HtmlElements";
+import { CardPreview } from "@/components/shared/CardPreview";
+import { DeleteItem } from "@/components/shared/DeleteItem";
 import { EditToggleButton } from "@/components/shared/EditToggleButton";
-import { deleteProject, getProjectById } from "../lib/db";
-import { usePaperTrailStore } from "../lib/store";
-import { CardPreview } from "./CardPreview";
-import { DeleteItem } from "./DeleteItem";
-import { Flex } from "./Flex";
-import { GenerateTimesheet } from "./GenerateTimesheet";
-import { H2, P } from "./HtmlElements";
+import { Dialog } from "@/components/ui/Dialog";
+import { Grid } from "@/components/ui/Grid";
+import { deleteProject, getProjectById } from "@/lib/db";
+import { usePaperTrailStore } from "@/lib/store";
 import { ProjectEditForm } from "./ProjectEditForm";
-import { Dialog } from "./ui/Dialog";
-import { Grid } from "./ui/Grid";
 
 export const ProjectModal = () => {
 	const [isEditing, setIsEditing] = useState(false);

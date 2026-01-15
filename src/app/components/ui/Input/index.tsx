@@ -1,7 +1,8 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
 import { forwardRef, useId } from "react";
-import { Flex } from "@/components/Flex";
-import { Label } from "@/components/HtmlElements";
+import { Flex } from "@/components/layout/Flex";
+import { Label } from "@/components/layout/HtmlElements";
+import styles from "./Input.module.css";
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 	className?: string;
@@ -12,9 +13,6 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 	descriptionId?: string;
 	errorId?: string;
 };
-
-const baseClasses =
-	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm placeholder:text-slate-500 text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 read-only:opacity-75";
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
 	(
@@ -37,8 +35,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 		ref,
 	) => {
 		const inputClasses = className
-			? `${baseClasses} ${className}`
-			: baseClasses;
+			? `${styles.input} ${className}`
+			: styles.input;
 		const generatedId = useId();
 		const inputId = id ?? generatedId;
 

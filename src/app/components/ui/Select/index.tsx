@@ -1,7 +1,8 @@
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { forwardRef, useId } from "react";
-import { Flex } from "@/components/Flex";
-import { Label } from "@/components/HtmlElements";
+import { Flex } from "@/components/layout/Flex";
+import { Label } from "@/components/layout/HtmlElements";
+import styles from "./Select.module.css";
 
 export type SelectOption = {
 	value: string | number;
@@ -19,9 +20,6 @@ export type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
 	errorId?: string;
 	options?: SelectOption[];
 };
-
-const baseClasses =
-	"h-10 rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 	(
@@ -41,8 +39,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 		ref,
 	) => {
 		const selectClasses = className
-			? `${baseClasses} ${className}`
-			: baseClasses;
+			? `${styles.select} ${className}`
+			: styles.select;
 		const generatedId = useId();
 		const selectId = id ?? generatedId;
 

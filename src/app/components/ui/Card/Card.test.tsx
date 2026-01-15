@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, it, expect } from "vitest";
-import { Card, CardHeader, CardContent, CardFooter } from "./index";
+import { describe, expect, it } from "vitest";
+import { Card, CardContent, CardFooter, CardHeader } from "./index";
 
 describe("Card Component", () => {
 	it("renders Card component with content", () => {
@@ -10,7 +10,9 @@ describe("Card Component", () => {
 	});
 
 	it("applies custom className to Card", () => {
-		const html = renderToStaticMarkup(<Card className="custom-class">Test</Card>);
+		const html = renderToStaticMarkup(
+			<Card className="custom-class">Test</Card>,
+		);
 		expect(html).toContain("custom-class");
 	});
 
@@ -28,7 +30,9 @@ describe("CardHeader Component", () => {
 	});
 
 	it("applies custom className to CardHeader", () => {
-		const html = renderToStaticMarkup(<CardHeader className="custom-header">Header</CardHeader>);
+		const html = renderToStaticMarkup(
+			<CardHeader className="custom-header">Header</CardHeader>,
+		);
 		expect(html).toContain("custom-header");
 	});
 
@@ -46,7 +50,9 @@ describe("CardContent Component", () => {
 	});
 
 	it("applies custom className to CardContent", () => {
-		const html = renderToStaticMarkup(<CardContent className="custom-content">Content</CardContent>);
+		const html = renderToStaticMarkup(
+			<CardContent className="custom-content">Content</CardContent>,
+		);
 		expect(html).toContain("custom-content");
 	});
 
@@ -64,7 +70,9 @@ describe("CardFooter Component", () => {
 	});
 
 	it("applies custom className to CardFooter", () => {
-		const html = renderToStaticMarkup(<CardFooter className="custom-footer">Footer</CardFooter>);
+		const html = renderToStaticMarkup(
+			<CardFooter className="custom-footer">Footer</CardFooter>,
+		);
 		expect(html).toContain("custom-footer");
 	});
 

@@ -1,9 +1,9 @@
 import { Edit, FolderOpen, Globe, TrashIcon } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
 import { formatDate } from "@/lib/utils";
-import { Button } from "./ui/Button";
 
 interface TransactionViewRowProps {
 	tx: Transaction;

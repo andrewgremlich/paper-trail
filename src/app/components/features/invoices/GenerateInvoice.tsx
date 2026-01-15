@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { TimesheetDetails } from "@/lib/db";
 import { generateInvoice } from "@/lib/stripeApi";
-import { Button } from "./ui/Button";
 
 export const GenerateInvoice = ({
 	timesheet,

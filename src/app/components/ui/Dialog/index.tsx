@@ -6,6 +6,7 @@ import React, {
 	useEffect,
 	useRef,
 } from "react";
+import styles from "./Dialog.module.css";
 
 interface DialogProps {
 	isOpen: boolean;
@@ -194,17 +195,9 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				aria-labelledby={titleId}
 				aria-label={titleId ? undefined : ariaLabel}
 				className={clsx(
-					"fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 w-full max-w-3xl",
-					visualVariant === "liquidGlass"
-						? [
-								"rounded-xl p-4 border bg-blue-950/20 border-white/15 backdrop:backdrop-blur-md",
-							]
-						: [
-								// Original solid dialog styling
-								"rounded-md p-4 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 backdrop:backdrop-blur-sm",
-							],
-					animate &&
-						"opacity-0 scale-95 data-[state=open]:opacity-100 data-[state=open]:scale-100 transition-all duration-150 ease-out will-change-transform will-change-opacity",
+					styles.dialog,
+					styles[visualVariant],
+					animate && styles.animate,
 					className,
 				)}
 				data-variant={visualVariant}

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Button } from "./ui/Button";
 
 export const DeleteItem = ({
 	deleteItemId,

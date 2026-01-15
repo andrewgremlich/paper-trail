@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { generateProject } from "../lib/db";
-import { usePaperTrailStore } from "../lib/store";
-import type { Customer } from "../lib/types";
-import { Button } from "./ui/Button";
+import { generateProject } from "@/lib/db";
+import { usePaperTrailStore } from "@/lib/store";
+import type { Customer } from "@/lib/types";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();

@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
+import { Grid } from "@/components/ui/Grid";
 import { Input } from "@/components/ui/Input";
-import { type Project, updateProject } from "../lib/db";
-import { Button } from "./ui/Button";
-import { Grid } from "./ui/Grid";
+import { type Project, updateProject } from "@/lib/db";
 
 type ProjectEditFormProps = {
 	project: Project;

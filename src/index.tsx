@@ -1,13 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { Nav } from "@/components/Nav";
-import { PageWrapper } from "@/components/PageWrapper";
-import { ProjectModal } from "@/components/ProjectModal";
-import { SettingsModal } from "@/components/SettingsModal";
-import { TimesheetModal } from "@/components/TimesheetModal";
+import { ProjectModal } from "@/components/features/projects/ProjectModal";
+import { SettingsModal } from "@/components/features/settings/SettingsModal";
+import { TimesheetModal } from "@/components/features/timesheets/TimesheetModal";
+import { Nav } from "@/components/layout/Nav";
+import { PageWrapper } from "@/components/layout/PageWrapper";
+import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { App } from "@/index";
 
 const queryClient = new QueryClient();

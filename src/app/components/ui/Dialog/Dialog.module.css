@@ -1,0 +1,56 @@
+/* Base dialog styles */
+.dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	margin: 0;
+	width: 100%;
+	max-width: 48rem;
+}
+
+/* Variant: Solid (default) */
+.solid {
+	border-radius: 0.375rem;
+	padding: 1rem;
+	border: 1px solid rgb(229 229 229);
+	background-color: white;
+}
+
+.solid::backdrop {
+	backdrop-filter: blur(4px);
+}
+
+@media (prefers-color-scheme: dark) {
+	.solid {
+		border-color: rgb(64 64 64);
+		background-color: rgb(23 23 23);
+	}
+}
+
+/* Variant: Liquid Glass */
+.liquidGlass {
+	border-radius: 0.75rem;
+	padding: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background-color: rgba(23, 37, 84, 0.2);
+}
+
+.liquidGlass::backdrop {
+	backdrop-filter: blur(12px);
+}
+
+/* Animation states */
+.animate {
+	opacity: 0;
+	scale: 0.95;
+	transition-property: opacity, scale;
+	transition-timing-function: ease-out;
+	transition-duration: 150ms;
+	will-change: transform, opacity;
+}
+
+.animate[data-state="open"] {
+	opacity: 1;
+	scale: 1;
+}

@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
+import { Grid } from "@/components/ui/Grid";
 import { Input } from "@/components/ui/Input";
-import { updateTimesheet } from "../lib/db";
-import type { TimesheetDetails } from "../lib/db/types";
-import { Button } from "./ui/Button";
-import { Grid } from "./ui/Grid";
+import { updateTimesheet } from "@/lib/db";
+import type { TimesheetDetails } from "@/lib/db/types";
 
 type TimesheetEditFormProps = {
 	timesheet: TimesheetDetails;

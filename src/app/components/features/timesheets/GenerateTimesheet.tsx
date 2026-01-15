@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReducer } from "react";
+import { Flex } from "@/components/layout/Flex";
+import { H2, Section } from "@/components/layout/HtmlElements";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
 	generateTimesheet,
@@ -7,9 +10,6 @@ import {
 	type ProjectWithTimesheets,
 } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { Flex } from "./Flex";
-import { H2, Section } from "./HtmlElements";
-import { Button } from "./ui/Button";
 
 type FormState = { name: string; description: string };
 type FormAction =

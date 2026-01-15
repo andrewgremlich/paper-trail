@@ -3,9 +3,9 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table, TBody, TD, TR } from "@/components/ui/Table";
-import { H1, Main } from "./components/HtmlElements";
-import { TransactionEditRow } from "./components/TransactionEditRow";
-import { TransactionViewRow } from "./components/TransactionViewRow";
+import { TransactionEditRow } from "./components/features/transactions/TransactionEditRow";
+import { TransactionViewRow } from "./components/features/transactions/TransactionViewRow";
+import { H1, Main } from "./components/layout/HtmlElements";
 import { Button } from "./components/ui/Button";
 import { Grid } from "./components/ui/Grid";
 import {

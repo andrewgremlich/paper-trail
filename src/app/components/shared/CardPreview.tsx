@@ -1,5 +1,5 @@
-import { H3, P } from "./HtmlElements";
-import { Card } from "./ui/Card";
+import { H3, P } from "@/components/layout/HtmlElements";
+import { Card } from "@/components/ui/Card";
 
 export const CardPreview = ({
 	name,

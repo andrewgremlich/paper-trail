@@ -19,7 +19,9 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={className ? `${styles.cardHeader} ${className}` : styles.cardHeader}
+		className={
+			className ? `${styles.cardHeader} ${className}` : styles.cardHeader
+		}
 		{...props}
 	/>
 ));
@@ -31,7 +33,9 @@ const CardContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={className ? `${styles.cardContent} ${className}` : styles.cardContent}
+		className={
+			className ? `${styles.cardContent} ${className}` : styles.cardContent
+		}
 		{...props}
 	/>
 ));
@@ -43,7 +47,9 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		ref={ref}
-		className={className ? `${styles.cardFooter} ${className}` : styles.cardFooter}
+		className={
+			className ? `${styles.cardFooter} ${className}` : styles.cardFooter
+		}
 		{...props}
 	/>
 ));

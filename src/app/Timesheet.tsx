@@ -1,11 +1,12 @@
 import "./globals.css";
 
 import { useQuery } from "@tanstack/react-query";
+
 // import { invoke } from "@tauri-apps/api/core";
 
-import { CardPreview } from "@/components/CardPreview";
-import { GenerateProject } from "@/components/GenerateProject";
-import { H1, H2, Main, P, Section } from "@/components/HtmlElements";
+import { GenerateProject } from "@/components/features/projects/GenerateProject";
+import { H1, H2, Main, P, Section } from "@/components/layout/HtmlElements";
+import { CardPreview } from "@/components/shared/CardPreview";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import { getAllCustomers } from "@/lib/stripeApi";
