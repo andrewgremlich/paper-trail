@@ -10,9 +10,10 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Grid } from "@/components/ui/Grid";
 import { deleteTimesheet, getTimesheetById } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { CreateTimesheetRecord } from "./CreateTimesheetRecord";
-import { TimesheetEditForm } from "./TimesheetEditForm";
-import { TimesheetTable } from "./TimesheetTable";
+import { CreateTimesheetRecord } from "../CreateTimesheetRecord";
+import { TimesheetEditForm } from "../TimesheetEditForm";
+import { TimesheetTable } from "../TimesheetTable";
+import styles from "./styles.module.css";
 
 export const TimesheetModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
@@ -30,7 +31,7 @@ export const TimesheetModal = () => {
 
 	return (
 		<Dialog
-			className="px-10 py-8"
+			className={styles.dialog}
 			variant="liquidGlass"
 			isOpen={timesheetModalActive}
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
@@ -72,7 +73,7 @@ export const TimesheetModal = () => {
 					rows={timesheet?.invoiceId ? 4 : 3}
 					flow="col"
 					columnGap={24}
-					className="mb-6"
+					className={styles.infoGrid}
 				>
 					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
 					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}

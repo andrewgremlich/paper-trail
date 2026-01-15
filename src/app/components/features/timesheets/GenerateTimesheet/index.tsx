@@ -10,6 +10,7 @@ import {
 	type ProjectWithTimesheets,
 } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
+import styles from "./styles.module.css";
 
 type FormState = { name: string; description: string };
 type FormAction =
@@ -64,7 +65,7 @@ export const GenerateTimesheet = ({
 				}}
 			>
 				<input type="hidden" name="projectId" defaultValue={project?.id} />
-				<Flex gap={8} className="mb-4" items="end">
+				<Flex gap={8} className={styles.inputContainer} items="end">
 					<Input
 						type="text"
 						name="name"
@@ -99,7 +100,7 @@ export const GenerateTimesheet = ({
 					name="description"
 					placeholder="Timesheet Description"
 					label="Timesheet Description"
-					className="mb-6"
+					className={styles.descriptionInput}
 					value={form.description}
 					onChange={(e) =>
 						dispatch({

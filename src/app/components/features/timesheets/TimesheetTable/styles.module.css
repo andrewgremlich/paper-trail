@@ -1,0 +1,25 @@
+.container {
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+.noWrap {
+	text-wrap: nowrap;
+}
+
+.hoursInput {
+	width: 6rem;
+}
+
+.fullWidth {
+	width: 100%;
+}
+
+.emptyState {
+	padding-top: 2rem;
+	padding-bottom: 2rem;
+}
+
+.totalContainer {
+	text-align: right;
+}

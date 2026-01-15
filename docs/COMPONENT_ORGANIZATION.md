@@ -138,7 +138,7 @@ Each component directory should follow this structure:
 ```
 ComponentName/
 ├── index.tsx                    # Main component file
-├── ComponentName.module.css     # CSS module styles
+├── styles.module.css            # CSS module styles
 ├── ComponentName.test.tsx       # Component tests
 └── README.md                    # Optional: complex component documentation
 ```
@@ -249,7 +249,7 @@ import { Button, Input, Select } from "@/components/ui";
 - Use PascalCase for component directories and files
 - Be descriptive with names (e.g., `ProjectEditForm` not `EditForm`)
 - Prefix feature-specific components with their domain when exported
-- Keep CSS module names matching the component name
+- Use `styles.module.css` as the CSS module filename for consistency
 
 ## Future Considerations
 

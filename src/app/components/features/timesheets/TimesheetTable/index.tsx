@@ -14,6 +14,7 @@ import {
 import { normalizeDateInput } from "@/lib/db/utils";
 import { usePaperTrailStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
+import styles from "./styles.module.css";
 
 export const TimesheetTable = ({
 	entries,
@@ -66,7 +67,7 @@ export const TimesheetTable = ({
 	});
 
 	return (
-		<div className="my-4">
+		<div className={styles.container}>
 			{entries.length > 0 ? (
 				<Table>
 					<THead>
@@ -74,7 +75,7 @@ export const TimesheetTable = ({
 							<TH>Date</TH>
 							<TH>Hours</TH>
 							<TH>Description</TH>
-							<TH className="text-nowrap">Amount ($)</TH>
+							<TH className={styles.noWrap}>Amount ($)</TH>
 							<TH></TH>
 							<TH></TH>
 						</TR>
@@ -99,7 +100,7 @@ export const TimesheetTable = ({
 												type="number"
 												step="0.25"
 												defaultValue={entry.minutes / 60}
-												className="w-24"
+												className={styles.hoursInput}
 												min={0}
 												form={`edit-form-${entry.id}`}
 												required
@@ -110,7 +111,7 @@ export const TimesheetTable = ({
 												name="description"
 												type="text"
 												defaultValue={entry.description}
-												className="w-full"
+												className={styles.fullWidth}
 												form={`edit-form-${entry.id}`}
 												required
 											/>
@@ -154,7 +155,7 @@ export const TimesheetTable = ({
 									</>
 								) : (
 									<>
-										<TD className="text-nowrap">{formatDate(entry.date)}</TD>
+										<TD className={styles.noWrap}>{formatDate(entry.date)}</TD>
 										<TD>{entry.minutes / 60}</TD>
 										<TD>{entry.description}</TD>
 										<TD>${(entry.amount / 100).toFixed(2)}</TD>
@@ -195,14 +196,14 @@ export const TimesheetTable = ({
 					</TBody>
 				</Table>
 			) : (
-				<Flex justify="center" className="py-8">
+				<Flex justify="center" className={styles.emptyState}>
 					<P>No timesheet entries yet! Add your first entry above.</P>
 				</Flex>
 			)}
 
 			{entries.length > 0 && (
 				<Flex justify="end">
-					<div className="text-right">
+					<div className={styles.totalContainer}>
 						<Label>Total Amount</Label>
 						<H2>${(totalAmount / 100).toFixed(2)}</H2>
 					</div>

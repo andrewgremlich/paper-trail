@@ -5,6 +5,7 @@ import { Grid } from "@/components/ui/Grid";
 import { Input } from "@/components/ui/Input";
 import { updateTimesheet } from "@/lib/db";
 import type { TimesheetDetails } from "@/lib/db/types";
+import styles from "./styles.module.css";
 
 type TimesheetEditFormProps = {
 	timesheet: TimesheetDetails;
@@ -52,7 +53,7 @@ export const TimesheetEditForm = ({
 				label="Description"
 				defaultValue={timesheet?.description || ""}
 			/>
-			<Button type="submit" className="mt-4">
+			<Button type="submit" className={styles.submitButton}>
 				Save Changes
 			</Button>
 		</Grid>

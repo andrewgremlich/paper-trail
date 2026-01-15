@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createTimesheetEntry } from "@/lib/db";
 import { normalizeDateInput } from "@/lib/db/utils";
+import styles from "./styles.module.css";
 
 export const CreateTimesheetRecord = ({
 	timesheetId,
@@ -45,6 +46,7 @@ export const CreateTimesheetRecord = ({
 
 	return (
 		<form
+			className={styles.form}
 			onSubmit={async (evt) => {
 				evt.preventDefault();
 				const formData = new FormData(evt.currentTarget);
@@ -89,7 +91,7 @@ export const CreateTimesheetRecord = ({
 					size="icon"
 					disabled={!active}
 				>
-					<PlusIcon className="h-4 w-4" />
+					<PlusIcon className={styles.icon} />
 				</Button>
 			</Flex>
 		</form>
