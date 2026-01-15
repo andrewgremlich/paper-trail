@@ -4,6 +4,7 @@ import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import type { TimesheetDetails } from "@/lib/db/types";
 import { getInvoice, markInvoiceAsPaid, voidInvoice } from "@/lib/stripeApi";
+import styles from "./styles.module.css";
 
 export const PayVoidButtons = ({
 	timesheet,
@@ -70,7 +71,7 @@ export const PayVoidButtons = ({
 				<P>
 					Invoice PDF is available.{" "}
 					<a
-						className="text-blue-500 underline underline-offset-4 decoration-dashed"
+						className={styles.pdfLink}
 						href={invoiceData.pdf}
 						target="_blank"
 						rel="noopener noreferrer"

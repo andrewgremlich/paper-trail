@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { TimesheetDetails } from "@/lib/db";
 import { generateInvoice } from "@/lib/stripeApi";
+import styles from "./styles.module.css";
 
 export const GenerateInvoice = ({
 	timesheet,
@@ -47,7 +48,7 @@ export const GenerateInvoice = ({
 			<Button
 				type="submit"
 				variant="default"
-				className="mb-4"
+				className={styles.button}
 				disabled={!timesheet?.active || timesheet?.entries.length === 0}
 			>
 				{isPending
@@ -57,17 +58,13 @@ export const GenerateInvoice = ({
 						: "Invoice Generated"}
 			</Button>
 			{isSuccess && (
-				<div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+				<div className={styles.successMessage}>
 					{timesheet?.invoiceId
 						? `Invoice ${timesheet.invoiceId} generated successfully!`
 						: "Action completed successfully!"}
 				</div>
 			)}
-			{isError && (
-				<div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-					Error: {isError}
-				</div>
-			)}
+			{isError && <div className={styles.errorMessage}>Error: {isError}</div>}
 		</form>
 	);
 };
