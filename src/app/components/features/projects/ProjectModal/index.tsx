@@ -10,7 +10,8 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Grid } from "@/components/ui/Grid";
 import { deleteProject, getProjectById } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import { ProjectEditForm } from "./ProjectEditForm";
+import { ProjectEditForm } from "../ProjectEditForm";
+import styles from "./styles.module.css";
 
 export const ProjectModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
@@ -34,12 +35,12 @@ export const ProjectModal = () => {
 
 	return (
 		<Dialog
-			className="px-10 py-8"
+			className={styles.dialog}
 			variant="liquidGlass"
 			isOpen={projectModalActive}
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 		>
-			<Flex className="w-full" justify="between" items="start">
+			<Flex className={styles.header} justify="between" items="start">
 				<H2>{project?.name}</H2>
 				{/* TODO: abstract editing so it's reusable */}
 				<Flex gap={2} items="center">
@@ -86,8 +87,8 @@ export const ProjectModal = () => {
 				</Grid>
 			)}
 			{project?.timesheets && project.timesheets.length > 0 && (
-				<div className="mb-6">
-					<H2 className="mt-8 mb-4">Timesheets</H2>
+				<div className={styles.timesheetsSection}>
+					<H2 className={styles.timesheetsHeading}>Timesheets</H2>
 					{project?.timesheets.map((timesheet) => (
 						<CardPreview
 							key={timesheet.id}

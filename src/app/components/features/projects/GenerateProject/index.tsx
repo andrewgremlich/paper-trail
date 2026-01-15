@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/Select";
 import { generateProject } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import type { Customer } from "@/lib/types";
+import styles from "./styles.module.css";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const queryClient = useQueryClient();
@@ -36,7 +37,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 
 	return (
 		<form
-			className="grid grid-cols-3 gap-6"
+			className={styles.form}
 			onSubmit={(e) => {
 				e.preventDefault();
 				const formData = new FormData(e.currentTarget);
@@ -49,8 +50,8 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				placeholder="Awesome Project"
 				required
 				label="Project Name"
-				containerClassName="col-span-3"
-				className="w-full"
+				containerClassName={styles.nameInput}
+				className={styles.fullWidth}
 			/>
 			<Input
 				type="number"
@@ -58,13 +59,13 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				placeholder="dollars/hour"
 				required
 				label="Rate"
-				containerClassName="col-span-1"
-				className="w-full"
+				containerClassName={styles.rateInput}
+				className={styles.fullWidth}
 			/>
 			<Select
 				name="customerId"
 				label="Customer"
-				containerClassName="col-span-2"
+				containerClassName={styles.customerSelect}
 				required
 				options={[{ value: "", label: "Select a customer" }].concat(
 					customers?.map((customer) => ({
@@ -77,8 +78,8 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				name="description"
 				placeholder="Awesome project description"
 				required
-				containerClassName="col-span-3"
-				className="w-full"
+				containerClassName={styles.descriptionInput}
+				className={styles.fullWidth}
 				label="Project Description"
 			/>
 			<Button type="submit" size="lg" variant="default">

@@ -1,0 +1,25 @@
+.form {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1.5rem;
+}
+
+.nameInput {
+	grid-column: span 3 / span 3;
+}
+
+.rateInput {
+	grid-column: span 1 / span 1;
+}
+
+.customerSelect {
+	grid-column: span 2 / span 2;
+}
+
+.descriptionInput {
+	grid-column: span 3 / span 3;
+}
+
+.fullWidth {
+	width: 100%;
+}

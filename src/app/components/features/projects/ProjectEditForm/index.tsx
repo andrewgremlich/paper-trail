@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Grid } from "@/components/ui/Grid";
 import { Input } from "@/components/ui/Input";
 import { type Project, updateProject } from "@/lib/db";
+import styles from "./styles.module.css";
 
 type ProjectEditFormProps = {
 	project: Project;
@@ -61,7 +62,7 @@ export const ProjectEditForm = ({ project, onSaved }: ProjectEditFormProps) => {
 				type="number"
 				defaultValue={(project?.rate_in_cents ?? 0) / 100}
 			/>
-			<Button type="submit" className="mt-4">
+			<Button type="submit" className={styles.saveButton}>
 				Save Changes
 			</Button>
 		</Grid>
