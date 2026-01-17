@@ -11,7 +11,7 @@ import {
 	exportAllData,
 	importAllData,
 	validateImportData,
-} from "../lib/db/exportImport";
+} from "../db/exportImport";
 
 export const handleExportData = async () => {
 	// Get all data from database

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Upload } from "lucide-react";
 import { H3, P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
-import { handleExportData, handleImportData } from "@/lib/exportImport";
+import { handleExportData, handleImportData } from "@/lib/files/exportImport";
 import styles from "./styles.module.css";
 
 export const ExportImportSection = () => {

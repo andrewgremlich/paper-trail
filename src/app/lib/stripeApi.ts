@@ -12,7 +12,7 @@ const DAYS_UNTIL_DUE = 30;
 async function getStripeClient(): Promise<Stripe> {
 	if (stripeClient) return stripeClient;
 
-	const { getStripeSecretKey } = await import("./stronghold");
+	const { getStripeSecretKey } = await import("./files/stronghold");
 	const key = await getStripeSecretKey();
 
 	if (!key) throw new Error("Stripe secret key not found. Set it in Settings.");

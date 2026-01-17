@@ -16,7 +16,7 @@ import {
 } from "./lib/db";
 import { getAllProjects } from "./lib/db/projects";
 import { normalizeDateInput } from "./lib/db/utils";
-import { saveAttachment } from "./lib/fileStorage";
+import { saveAttachment } from "./lib/files/fileStorage";
 import styles from "./Page.module.css";
 
 export const Transactions = () => {

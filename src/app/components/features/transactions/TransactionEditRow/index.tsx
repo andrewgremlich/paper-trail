@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
-import { openAttachment } from "@/lib/fileStorage";
+import { openAttachment } from "@/lib/files/fileStorage";
 import styles from "./styles.module.css";
 
 interface TransactionEditRowProps {
