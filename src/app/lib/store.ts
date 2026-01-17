@@ -30,7 +30,7 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 			activeTimesheetId: undefined,
 			projects: [],
 			timesheets: [],
-			activeTab: ProjectPageTab.Timesheet,
+			activeTab: ProjectPageTab.Timesheets,
 			toggleProjectModal: (args) =>
 				set((state) => ({
 					projectModalActive:

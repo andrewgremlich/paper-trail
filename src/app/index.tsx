@@ -1,17 +1,20 @@
+import { Invoices } from "./Invoices";
 import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
-import { Timesheet } from "./Timesheet";
+import { Timesheets } from "./Timesheets";
 import { Transactions } from "./Transactions";
 
 export const App = () => {
 	const { activeTab } = usePaperTrailStore();
 
 	switch (activeTab) {
-		case ProjectPageTab.Timesheet:
-			return <Timesheet />;
+		case ProjectPageTab.Timesheets:
+			return <Timesheets />;
 		case ProjectPageTab.Transactions:
 			return <Transactions />;
+		case ProjectPageTab.Invoices:
+			return <Invoices />;
 		default:
-			return <Timesheet />;
+			return <Timesheets />;
 	}
 };

@@ -1,4 +1,4 @@
-import { Settings, Table, Timer } from "lucide-react";
+import { NotebookPen, Settings, Table, Timer } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { Button } from "@/components/ui/Button";
 import { usePaperTrailStore } from "@/lib/store";
@@ -17,12 +17,12 @@ export const Nav = () => {
 					type="button"
 					variant="liquidGlass"
 					size="icon"
-					onClick={() => changeActiveTab(ProjectPageTab.Timesheet)}
+					onClick={() => changeActiveTab(ProjectPageTab.Timesheets)}
 					className={cn(
 						styles.navButtonSpacing,
-						activeTab === ProjectPageTab.Timesheet && styles.navButtonActive,
+						activeTab === ProjectPageTab.Timesheets && styles.navButtonActive,
 					)}
-					aria-pressed={activeTab === ProjectPageTab.Timesheet}
+					aria-pressed={activeTab === ProjectPageTab.Timesheets}
 				>
 					<Timer size={40} />
 				</Button>
@@ -38,6 +38,19 @@ export const Nav = () => {
 					aria-pressed={activeTab === ProjectPageTab.Transactions}
 				>
 					<Table size={40} />
+				</Button>
+				<Button
+					type="button"
+					variant="liquidGlass"
+					size="icon"
+					onClick={() => changeActiveTab(ProjectPageTab.Invoices)}
+					className={cn(
+						styles.navButtonSpacing,
+						activeTab === ProjectPageTab.Invoices && styles.navButtonActive,
+					)}
+					aria-pressed={activeTab === ProjectPageTab.Invoices}
+				>
+					<NotebookPen size={40} />
 				</Button>
 			</div>
 

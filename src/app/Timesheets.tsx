@@ -10,8 +10,9 @@ import { CardPreview } from "@/components/shared/CardPreview";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
 import { getAllCustomers } from "@/lib/stripeApi";
+import styles from "./Page.module.css";
 
-export const Timesheet = () => {
+export const Timesheets = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
@@ -38,7 +39,7 @@ export const Timesheet = () => {
 	// }
 
 	return (
-		<Main style={{ maxWidth: "48rem" }}>
+		<Main className={styles.container}>
 			<H1>Paper Trail</H1>
 			{/* <input
 				onChange={(e) => setName(e.currentTarget.value)}

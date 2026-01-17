@@ -5,8 +5,9 @@ export type Customer = {
 };
 
 export enum ProjectPageTab {
-	Timesheet = "Timesheet",
+	Timesheets = "Timesheets",
 	Transactions = "Transactions",
+	Invoices = "Invoices",
 }
 
 export interface StripeInvoiceMinimal {

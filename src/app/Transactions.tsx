@@ -17,7 +17,7 @@ import {
 import { getAllProjects } from "./lib/db/projects";
 import { normalizeDateInput } from "./lib/db/utils";
 import { saveAttachment } from "./lib/fileStorage";
-import styles from "./Transactions.module.css";
+import styles from "./Page.module.css";
 
 export const Transactions = () => {
 	const queryClient = useQueryClient();
