@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import styles from "./styles.module.css";
 
 export const DeleteItem = ({
 	deleteItemId,
@@ -35,11 +36,11 @@ export const DeleteItem = ({
 			<Button
 				variant="ghost"
 				size="icon"
-				className="ml-2"
+				className={styles.deleteButton}
 				type="submit"
 				aria-label="Delete timesheet"
 			>
-				<TrashIcon className="w-6 h-6 text-primary-foreground" />
+				<TrashIcon className={styles.trashIcon} />
 			</Button>
 		</form>
 	);

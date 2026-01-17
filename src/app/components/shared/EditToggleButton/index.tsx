@@ -1,5 +1,6 @@
 import { Edit } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import styles from "./styles.module.css";
 
 type EditToggleButtonProps = {
 	enabled?: boolean;
@@ -26,7 +27,7 @@ export const EditToggleButton = ({
 				onToggle();
 			}}
 		>
-			<Edit className="w-6 h-6" />
+			<Edit className={styles.editIcon} />
 		</Button>
 	);
 };

@@ -1,5 +1,7 @@
 import type { HTMLAttributes, JSX } from "react";
 import { forwardRef } from "react";
+import { cn } from "@/lib/utils";
+import styles from "./styles.module.css";
 
 type Direction = "row" | "row-reverse" | "col" | "col-reverse";
 type Justify = "start" | "end" | "center" | "between" | "around" | "evenly";
@@ -37,59 +39,55 @@ export const Flex = forwardRef<HTMLElement, FlexProps>(
 	) => {
 		const Comp: keyof JSX.IntrinsicElements = as;
 
-		// Use explicit class maps so Tailwind can statically detect classes
 		const directionClassMap: Record<Direction, string> = {
-			row: "flex-row",
-			"row-reverse": "flex-row-reverse",
-			col: "flex-col",
-			"col-reverse": "flex-col-reverse",
+			row: styles.flexRow,
+			"row-reverse": styles.flexRowReverse,
+			col: styles.flexCol,
+			"col-reverse": styles.flexColReverse,
 		};
 
 		const justifyClassMap: Record<Justify, string> = {
-			start: "justify-start",
-			end: "justify-end",
-			center: "justify-center",
-			between: "justify-between",
-			around: "justify-around",
-			evenly: "justify-evenly",
+			start: styles.justifyStart,
+			end: styles.justifyEnd,
+			center: styles.justifyCenter,
+			between: styles.justifyBetween,
+			around: styles.justifyAround,
+			evenly: styles.justifyEvenly,
 		};
 
 		const itemsClassMap: Record<Items, string> = {
-			start: "items-start",
-			end: "items-end",
-			center: "items-center",
-			baseline: "items-baseline",
-			stretch: "items-stretch",
+			start: styles.itemsStart,
+			end: styles.itemsEnd,
+			center: styles.itemsCenter,
+			baseline: styles.itemsBaseline,
+			stretch: styles.itemsStretch,
 		};
 
 		const contentClassMap: Record<Content, string> = {
-			start: "content-start",
-			end: "content-end",
-			center: "content-center",
-			between: "content-between",
-			around: "content-around",
-			evenly: "content-evenly",
+			start: styles.contentStart,
+			end: styles.contentEnd,
+			center: styles.contentCenter,
+			between: styles.contentBetween,
+			around: styles.contentAround,
+			evenly: styles.contentEvenly,
 		};
 
 		const wrapClassMap: Record<Wrap, string> = {
-			wrap: "flex-wrap",
-			"wrap-reverse": "flex-wrap-reverse",
-			nowrap: "flex-nowrap",
+			wrap: styles.flexWrap,
+			"wrap-reverse": styles.flexWrapReverse,
+			nowrap: styles.flexNowrap,
 		};
 
-		const classes = [
-			inline ? "inline-flex" : "flex",
+		const classes = cn(
+			inline ? styles.inlineFlex : styles.flex,
 			directionClassMap[direction],
-			justify ? justifyClassMap[justify] : null,
-			items ? itemsClassMap[items] : null,
-			content ? contentClassMap[content] : null,
-			wrap ? wrapClassMap[wrap] : null,
+			justify && justifyClassMap[justify],
+			items && itemsClassMap[items],
+			content && contentClassMap[content],
+			wrap && wrapClassMap[wrap],
 			className,
-		]
-			.filter(Boolean)
-			.join(" ");
+		);
 
-		// Prefer inline style for gap to avoid dynamic class generation
 		const { style, ...restProps } = rest as HTMLAttributes<HTMLElement>;
 		const mergedStyle =
 			gap !== undefined && gap !== null

@@ -38,7 +38,7 @@ export const Timesheet = () => {
 	// }
 
 	return (
-		<Main className="max-w-3xl">
+		<Main style={{ maxWidth: "48rem" }}>
 			<H1>Paper Trail</H1>
 			{/* <input
 				onChange={(e) => setName(e.currentTarget.value)}

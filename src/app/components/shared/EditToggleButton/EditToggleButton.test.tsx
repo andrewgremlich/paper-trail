@@ -67,6 +67,6 @@ describe("EditToggleButton component", () => {
 			<EditToggleButton isEditing={false} onToggle={() => {}} />,
 		);
 
-		expect(html).toContain("w-6 h-6");
+		expect(html).toContain("editIcon");
 	});
 });

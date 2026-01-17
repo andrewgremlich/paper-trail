@@ -1,0 +1,21 @@
+.container {
+	max-width: 64rem;
+}
+
+.errorText {
+	color: rgb(239, 68, 68);
+}
+
+.formSection {
+	padding-bottom: 1.5rem;
+}
+
+.formInput {
+	border: 1px solid var(--border);
+	border-radius: 0.375rem;
+	padding: 0.5rem;
+}
+
+.tableFullWidth {
+	width: 100%;
+}

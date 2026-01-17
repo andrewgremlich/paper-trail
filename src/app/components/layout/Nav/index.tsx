@@ -3,24 +3,25 @@ import { Flex } from "@/components/layout/Flex";
 import { Button } from "@/components/ui/Button";
 import { usePaperTrailStore } from "@/lib/store";
 import { ProjectPageTab } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import styles from "./styles.module.css";
 
 export const Nav = () => {
 	const { toggleSettingsModal, changeActiveTab, activeTab } =
 		usePaperTrailStore();
 
 	return (
-		<Flex
-			as="nav"
-			justify="between"
-			className="fixed top-0 left-0 right-0 py-6 px-4"
-		>
+		<Flex as="nav" justify="between" className={styles.nav}>
 			<div>
 				<Button
 					type="button"
 					variant="liquidGlass"
 					size="icon"
 					onClick={() => changeActiveTab(ProjectPageTab.Timesheet)}
-					className={`${activeTab === ProjectPageTab.Timesheet ? "bg-blue-600/20" : ""} mr-4`}
+					className={cn(
+						styles.navButtonSpacing,
+						activeTab === ProjectPageTab.Timesheet && styles.navButtonActive,
+					)}
 					aria-pressed={activeTab === ProjectPageTab.Timesheet}
 				>
 					<Timer size={40} />
@@ -30,7 +31,10 @@ export const Nav = () => {
 					variant="liquidGlass"
 					size="icon"
 					onClick={() => changeActiveTab(ProjectPageTab.Transactions)}
-					className={`${activeTab === ProjectPageTab.Transactions ? "bg-blue-600/20" : ""} mr-4`}
+					className={cn(
+						styles.navButtonSpacing,
+						activeTab === ProjectPageTab.Transactions && styles.navButtonActive,
+					)}
 					aria-pressed={activeTab === ProjectPageTab.Transactions}
 				>
 					<Table size={40} />

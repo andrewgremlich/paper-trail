@@ -31,7 +31,7 @@ npx vitest run src/app/lib/utils.test.ts
 - **React 19** with TypeScript, built with **Vite**
 - **Zustand** for state management (persisted to localStorage)
 - **TanStack React Query** for async data fetching
-- **Tailwind CSS 4** for styling
+- **CSS Modules** for component styling (no Tailwind)
 - Path aliases: `@/components/*`, `@/lib/*`, `@/*` map to `src/app/`
 
 ### Backend (`src-tauri/`)

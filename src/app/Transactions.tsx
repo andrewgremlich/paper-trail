@@ -17,6 +17,7 @@ import {
 import { getAllProjects } from "./lib/db/projects";
 import { normalizeDateInput } from "./lib/db/utils";
 import { saveAttachment } from "./lib/fileStorage";
+import styles from "./Transactions.module.css";
 
 export const Transactions = () => {
 	const queryClient = useQueryClient();
@@ -119,7 +120,7 @@ export const Transactions = () => {
 
 	if (isLoadingTransactions) {
 		return (
-			<Main className="max-w-5xl">
+			<Main className={styles.container}>
 				<H1>Transactions</H1>
 				<p>Loading transactions...</p>
 			</Main>
@@ -128,9 +129,9 @@ export const Transactions = () => {
 
 	if (transactionsError) {
 		return (
-			<Main className="max-w-5xl">
+			<Main className={styles.container}>
 				<H1>Transactions</H1>
-				<p className="text-red-500">
+				<p className={styles.errorText}>
 					Error loading transactions: {transactionsError.message}
 				</p>
 			</Main>
@@ -138,14 +139,14 @@ export const Transactions = () => {
 	}
 
 	return (
-		<Main className="max-w-5xl">
+		<Main className={styles.container}>
 			<H1>Transactions</H1>
 
 			<Grid
 				cols={5}
 				gap={12}
 				as="form"
-				className="pb-6"
+				className={styles.formSection}
 				onSubmit={(evt: FormEvent<HTMLFormElement>) => {
 					evt.preventDefault();
 					submitTransaction(new FormData(evt.currentTarget));
@@ -156,7 +157,7 @@ export const Transactions = () => {
 					label="Date"
 					name="date"
 					type="date"
-					className="border rounded p-2"
+					className={styles.formInput}
 					defaultValue={new Date().toISOString().split("T")[0]}
 					required
 				/>
@@ -164,12 +165,11 @@ export const Transactions = () => {
 					label="Description"
 					name="description"
 					type="text"
-					className="border rounded p-2"
+					className={styles.formInput}
 					required
 				/>
 				<Select
 					label="Project"
-					labelClassName="font-semibold"
 					name="projectId"
 					options={[
 						{ value: "", label: "Select Project" },
@@ -192,14 +192,14 @@ export const Transactions = () => {
 					name="amount"
 					step="0.01"
 					type="number"
-					className="border rounded p-2"
+					className={styles.formInput}
 					required
 				/>
 				<Input
 					label="File"
 					name="file"
 					type="file"
-					className="border rounded p-2"
+					className={styles.formInput}
 				/>
 				<Button type="submit" variant="default" size="sm">
 					Add Transaction
@@ -209,7 +209,7 @@ export const Transactions = () => {
 			{!transactions || transactions.length === 0 ? (
 				<p>No transactions found.</p>
 			) : (
-				<Table className="w-full">
+				<Table className={styles.tableFullWidth}>
 					<TBody>
 						{transactions.map((tx) => {
 							const path = tx.filePath ?? "";

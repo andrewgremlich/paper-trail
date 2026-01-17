@@ -1,5 +1,6 @@
 import { H3, P } from "@/components/layout/HtmlElements";
 import { Card } from "@/components/ui/Card";
+import styles from "./styles.module.css";
 
 export const CardPreview = ({
 	name,
@@ -11,10 +12,7 @@ export const CardPreview = ({
 	action: () => void;
 }) => {
 	return (
-		<Card
-			className="p-4 mb-4 transition-shadow cursor-pointer"
-			onClick={action}
-		>
+		<Card className={styles.card} onClick={action}>
 			<H3>{name}</H3>
 			<P>{description}</P>
 		</Card>

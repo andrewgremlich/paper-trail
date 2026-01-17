@@ -1,4 +1,3 @@
-import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -6,7 +5,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-  plugins: [tailwindcss(), tsconfigPaths(), react()],
+  plugins: [tsconfigPaths(), react()],
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
