@@ -6,7 +6,7 @@ import React, {
 	useEffect,
 	useRef,
 } from "react";
-import styles from "./Dialog.module.css";
+import styles from "./styles.module.css";
 
 interface DialogProps {
 	isOpen: boolean;

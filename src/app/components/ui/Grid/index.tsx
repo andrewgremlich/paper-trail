@@ -1,5 +1,5 @@
 import type { HTMLAttributes, JSX, ReactNode } from "react";
-import styles from "./Grid.module.css";
+import styles from "./styles.module.css";
 
 type ColCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 

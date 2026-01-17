@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { Spinner } from "@/components/ui/Spinner";
-import styles from "./Button.module.css";
+import styles from "./styles.module.css";
 
 type ButtonVariant =
 	| "default"

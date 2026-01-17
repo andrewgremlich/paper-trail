@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, ReactNode } from "react";
 import { forwardRef, useId } from "react";
 import { Flex } from "@/components/layout/Flex";
 import { Label } from "@/components/layout/HtmlElements";
-import styles from "./Input.module.css";
+import styles from "./styles.module.css";
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 	className?: string;

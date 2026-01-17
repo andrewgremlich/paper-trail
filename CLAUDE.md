@@ -60,6 +60,19 @@ npx vitest run src/app/lib/utils.test.ts
 - Use arrow functions in predicates
 - Test files use `.test.ts`/`.test.tsx` extension with Vitest
 
+### Component File Naming Conventions
+
+Components in `src/app/components/` follow this folder structure:
+```
+ComponentName/
+├── index.tsx              # Main component file
+├── styles.module.css      # CSS module (always named styles.module.css)
+└── ComponentName.test.tsx # Test file (named after the component)
+```
+
+- **CSS modules**: Always name `styles.module.css`, import as `import styles from "./styles.module.css"`
+- **Test files**: Always name `ComponentName.test.tsx` (matching the folder name)
+
 ## Stripe Integration
 
 Stripe API keys are stored encrypted via Stronghold plugin. The app supports:

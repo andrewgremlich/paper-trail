@@ -4,7 +4,7 @@ import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
 import { openAttachment } from "@/lib/fileStorage";
 import { formatDate } from "@/lib/utils";
-import styles from "./index.module.css";
+import styles from "./styles.module.css";
 
 interface TransactionViewRowProps {
 	tx: Transaction;

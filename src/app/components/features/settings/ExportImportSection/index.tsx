@@ -3,7 +3,7 @@ import { Download, Upload } from "lucide-react";
 import { H3, P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { handleExportData, handleImportData } from "@/lib/exportImport";
-import styles from "./index.module.css";
+import styles from "./styles.module.css";
 
 export const ExportImportSection = () => {
 	const queryClient = useQueryClient();

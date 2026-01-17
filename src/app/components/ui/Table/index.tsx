@@ -1,5 +1,5 @@
 import * as React from "react";
-import styles from "./Table.module.css";
+import styles from "./styles.module.css";
 
 type TableProps = React.TableHTMLAttributes<HTMLTableElement>;
 type THeadProps = React.HTMLAttributes<HTMLTableSectionElement>;

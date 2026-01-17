@@ -2,7 +2,7 @@ import type { ReactNode, SelectHTMLAttributes } from "react";
 import { forwardRef, useId } from "react";
 import { Flex } from "@/components/layout/Flex";
 import { Label } from "@/components/layout/HtmlElements";
-import styles from "./Select.module.css";
+import styles from "./styles.module.css";
 
 export type SelectOption = {
 	value: string | number;

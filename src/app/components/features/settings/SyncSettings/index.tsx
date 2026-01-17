@@ -7,7 +7,7 @@ import {
 	type SyncConfig,
 	syncNow,
 } from "@/lib/db/syncConfig";
-import styles from "./index.module.css";
+import styles from "./styles.module.css";
 
 export function SyncSettings() {
 	const [syncUrl, setSyncUrl] = useState("");
