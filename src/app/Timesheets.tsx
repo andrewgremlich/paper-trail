@@ -1,8 +1,6 @@
 import "./globals.css";
 
-import { useQuery } from "@tanstack/react-query";
-
-// import { invoke } from "@tauri-apps/api/core";
+import { useQueries } from "@tanstack/react-query";
 
 import { GenerateProject } from "@/components/features/projects/GenerateProject";
 import { H1, H2, Main, P, Section } from "@/components/layout/HtmlElements";
@@ -14,41 +12,18 @@ import styles from "./Page.module.css";
 
 export const Timesheets = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
-	const { data: projects } = useQuery({
-		queryKey: ["projects"],
-		queryFn: getAllProjects,
-	});
-	const { data: timesheets } = useQuery({
-		queryKey: ["timesheets"],
-		queryFn: getAllTimesheets,
-	});
-	const { data: customers } = useQuery({
-		queryKey: ["customers"],
-		queryFn: async () => {
-			return await getAllCustomers(50);
-		},
-	});
-
-	// TODO: potentially keep for seeing how to call Tauri commands
-	// const [greetMsg, setGreetMsg] = useState("");
-	// const [name, setName] = useState("");
-
-	// async function greet() {
-	// 	// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-	// 	setGreetMsg(await invoke("greet", { name }));
-	// }
+	const [{ data: projects }, { data: timesheets }, { data: customers }] =
+		useQueries({
+			queries: [
+				{ queryKey: ["projects"], queryFn: getAllProjects },
+				{ queryKey: ["timesheets"], queryFn: getAllTimesheets },
+				{ queryKey: ["customers"], queryFn: () => getAllCustomers(50) },
+			],
+		});
 
 	return (
 		<Main className={styles.container}>
 			<H1>Paper Trail</H1>
-			{/* <input
-				onChange={(e) => setName(e.currentTarget.value)}
-				placeholder="Enter a name..."
-			/>
-			<button type="button" onClick={greet}>
-				Greet
-			</button>
-			<p>{greetMsg}</p> */}
 			<P>
 				A Paper Trail that integrates with Stripe in order to send invoices.
 			</P>

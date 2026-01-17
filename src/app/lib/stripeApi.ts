@@ -204,3 +204,89 @@ export async function getAllCustomers(
 
 	return customers;
 }
+
+export interface StripeInvoiceListItem extends StripeInvoiceMinimal {
+	amountDue: number;
+	amountPaid: number;
+	currency: string;
+	customerEmail: string | null;
+	customerName: string | null;
+	customerId: string | null;
+	created: number;
+	dueDate: number | null;
+	number: string | null;
+	hostedInvoiceUrl: string | null;
+}
+
+export interface GetAllInvoicesOptions {
+	max?: number;
+	year?: number;
+	customerId?: string;
+}
+
+export async function getAllInvoices(
+	options: GetAllInvoicesOptions = {},
+): Promise<StripeInvoiceListItem[]> {
+	const { max, year, customerId } = options;
+
+	if (typeof max === "number" && max <= 0) return [];
+
+	const stripe = await getStripeClient();
+	const invoices: StripeInvoiceListItem[] = [];
+
+	// Calculate date range for year filter
+	let createdFilter: { gte?: number; lt?: number } | undefined;
+	if (year) {
+		const startOfYear = new Date(year, 0, 1).getTime() / 1000;
+		const startOfNextYear = new Date(year + 1, 0, 1).getTime() / 1000;
+		createdFilter = { gte: startOfYear, lt: startOfNextYear };
+	}
+
+	let startingAfter: string | undefined;
+
+	for (let page = 0; page < 50; page++) {
+		const remaining =
+			typeof max === "number" ? Math.max(0, max - invoices.length) : 100;
+		if (typeof max === "number" && remaining <= 0) break;
+		const pageLimit = Math.min(100, remaining || 100);
+
+		const list = await stripe.invoices.list({
+			limit: pageLimit,
+			starting_after: startingAfter,
+			created: createdFilter,
+			customer: customerId,
+		});
+
+		const pageItems: StripeInvoiceListItem[] = (list.data || []).map((inv) => {
+			const status = inv.status ?? null;
+			return {
+				id: inv.id,
+				status,
+				disabled: ["paid", "void"].includes(status ?? ""),
+				pdf: inv.invoice_pdf,
+				amountDue: inv.amount_due ?? 0,
+				amountPaid: inv.amount_paid ?? 0,
+				currency: inv.currency ?? CURRENCY,
+				customerEmail: inv.customer_email ?? null,
+				customerName: inv.customer_name ?? null,
+				customerId:
+					typeof inv.customer === "string"
+						? inv.customer
+						: (inv.customer?.id ?? null),
+				created: inv.created,
+				dueDate: inv.due_date ?? null,
+				number: inv.number ?? null,
+				hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+			};
+		});
+
+		invoices.push(...pageItems);
+
+		if (!list.has_more || pageItems.length === 0) break;
+		if (typeof max === "number" && invoices.length >= max) break;
+		startingAfter = pageItems[pageItems.length - 1]?.id;
+		if (!startingAfter) break;
+	}
+
+	return invoices;
+}
