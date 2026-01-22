@@ -139,7 +139,7 @@ export const Transactions = () => {
   }
 
   return (
-    <Main className={styles.container}>
+    <Main>
       <H1>Transactions</H1>
 
       <Grid
@@ -210,7 +210,7 @@ export const Transactions = () => {
       {!transactions || transactions.length === 0 ? (
         <p>No transactions found.</p>
       ) : (
-        <Table className={styles.tableFullWidth}>
+        <Table>
           <TBody>
             {transactions.map((tx) => {
               const path = tx.filePath ?? "";

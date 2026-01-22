@@ -96,13 +96,13 @@ export const TransactionEditRow = ({
 				}}
 			>
 				<Button type="submit" size="sm" variant="ghost">
-					<Save color="black" />
+					<Save />
 				</Button>
 			</form>
 		</TD>
 		<TD>
 			<Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-				<Ban color="black" />
+				<Ban />
 			</Button>
 		</TD>
 	</>
