@@ -8,8 +8,14 @@ import { Nav } from "@/components/layout/Nav";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { App } from "@/index";
+import { useTheme } from "@/lib/useTheme";
 
 const queryClient = new QueryClient();
+
+const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+	useTheme();
+	return <>{children}</>;
+};
 
 const rootElement = document.getElementById("root");
 
@@ -20,25 +26,27 @@ if (!rootElement) {
 createRoot(rootElement).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			<ErrorBoundary
-				fallback={(error) => (
-					<div className="error-boundary">
-						<h2>Something went wrong:</h2>
-						<pre>{error?.name}</pre>
-						<pre>{error?.message}</pre>
-						<pre>{error?.stack}</pre>
-						<p>Restart the application.</p>
-					</div>
-				)}
-			>
-				<TimesheetModal />
-				<ProjectModal />
-				<SettingsModal />
-				<Nav />
-				<PageWrapper>
-					<App />
-				</PageWrapper>
-			</ErrorBoundary>
+			<ThemeProvider>
+				<ErrorBoundary
+					fallback={(error) => (
+						<div className="error-boundary">
+							<h2>Something went wrong:</h2>
+							<pre>{error?.name}</pre>
+							<pre>{error?.message}</pre>
+							<pre>{error?.stack}</pre>
+							<p>Restart the application.</p>
+						</div>
+					)}
+				>
+					<TimesheetModal />
+					<ProjectModal />
+					<SettingsModal />
+					<Nav />
+					<PageWrapper>
+						<App />
+					</PageWrapper>
+				</ErrorBoundary>
+			</ThemeProvider>
 		</QueryClientProvider>
 	</StrictMode>,
 );

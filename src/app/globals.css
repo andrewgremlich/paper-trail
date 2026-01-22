@@ -82,44 +82,282 @@ h6 {
 
 /* THEME VARIABLES */
 
-:root {
+/* Light theme (default) */
+:root,
+:root[data-theme="light"] {
+	/* Neutral scale - gray palette for UI elements */
+	--neutral-50: #fafafa;
+	--neutral-100: #f4f4f5;
+	--neutral-200: #e4e4e7;
+	--neutral-300: #d4d4d8;
+	--neutral-400: #a1a1aa;
+	--neutral-500: #71717a;
+	--neutral-600: #52525b;
+	--neutral-700: #3f3f46;
+	--neutral-800: #27272a;
+	--neutral-900: #18181b;
+	--neutral-950: #09090b;
+
+	/* Core colors */
 	--background: #ffffff;
-	--foreground: rgba(7, 24, 20, 1);
+	--foreground: #0f172a;
 	--muted: #f1f5f9;
 	--muted-foreground: #64748b;
+
+	/* Primary - blue accent */
 	--primary: #2563eb;
+	--primary-hover: #1d4ed8;
 	--primary-foreground: #ffffff;
+
+	/* Secondary */
 	--secondary: #f1f5f9;
+	--secondary-hover: #e2e8f0;
 	--secondary-foreground: #0f172a;
+
+	/* Accent */
 	--accent: #f1f5f9;
+	--accent-hover: #e2e8f0;
 	--accent-foreground: #0f172a;
+
+	/* Destructive - red for delete/danger actions */
+	--destructive: #dc2626;
+	--destructive-hover: #b91c1c;
+	--destructive-foreground: #ffffff;
+
+	/* Borders and inputs */
 	--border: #e2e8f0;
+	--border-hover: #cbd5e1;
 	--input: #e2e8f0;
+	--input-background: #ffffff;
 	--ring: #2563eb;
+
+	/* Cards and popovers */
 	--card: #ffffff;
-	--card-foreground: #171717;
+	--card-foreground: #0f172a;
 	--popover: #ffffff;
-	--popover-foreground: #171717;
+	--popover-foreground: #0f172a;
+
+	/* Semantic colors - success */
+	--success: #16a34a;
+	--success-hover: #15803d;
+	--success-foreground: #ffffff;
+	--success-background: #dcfce7;
+	--success-background-foreground: #166534;
+
+	/* Semantic colors - warning */
+	--warning: #ca8a04;
+	--warning-hover: #a16207;
+	--warning-foreground: #ffffff;
+	--warning-background: #fef9c3;
+	--warning-background-foreground: #854d0e;
+
+	/* Semantic colors - error */
+	--error: #dc2626;
+	--error-hover: #b91c1c;
+	--error-foreground: #ffffff;
+	--error-background: #fee2e2;
+	--error-background-foreground: #991b1b;
+
+	/* Semantic colors - info */
+	--info: #2563eb;
+	--info-hover: #1d4ed8;
+	--info-foreground: #ffffff;
+	--info-background: #dbeafe;
+	--info-background-foreground: #1e40af;
+
+	/* Table specific */
+	--table-header-background: #f9fafb;
+	--table-row-background: #ffffff;
+	--table-row-hover: #f9fafb;
+	--table-border: #e5e7eb;
+
+	/* Focus/ring shadow for dark backgrounds in focus states */
+	--focus-ring-outer: #020617;
 }
 
+/* Dark theme */
+:root[data-theme="dark"] {
+	/* Neutral scale - inverted for dark mode */
+	--neutral-50: #09090b;
+	--neutral-100: #18181b;
+	--neutral-200: #27272a;
+	--neutral-300: #3f3f46;
+	--neutral-400: #52525b;
+	--neutral-500: #71717a;
+	--neutral-600: #a1a1aa;
+	--neutral-700: #d4d4d8;
+	--neutral-800: #e4e4e7;
+	--neutral-900: #f4f4f5;
+	--neutral-950: #fafafa;
+
+	/* Core colors */
+	--background: #0a0a0a;
+	--foreground: #fafafa;
+	--muted: #27272a;
+	--muted-foreground: #a1a1aa;
+
+	/* Primary - brighter blue for dark mode */
+	--primary: #3b82f6;
+	--primary-hover: #60a5fa;
+	--primary-foreground: #ffffff;
+
+	/* Secondary */
+	--secondary: #27272a;
+	--secondary-hover: #3f3f46;
+	--secondary-foreground: #fafafa;
+
+	/* Accent */
+	--accent: #27272a;
+	--accent-hover: #3f3f46;
+	--accent-foreground: #fafafa;
+
+	/* Destructive - slightly brighter red for dark mode */
+	--destructive: #ef4444;
+	--destructive-hover: #f87171;
+	--destructive-foreground: #ffffff;
+
+	/* Borders and inputs */
+	--border: #3f3f46;
+	--border-hover: #52525b;
+	--input: #3f3f46;
+	--input-background: #18181b;
+	--ring: #3b82f6;
+
+	/* Cards and popovers */
+	--card: #18181b;
+	--card-foreground: #fafafa;
+	--popover: #18181b;
+	--popover-foreground: #fafafa;
+
+	/* Semantic colors - success */
+	--success: #22c55e;
+	--success-hover: #4ade80;
+	--success-foreground: #000000;
+	--success-background: #14532d;
+	--success-background-foreground: #86efac;
+
+	/* Semantic colors - warning */
+	--warning: #eab308;
+	--warning-hover: #facc15;
+	--warning-foreground: #000000;
+	--warning-background: #422006;
+	--warning-background-foreground: #fde047;
+
+	/* Semantic colors - error */
+	--error: #ef4444;
+	--error-hover: #f87171;
+	--error-foreground: #ffffff;
+	--error-background: #450a0a;
+	--error-background-foreground: #fca5a5;
+
+	/* Semantic colors - info */
+	--info: #3b82f6;
+	--info-hover: #60a5fa;
+	--info-foreground: #ffffff;
+	--info-background: #1e3a8a;
+	--info-background-foreground: #93c5fd;
+
+	/* Table specific */
+	--table-header-background: #18181b;
+	--table-row-background: #0a0a0a;
+	--table-row-hover: #18181b;
+	--table-border: #3f3f46;
+
+	/* Focus/ring shadow for light backgrounds in focus states */
+	--focus-ring-outer: #fafafa;
+}
+
+/* System preference (when no explicit theme is set) */
 @media (prefers-color-scheme: dark) {
-	:root {
-		--background: rgba(7, 24, 20, 1);
-		--foreground: rgba(239, 254, 247, 1);
-		--muted: #1e293b;
-		--muted-foreground: #94a3b8;
-		--primary: rgba(14, 50, 50, 1);
+	:root:not([data-theme="light"]):not([data-theme="dark"]) {
+		/* Neutral scale - inverted for dark mode */
+		--neutral-50: #09090b;
+		--neutral-100: #18181b;
+		--neutral-200: #27272a;
+		--neutral-300: #3f3f46;
+		--neutral-400: #52525b;
+		--neutral-500: #71717a;
+		--neutral-600: #a1a1aa;
+		--neutral-700: #d4d4d8;
+		--neutral-800: #e4e4e7;
+		--neutral-900: #f4f4f5;
+		--neutral-950: #fafafa;
+
+		/* Core colors */
+		--background: #0a0a0a;
+		--foreground: #fafafa;
+		--muted: #27272a;
+		--muted-foreground: #a1a1aa;
+
+		/* Primary - brighter blue for dark mode */
+		--primary: #3b82f6;
+		--primary-hover: #60a5fa;
 		--primary-foreground: #ffffff;
-		--secondary: #1e293b;
-		--secondary-foreground: #f8fafc;
-		--accent: #1e293b;
-		--accent-foreground: #f8fafc;
-		--border: #334155;
-		--input: #334155;
-		--card: #0a0a0a;
-		--card-foreground: #ededed;
-		--popover: #0a0a0a;
-		--popover-foreground: #ededed;
+
+		/* Secondary */
+		--secondary: #27272a;
+		--secondary-hover: #3f3f46;
+		--secondary-foreground: #fafafa;
+
+		/* Accent */
+		--accent: #27272a;
+		--accent-hover: #3f3f46;
+		--accent-foreground: #fafafa;
+
+		/* Destructive - slightly brighter red for dark mode */
+		--destructive: #ef4444;
+		--destructive-hover: #f87171;
+		--destructive-foreground: #ffffff;
+
+		/* Borders and inputs */
+		--border: #3f3f46;
+		--border-hover: #52525b;
+		--input: #3f3f46;
+		--input-background: #18181b;
+		--ring: #3b82f6;
+
+		/* Cards and popovers */
+		--card: #18181b;
+		--card-foreground: #fafafa;
+		--popover: #18181b;
+		--popover-foreground: #fafafa;
+
+		/* Semantic colors - success */
+		--success: #22c55e;
+		--success-hover: #4ade80;
+		--success-foreground: #000000;
+		--success-background: #14532d;
+		--success-background-foreground: #86efac;
+
+		/* Semantic colors - warning */
+		--warning: #eab308;
+		--warning-hover: #facc15;
+		--warning-foreground: #000000;
+		--warning-background: #422006;
+		--warning-background-foreground: #fde047;
+
+		/* Semantic colors - error */
+		--error: #ef4444;
+		--error-hover: #f87171;
+		--error-foreground: #ffffff;
+		--error-background: #450a0a;
+		--error-background-foreground: #fca5a5;
+
+		/* Semantic colors - info */
+		--info: #3b82f6;
+		--info-hover: #60a5fa;
+		--info-foreground: #ffffff;
+		--info-background: #1e3a8a;
+		--info-background-foreground: #93c5fd;
+
+		/* Table specific */
+		--table-header-background: #18181b;
+		--table-row-background: #0a0a0a;
+		--table-row-hover: #18181b;
+		--table-border: #3f3f46;
+
+		/* Focus/ring shadow for light backgrounds in focus states */
+		--focus-ring-outer: #fafafa;
 	}
 }
 

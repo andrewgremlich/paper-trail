@@ -3,7 +3,7 @@
 }
 
 .errorText {
-	color: rgb(239, 68, 68);
+	color: var(--error);
 }
 
 .formSection {

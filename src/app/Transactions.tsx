@@ -143,7 +143,7 @@ export const Transactions = () => {
 			<H1>Transactions</H1>
 
 			<Grid
-				cols={5}
+				cols={3}
 				gap={12}
 				as="form"
 				className={styles.formSection}

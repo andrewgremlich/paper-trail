@@ -3,6 +3,9 @@ import styles from "./styles.module.css";
 
 type ColCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
+type AlignItems = "start" | "center" | "end" | "stretch" | "baseline";
+type JustifyItems = "start" | "center" | "end" | "stretch";
+
 export type GridProps = HTMLAttributes<HTMLElement> & {
 	as?: keyof JSX.IntrinsicElements;
 	className?: string;
@@ -26,6 +29,10 @@ export type GridProps = HTMLAttributes<HTMLElement> & {
 	templateCols?: string;
 	/** Optional CSS grid template rows via inline style. */
 	templateRows?: string;
+	/** Vertical alignment of items within grid cells. */
+	alignItems?: AlignItems;
+	/** Horizontal alignment of items within grid cells. */
+	justifyItems?: JustifyItems;
 	children: ReactNode;
 };
 
@@ -42,6 +49,8 @@ export function Grid({
 	fullWidth = true,
 	templateCols,
 	templateRows,
+	alignItems,
+	justifyItems,
 	children,
 	...rest
 }: GridProps) {
@@ -112,6 +121,8 @@ export function Grid({
 			: {}),
 		...(templateCols ? { gridTemplateColumns: templateCols } : {}),
 		...(templateRows ? { gridTemplateRows: templateRows } : {}),
+		...(alignItems ? { alignItems } : {}),
+		...(justifyItems ? { justifyItems } : {}),
 	} as HTMLAttributes<HTMLElement>["style"];
 
 	return (
@@ -138,6 +149,8 @@ type GridHeaderProps = {
 	fullWidth?: boolean;
 	templateCols?: string;
 	templateRows?: string;
+	alignItems?: AlignItems;
+	justifyItems?: JustifyItems;
 };
 
 export function GridHeader({
@@ -153,6 +166,8 @@ export function GridHeader({
 	fullWidth,
 	templateCols,
 	templateRows,
+	alignItems,
+	justifyItems,
 }: GridHeaderProps) {
 	return (
 		<Grid
@@ -167,6 +182,8 @@ export function GridHeader({
 			fullWidth={fullWidth}
 			templateCols={templateCols}
 			templateRows={templateRows}
+			alignItems={alignItems}
+			justifyItems={justifyItems}
 		>
 			{headers.map((h) => (
 				<div key={h} className={styles.headerCell}>
@@ -190,6 +207,8 @@ type GridRowProps = {
 	fullWidth?: boolean;
 	templateCols?: string;
 	templateRows?: string;
+	alignItems?: AlignItems;
+	justifyItems?: JustifyItems;
 };
 
 export function GridRow({
@@ -205,6 +224,8 @@ export function GridRow({
 	fullWidth,
 	templateCols,
 	templateRows,
+	alignItems,
+	justifyItems,
 }: GridRowProps) {
 	return (
 		<Grid
@@ -219,6 +240,8 @@ export function GridRow({
 			fullWidth={fullWidth}
 			templateCols={templateCols}
 			templateRows={templateRows}
+			alignItems={alignItems}
+			justifyItems={justifyItems}
 		>
 			{children}
 		</Grid>

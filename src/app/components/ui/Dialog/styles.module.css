@@ -13,19 +13,14 @@
 .solid {
 	border-radius: 0.375rem;
 	padding: 1rem;
-	border: 1px solid rgb(229 229 229);
-	background-color: white;
+	border: 1px solid var(--border);
+	background-color: var(--card);
+	color: var(--card-foreground);
 }
 
 .solid::backdrop {
 	backdrop-filter: blur(4px);
-}
-
-@media (prefers-color-scheme: dark) {
-	.solid {
-		border-color: rgb(64 64 64);
-		background-color: rgb(23 23 23);
-	}
+	background-color: rgba(0, 0, 0, 0.5);
 }
 
 /* Variant: Liquid Glass */
@@ -34,6 +29,7 @@
 	padding: 1rem;
 	border: 1px solid rgba(255, 255, 255, 0.15);
 	background-color: rgba(23, 37, 84, 0.2);
+	color: var(--foreground);
 }
 
 .liquidGlass::backdrop {

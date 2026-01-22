@@ -38,6 +38,7 @@ export const TimesheetEditForm = ({
 
 	return (
 		<Grid
+			className={styles.timesheetEditForm}
 			as="form"
 			cols={2}
 			gap={6}
@@ -53,7 +54,7 @@ export const TimesheetEditForm = ({
 				label="Description"
 				defaultValue={timesheet?.description || ""}
 			/>
-			<Button type="submit" className={styles.submitButton}>
+			<Button type="submit" className={styles.submitButton} size="sm">
 				Save Changes
 			</Button>
 		</Grid>

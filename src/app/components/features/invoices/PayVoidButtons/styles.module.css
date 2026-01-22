@@ -1,5 +1,5 @@
 .pdfLink {
-	color: rgb(59 130 246);
+	color: var(--primary);
 	text-decoration: underline;
 	text-underline-offset: 4px;
 	text-decoration-style: dashed;

@@ -14,7 +14,9 @@
 
 .button:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 2px var(--ring, #3b82f6);
+	box-shadow:
+		0 0 0 2px var(--background),
+		0 0 0 4px var(--ring);
 }
 
 .button:disabled {
@@ -25,40 +27,61 @@
 
 /* Variants */
 .default {
-	background-color: var(--primary, #1a1a1a);
-	color: var(--primary-foreground, #ffffff);
+	background-color: var(--primary);
+	color: var(--primary-foreground);
 	border: 1px solid transparent;
 }
 
 .default:hover {
-	border-color: var(--border, #333333);
+	background-color: var(--primary-hover);
 }
 
 .secondary {
-	background-color: #4b5563;
-	color: var(--primary-foreground, #ffffff);
-	border: 1px solid transparent;
+	background-color: var(--secondary);
+	color: var(--secondary-foreground);
+	border: 1px solid var(--border);
 }
 
 .secondary:hover {
-	border-color: var(--border, #333333);
+	background-color: var(--secondary-hover);
+	border-color: var(--border-hover);
 }
 
 .outline {
 	background-color: transparent;
-	border: 1px solid var(--border, #333333);
+	border: 1px solid var(--border);
+	color: var(--foreground);
+}
+
+.outline:hover {
+	background-color: var(--muted);
+	border-color: var(--border-hover);
 }
 
 .ghost {
 	background-color: transparent;
 	border: 1px solid transparent;
-	color: var(--primary-foreground, #ffffff);
+	color: var(--foreground);
+}
+
+.ghost:hover {
+	background-color: var(--muted);
+}
+
+.destructive {
+	background-color: var(--destructive);
+	color: var(--destructive-foreground);
+	border: 1px solid transparent;
+}
+
+.destructive:hover {
+	background-color: var(--destructive-hover);
 }
 
 .liquidGlass {
 	position: relative;
 	background-color: rgba(255, 255, 255, 0.1);
-	color: var(--primary-foreground, #ffffff);
+	color: var(--primary-foreground);
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	backdrop-filter: blur(12px);
 	box-shadow:
@@ -92,6 +115,10 @@
 	width: 2.5rem;
 	padding: 1.5rem;
 	border-radius: 9999px;
+
+	& svg {	
+		color: var(--card-foreground);
+	}
 }
 
 /* Utility */

@@ -1,3 +1,3 @@
 .noFile {
-	color: rgb(107, 114, 128);
+	color: var(--muted-foreground);
 }

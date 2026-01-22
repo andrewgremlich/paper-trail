@@ -1,7 +1,7 @@
 /* Table wrapper */
 .tableWrapper {
 	border-radius: 0.5rem;
-	border: 1px solid rgb(229 231 235);
+	border: 1px solid var(--table-border);
 	overflow: hidden;
 }
 
@@ -14,16 +14,21 @@
 
 /* THead */
 .thead {
-	background-color: rgb(249 250 251);
+	background-color: var(--table-header-background);
 }
 
 /* TBody */
 .tbody {
-	background-color: white;
+	background-color: var(--table-row-background);
 }
 
 .tbody > tr {
-	border-bottom: 1px solid rgb(229 231 235);
+	border-bottom: 1px solid var(--table-border);
+	transition: background-color 0.15s ease;
+}
+
+.tbody > tr:hover {
+	background-color: var(--table-row-hover);
 }
 
 /* TH */
@@ -35,7 +40,7 @@
 	font-size: 0.875rem;
 	line-height: 1.25rem;
 	text-align: left;
-	color: black;
+	color: var(--foreground);
 	font-weight: 500;
 }
 
@@ -45,5 +50,5 @@
 	line-height: 1.25rem;
 	padding-left: 1rem;
 	padding-right: 1rem;
-	color: black;
+	color: var(--foreground);
 }

@@ -1,14 +1,10 @@
 .container {
-	border-top: 1px solid var(--neutral-200);
+	border-top: 1px solid var(--border);
 	padding-top: 1rem;
 	margin-top: 1rem;
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
-}
-
-.dark .container {
-	border-top-color: var(--neutral-700);
 }
 
 .header {
@@ -18,11 +14,7 @@
 
 .description {
 	font-size: 0.875rem;
-	color: var(--neutral-600);
-}
-
-.dark .description {
-	color: var(--neutral-400);
+	color: var(--muted-foreground);
 }
 
 .buttonGroup {
@@ -34,24 +26,14 @@
 	padding: 0.75rem;
 	border-radius: 0.375rem;
 	font-size: 0.875rem;
-	background-color: rgb(220, 252, 231);
-	color: rgb(22, 101, 52);
-}
-
-.dark .successMessage {
-	background-color: rgb(22, 101, 52, 0.3);
-	color: rgb(187, 247, 208);
+	background-color: var(--success-background);
+	color: var(--success-background-foreground);
 }
 
 .errorMessage {
 	padding: 0.75rem;
 	border-radius: 0.375rem;
 	font-size: 0.875rem;
-	background-color: rgb(254, 226, 226);
-	color: rgb(153, 27, 27);
-}
-
-.dark .errorMessage {
-	background-color: rgb(153, 27, 27, 0.3);
-	color: rgb(254, 202, 202);
+	background-color: var(--error-background);
+	color: var(--error-background-foreground);
 }

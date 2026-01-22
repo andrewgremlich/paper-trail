@@ -43,6 +43,7 @@ export const ProjectEditForm = ({ project, onSaved }: ProjectEditFormProps) => {
 		<Grid
 			as="form"
 			cols={2}
+			alignItems="center"
 			gap={6}
 			onSubmit={async (evt: FormEvent<HTMLFormElement>) => {
 				evt.preventDefault();
@@ -62,7 +63,7 @@ export const ProjectEditForm = ({ project, onSaved }: ProjectEditFormProps) => {
 				type="number"
 				defaultValue={(project?.rate_in_cents ?? 0) / 100}
 			/>
-			<Button type="submit" className={styles.saveButton}>
+			<Button type="submit" className={styles.saveButton} size="sm">
 				Save Changes
 			</Button>
 		</Grid>

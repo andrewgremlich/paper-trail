@@ -3,6 +3,8 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { Project, Timesheet } from "./db";
 import { ProjectPageTab } from "./types";
 
+export type Theme = "light" | "dark" | "system";
+
 type PaperTrailState = {
 	projectModalActive: boolean;
 	timesheetModalActive: boolean;
@@ -12,12 +14,14 @@ type PaperTrailState = {
 	projects: Project[];
 	timesheets: Timesheet[];
 	activeTab: ProjectPageTab;
+	theme: Theme;
 	toggleProjectModal: (args?: { projectId?: number }) => void;
 	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
 	changeActiveTab: (tab: ProjectPageTab) => void;
 	addProject: (project: Project) => void;
 	addTimesheet: (timesheet: Timesheet) => void;
+	setTheme: (theme: Theme) => void;
 };
 
 export const usePaperTrailStore = create<PaperTrailState>()(
@@ -31,6 +35,7 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 			projects: [],
 			timesheets: [],
 			activeTab: ProjectPageTab.Timesheets,
+			theme: "system",
 			toggleProjectModal: (args) =>
 				set((state) => ({
 					projectModalActive:
@@ -54,6 +59,7 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 				set((state) => ({ projects: [project, ...state.projects] })),
 			addTimesheet: (timesheet) =>
 				set((state) => ({ timesheets: [timesheet, ...state.timesheets] })),
+			setTheme: (theme) => set(() => ({ theme })),
 		}),
 		{
 			name: "paper-trail-storage",

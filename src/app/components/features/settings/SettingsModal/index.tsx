@@ -5,6 +5,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
 import { StripeSecretSection } from "../StripeSecretSection";
+import { ThemeSection } from "../ThemeSection";
 import styles from "./styles.module.css";
 
 export const SettingsModal = () => {
@@ -37,6 +38,7 @@ export const SettingsModal = () => {
 				exposed outside the local vault).
 			</P>
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
+			<ThemeSection />
 			<ExportImportSection />
 			<div className={styles.footer}>
 				<button

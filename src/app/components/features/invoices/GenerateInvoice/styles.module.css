@@ -5,17 +5,17 @@
 .successMessage {
 	margin-bottom: 1rem;
 	padding: 1rem;
-	background-color: rgb(220 252 231);
-	border: 1px solid rgb(74 222 128);
-	color: rgb(21 128 61);
+	background-color: var(--success-background);
+	border: 1px solid var(--success);
+	color: var(--success-background-foreground);
 	border-radius: 0.25rem;
 }
 
 .errorMessage {
 	margin-bottom: 1rem;
 	padding: 1rem;
-	background-color: rgb(254 226 226);
-	border: 1px solid rgb(248 113 113);
-	color: rgb(153 27 27);
+	background-color: var(--error-background);
+	border: 1px solid var(--error);
+	color: var(--error-background-foreground);
 	border-radius: 0.25rem;
 }
