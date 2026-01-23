@@ -50,21 +50,20 @@ export const GenerateInvoice = ({
 				variant="default"
 				className={styles.button}
 				disabled={!timesheet?.active || timesheet?.entries.length === 0}
+				isLoading={isPending}
 			>
-				{isPending
-					? "Generating..."
-					: timesheet?.active
-						? "Generate Invoice"
-						: "Invoice Generated"}
+				{timesheet?.active ? "Generate Invoice" : "Invoice Generated"}
 			</Button>
-			{isSuccess && (
-				<div className={styles.successMessage}>
-					{timesheet?.invoiceId
-						? `Invoice ${timesheet.invoiceId} generated successfully!`
-						: "Action completed successfully!"}
-				</div>
-			)}
-			{isError && <div className={styles.errorMessage}>Error: {isError}</div>}
+			<div aria-live="polite" aria-atomic="true">
+				{isSuccess && (
+					<div className={styles.successMessage}>
+						{timesheet?.invoiceId
+							? `Invoice ${timesheet.invoiceId} generated successfully!`
+							: "Action completed successfully!"}
+					</div>
+				)}
+				{isError && <div className={styles.errorMessage}>Error: {isError}</div>}
+			</div>
 		</form>
 	);
 };

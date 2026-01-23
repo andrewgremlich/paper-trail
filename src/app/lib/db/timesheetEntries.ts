@@ -39,9 +39,9 @@ export const updateTimesheetEntry = async ({
 
 		await db.execute(
 			`UPDATE timesheet_entries
-			 SET date = $2, minutes = $3, description = $4, amount = $5
-			 WHERE id = $1`,
-			[id, date, minutes, description, amountInCents],
+			 SET date = $1, minutes = $2, description = $3, amount = $4
+			 WHERE id = $5`,
+			[date, minutes, description, amountInCents, id],
 		);
 	} catch (err) {
 		console.error(err);

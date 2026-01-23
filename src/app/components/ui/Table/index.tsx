@@ -1,7 +1,9 @@
 import * as React from "react";
 import styles from "./styles.module.css";
 
-type TableProps = React.TableHTMLAttributes<HTMLTableElement>;
+type TableProps = React.TableHTMLAttributes<HTMLTableElement> & {
+	wrapperClassName?: string;
+};
 type THeadProps = React.HTMLAttributes<HTMLTableSectionElement>;
 type TBodyProps = React.HTMLAttributes<HTMLTableSectionElement>;
 type TRProps = React.HTMLAttributes<HTMLTableRowElement>;
@@ -9,13 +11,16 @@ type THProps = React.ThHTMLAttributes<HTMLTableCellElement>;
 type TDProps = React.TdHTMLAttributes<HTMLTableCellElement>;
 
 export const Table = React.forwardRef<HTMLTableElement, TableProps>(
-	({ className, children, ...props }, ref) => {
+	({ className, wrapperClassName, children, ...props }, ref) => {
 		const tableClasses = className
 			? `${styles.table} ${className}`
 			: styles.table;
+		const wrapperClasses = wrapperClassName
+			? `${styles.tableWrapper} ${wrapperClassName}`
+			: styles.tableWrapper;
 
 		return (
-			<div className={styles.tableWrapper}>
+			<div className={wrapperClasses}>
 				<table ref={ref} className={tableClasses} {...props}>
 					{children}
 				</table>

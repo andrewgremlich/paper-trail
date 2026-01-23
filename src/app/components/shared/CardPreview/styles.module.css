@@ -10,3 +10,10 @@
 		0 4px 6px -1px rgb(0 0 0 / 0.1),
 		0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
+
+.card:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--background),
+		0 0 0 4px var(--ring);
+}

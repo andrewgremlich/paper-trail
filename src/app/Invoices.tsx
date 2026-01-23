@@ -4,7 +4,6 @@ import { H1, Main } from "@/components/layout/HtmlElements";
 import { Select } from "@/components/ui/Select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
 import { getAllCustomers, getAllInvoices } from "@/lib/stripeApi";
-import styles from "./Page.module.css";
 
 export const Invoices = () => {
 	const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -25,13 +24,12 @@ export const Invoices = () => {
 		: invoices;
 
 	return (
-		<Main className={styles.container}>
+		<Main>
 			<H1>Invoices</H1>
 			{(customers?.length ?? 0) > 1 && (
 				<Select
 					name="customerId"
 					label="Customer"
-					containerClassName={styles.customerSelect}
 					value={selectedCustomerId}
 					onChange={(e) => setSelectedCustomerId(e.target.value)}
 					options={[{ value: "", label: "All customers" }].concat(
@@ -42,7 +40,7 @@ export const Invoices = () => {
 					)}
 				/>
 			)}
-			<Table className={styles.tableFullWidth}>
+			<Table>
 				<THead>
 					<TR>
 						<TH>Invoice Number</TH>
@@ -56,7 +54,7 @@ export const Invoices = () => {
 				<TBody>
 					{invoicesLoading && (
 						<TR>
-							<TD>Loading invoices...</TD>
+							<TD colSpan={6}>Loading invoices...</TD>
 						</TR>
 					)}
 					{(filteredInvoices?.length ?? 0) > 0 &&

@@ -1,7 +1,7 @@
 use libsql::{Builder, Connection, Database};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 #[derive(Clone)]
 pub struct DbConfig {
@@ -24,6 +24,7 @@ impl Default for DbConfig {
 
 pub struct DbState {
 	pub db: Arc<Database>,
+	pub conn: Arc<Mutex<Connection>>,
 	pub config: DbConfig,
 }
 
@@ -54,14 +55,18 @@ impl DbState {
 			Builder::new_local(db_path).build().await?
 		};
 
+		// Create a single reusable connection to avoid "database is locked" errors
+		let conn = db.connect()?;
+
 		Ok(Self {
 			db: Arc::new(db),
+			conn: Arc::new(Mutex::new(conn)),
 			config,
 		})
 	}
 
-	pub async fn get_connection(&self) -> Result<Connection, libsql::Error> {
-		self.db.connect()
+	pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
+		self.conn.clone()
 	}
 
 	pub async fn sync(&self) -> Result<(), libsql::Error> {
@@ -76,12 +81,15 @@ pub async fn initialize_db(app: &AppHandle, config: DbConfig) -> Result<(), libs
 	let db_state = DbState::new(app, config).await?;
 
 	// Run migrations
-	let conn = db_state.get_connection().await?;
+	let conn = db_state.get_connection();
+	let conn_guard = conn.lock().await;
 	let schema_sql = include_str!("../db/seed.sql");
 
 	// Execute the entire schema as a batch
 	// This handles PRAGMA statements and other commands that might return rows
-	conn.execute_batch(schema_sql).await?;
+	conn_guard.execute_batch(schema_sql).await?;
+
+	drop(conn_guard); // Release lock before managing state
 
 	app.manage(Arc::new(RwLock::new(db_state)));
 
@@ -95,7 +103,8 @@ pub async fn execute_query(
 	params: Vec<serde_json::Value>,
 ) -> Result<Vec<serde_json::Value>, String> {
 	let db = db_state.read().await;
-	let conn = db.get_connection().await.map_err(|e| e.to_string())?;
+	let conn = db.get_connection();
+	let conn_guard = conn.lock().await;
 
 	// Convert JSON params to libsql Values
 	let libsql_params: Vec<libsql::Value> = params
@@ -103,7 +112,7 @@ pub async fn execute_query(
 		.map(|v| json_to_libsql_value(v))
 		.collect();
 
-	let mut rows = conn
+	let mut rows = conn_guard
 		.query(&query, libsql::params::Params::Positional(libsql_params))
 		.await
 		.map_err(|e| e.to_string())?;
@@ -132,21 +141,22 @@ pub async fn execute_statement(
 	params: Vec<serde_json::Value>,
 ) -> Result<ExecuteResult, String> {
 	let db = db_state.read().await;
-	let conn = db.get_connection().await.map_err(|e| e.to_string())?;
+	let conn = db.get_connection();
+	let conn_guard = conn.lock().await;
 
 	let libsql_params: Vec<libsql::Value> = params
 		.into_iter()
 		.map(|v| json_to_libsql_value(v))
 		.collect();
 
-	let result = conn
+	let result = conn_guard
 		.execute(&query, libsql::params::Params::Positional(libsql_params))
 		.await
 		.map_err(|e| e.to_string())?;
 
 	Ok(ExecuteResult {
 		rows_affected: result,
-		last_insert_id: conn.last_insert_rowid(),
+		last_insert_id: conn_guard.last_insert_rowid(),
 	})
 }
 

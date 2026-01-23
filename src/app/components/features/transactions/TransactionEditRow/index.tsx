@@ -30,6 +30,7 @@ export const TransactionEditRow = ({
 				defaultValue={tx.date}
 				form={`tx-edit-form-${tx.id}`}
 				required
+				aria-label="Date"
 			/>
 		</TD>
 		<TD>
@@ -39,6 +40,7 @@ export const TransactionEditRow = ({
 				defaultValue={tx.description}
 				form={`tx-edit-form-${tx.id}`}
 				required
+				aria-label="Description"
 			/>
 		</TD>
 		<TD>
@@ -52,6 +54,7 @@ export const TransactionEditRow = ({
 					})) ?? []
 				}
 				form={`tx-edit-form-${tx.id}`}
+				aria-label="Project"
 			/>
 		</TD>
 		<TD>
@@ -63,6 +66,7 @@ export const TransactionEditRow = ({
 				defaultValue={tx.amount.toFixed(2)}
 				form={`tx-edit-form-${tx.id}`}
 				required
+				aria-label="Amount"
 			/>
 		</TD>
 		<TD>
@@ -95,13 +99,24 @@ export const TransactionEditRow = ({
 					}
 				}}
 			>
-				<Button type="submit" size="sm" variant="ghost">
+				<Button
+					type="submit"
+					size="sm"
+					variant="ghost"
+					aria-label="Save changes"
+				>
 					<Save />
 				</Button>
 			</form>
 		</TD>
 		<TD>
-			<Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+			<Button
+				type="button"
+				size="sm"
+				variant="ghost"
+				onClick={onCancel}
+				aria-label="Cancel editing"
+			>
 				<Ban />
 			</Button>
 		</TD>

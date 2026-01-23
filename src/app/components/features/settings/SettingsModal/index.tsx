@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useId, useRef } from "react";
 import { H2, P } from "@/components/layout/HtmlElements";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
@@ -23,15 +24,17 @@ export const SettingsModal = () => {
 		>
 			<header className={styles.header}>
 				<H2 id={headingId}>Settings</H2>
-				<button
+				<Button
 					ref={closeButtonRef}
 					type="button"
+					variant="ghost"
+					size="md"
 					onClick={toggleSettingsModal}
 					aria-label="Close settings"
 					className={styles.closeButton}
 				>
 					<X />
-				</button>
+				</Button>
 			</header>
 			<P>
 				Application settings. Store your Stripe Secret Key securely (never

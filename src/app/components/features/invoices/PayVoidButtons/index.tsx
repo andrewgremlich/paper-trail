@@ -7,100 +7,100 @@ import { getInvoice, markInvoiceAsPaid, voidInvoice } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
 
 export const PayVoidButtons = ({
-  timesheet,
+	timesheet,
 }: {
-  timesheet: TimesheetDetails;
+	timesheet: TimesheetDetails;
 }) => {
-  const queryClient = useQueryClient();
-  const invoiceId = timesheet?.invoiceId;
-  const { data: invoiceData } = useQuery({
-    queryKey: ["invoice", invoiceId],
-    queryFn: async () => {
-      if (!invoiceId) return null;
-      return await getInvoice(invoiceId);
-    },
-    enabled: !!invoiceId,
-  });
-  const { mutateAsync: markAsPaid, isPending: isMarkingAsPaid } = useMutation({
-    mutationFn: async (invoiceId: string | undefined) => {
-      if (invoiceId) {
-        await markInvoiceAsPaid(invoiceId);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["invoice", invoiceId],
-      });
-    },
-  });
-  const { mutateAsync: voidInv, isPending: isVoiding } = useMutation({
-    mutationFn: async (invoiceId: string | undefined) => {
-      if (invoiceId) {
-        await voidInvoice(invoiceId);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["invoice", invoiceId],
-      });
-    },
-  });
+	const queryClient = useQueryClient();
+	const invoiceId = timesheet?.invoiceId;
+	const { data: invoiceData } = useQuery({
+		queryKey: ["invoice", invoiceId],
+		queryFn: async () => {
+			if (!invoiceId) return null;
+			return await getInvoice(invoiceId);
+		},
+		enabled: !!invoiceId,
+	});
+	const { mutateAsync: markAsPaid, isPending: isMarkingAsPaid } = useMutation({
+		mutationFn: async (invoiceId: string | undefined) => {
+			if (invoiceId) {
+				await markInvoiceAsPaid(invoiceId);
+			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["invoice", invoiceId],
+			});
+		},
+	});
+	const { mutateAsync: voidInv, isPending: isVoiding } = useMutation({
+		mutationFn: async (invoiceId: string | undefined) => {
+			if (invoiceId) {
+				await voidInvoice(invoiceId);
+			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["invoice", invoiceId],
+			});
+		},
+	});
 
-  const isDisabled = Boolean(
-    invoiceData?.disabled || isMarkingAsPaid || isVoiding,
-  );
-  const payLabel =
-    invoiceData?.status === "paid"
-      ? "Already Paid"
-      : invoiceData?.disabled || isMarkingAsPaid
-        ? "Disabled"
-        : "Mark as Paid";
-  const voidLabel =
-    invoiceData?.status === "void"
-      ? "Already Voided"
-      : invoiceData?.disabled || isVoiding
-        ? "Void Disabled"
-        : "Void Invoice";
+	const isDisabled = Boolean(
+		invoiceData?.disabled || isMarkingAsPaid || isVoiding,
+	);
+	const payLabel =
+		invoiceData?.status === "paid"
+			? "Already Paid"
+			: invoiceData?.disabled || isMarkingAsPaid
+				? "Disabled"
+				: "Mark as Paid";
+	const voidLabel =
+		invoiceData?.status === "void"
+			? "Already Voided"
+			: invoiceData?.disabled || isVoiding
+				? "Void Disabled"
+				: "Void Invoice";
 
-  return (
-    <>
-      <Flex gap={8}>
-        <Button
-          size="sm"
-          onClick={async () => {
-            if (invoiceId) await markAsPaid(invoiceId);
-          }}
-          disabled={isDisabled}
-        >
-          {payLabel}
-        </Button>
-        <Button
-          size="sm"
-          onClick={async () => {
-            if (invoiceId) await voidInv(invoiceId);
-          }}
-          disabled={isDisabled}
-        >
-          {voidLabel}
-        </Button>
-      </Flex>
-      {invoiceData?.status === "paid" && (
-        <P>Invoice has been marked as paid.</P>
-      )}
-      {invoiceData?.pdf && (
-        <P>
-          Invoice PDF is available.{" "}
-          <a
-            className={styles.pdfLink}
-            href={invoiceData.pdf}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open PDF
-          </a>
-        </P>
-      )}
-      {invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
-    </>
-  );
+	return (
+		<>
+			<Flex gap={8}>
+				<Button
+					size="sm"
+					onClick={async () => {
+						if (invoiceId) await markAsPaid(invoiceId);
+					}}
+					disabled={isDisabled}
+				>
+					{payLabel}
+				</Button>
+				<Button
+					size="sm"
+					onClick={async () => {
+						if (invoiceId) await voidInv(invoiceId);
+					}}
+					disabled={isDisabled}
+				>
+					{voidLabel}
+				</Button>
+			</Flex>
+			{invoiceData?.status === "paid" && (
+				<P>Invoice has been marked as paid.</P>
+			)}
+			{invoiceData?.pdf && (
+				<P>
+					Invoice PDF is available.{" "}
+					<a
+						className={styles.pdfLink}
+						href={invoiceData.pdf}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						Open PDF
+					</a>
+				</P>
+			)}
+			{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
+		</>
+	);
 };

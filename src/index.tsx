@@ -41,8 +41,8 @@ createRoot(rootElement).render(
 					<TimesheetModal />
 					<ProjectModal />
 					<SettingsModal />
-					<Nav />
 					<PageWrapper>
+						<Nav />
 						<App />
 					</PageWrapper>
 				</ErrorBoundary>

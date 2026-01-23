@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createTimesheetEntry } from "@/lib/db";
 import { normalizeDateInput } from "@/lib/db/utils";
-import styles from "./styles.module.css";
 
 export const CreateTimesheetRecord = ({
 	timesheetId,
@@ -46,7 +45,6 @@ export const CreateTimesheetRecord = ({
 
 	return (
 		<form
-			className={styles.form}
 			onSubmit={async (evt) => {
 				evt.preventDefault();
 				const formData = new FormData(evt.currentTarget);
@@ -61,37 +59,30 @@ export const CreateTimesheetRecord = ({
 			<input type="hidden" name="timesheetId" value={timesheetId} />
 			<input type="hidden" name="projectRate" value={projectRate} />
 			<Flex justify="between" items="end">
-				<Flex gap={20}>
-					<Input
-						name="date"
-						label="Date"
-						type="date"
-						defaultValue={format(new Date(), "yyyy-MM-dd")}
-						required
-					/>
-					<Input
-						name="hours"
-						type="number"
-						step="0.25"
-						label="Hours"
-						min="0.25"
-						placeholder="Hours worked"
-						required
-					/>
-					<Input
-						name="description"
-						label="Description"
-						placeholder="Work description"
-						required
-					/>
-				</Flex>
-				<Button
-					type="submit"
-					variant="secondary"
-					size="icon"
-					disabled={!active}
-				>
-					<PlusIcon className={styles.icon} />
+				<Input
+					name="date"
+					label="Date"
+					type="date"
+					defaultValue={format(new Date(), "yyyy-MM-dd")}
+					required
+				/>
+				<Input
+					name="hours"
+					type="number"
+					step="0.25"
+					label="Hours"
+					min="0.25"
+					placeholder="Hours worked"
+					required
+				/>
+				<Input
+					name="description"
+					label="Description"
+					placeholder="Work description"
+					required
+				/>
+				<Button type="submit" variant="secondary" size="md" disabled={!active}>
+					<PlusIcon />
 				</Button>
 			</Flex>
 		</form>

@@ -67,12 +67,13 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				label="Customer"
 				containerClassName={styles.customerSelect}
 				required
-				options={[{ value: "", label: "Select a customer" }].concat(
-					customers?.map((customer) => ({
+				options={[
+					{ value: "", label: "Select a customer", disabled: true },
+					...(customers?.map((customer) => ({
 						value: customer.id,
 						label: `${customer.name} (${customer.email})`,
-					})) ?? [],
-				)}
+					})) ?? []),
+				]}
 			/>
 			<Input
 				name="description"

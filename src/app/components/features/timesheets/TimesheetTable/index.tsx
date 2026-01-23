@@ -69,7 +69,7 @@ export const TimesheetTable = ({
 	return (
 		<div className={styles.container}>
 			{entries.length > 0 ? (
-				<Table>
+				<Table wrapperClassName={styles.table}>
 					<THead>
 						<TR>
 							<TH>Date</TH>
@@ -138,7 +138,7 @@ export const TimesheetTable = ({
 													variant="ghost"
 													disabled={!active}
 												>
-													<Save color="black" />
+													<Save />
 												</Button>
 											</form>
 										</TD>
@@ -149,7 +149,7 @@ export const TimesheetTable = ({
 												variant="ghost"
 												onClick={() => setEditingId(null)}
 											>
-												<Ban color="black" />
+												<Ban />
 											</Button>
 										</TD>
 									</>
@@ -167,8 +167,10 @@ export const TimesheetTable = ({
 												size="sm"
 												onClick={() => setEditingId(entry.id)}
 											>
-												<Edit color="black" />
+												<Edit />
 											</Button>
+										</TD>
+										<TD>
 											<form
 												onSubmit={(evt) => {
 													evt.preventDefault();
@@ -177,17 +179,15 @@ export const TimesheetTable = ({
 												}}
 											>
 												<input type="hidden" name="id" value={entry.id} />
+												<Button
+													disabled={!active}
+													variant="ghost"
+													size="sm"
+													type="submit"
+												>
+													<TrashIcon />
+												</Button>
 											</form>
-										</TD>
-										<TD>
-											<Button
-												disabled={!active}
-												variant="ghost"
-												size="sm"
-												type="submit"
-											>
-												<TrashIcon color="black" />
-											</Button>
 										</TD>
 									</>
 								)}
