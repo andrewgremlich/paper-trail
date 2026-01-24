@@ -9,6 +9,7 @@ type PaperTrailState = {
 	projectModalActive: boolean;
 	timesheetModalActive: boolean;
 	settingsModalActive: boolean;
+	invoiceModalActive: boolean;
 	activeProjectId: number | undefined;
 	activeTimesheetId: number | undefined;
 	projects: Project[];
@@ -18,6 +19,7 @@ type PaperTrailState = {
 	toggleProjectModal: (args?: { projectId?: number }) => void;
 	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
+	toggleInvoiceModal: () => void;
 	changeActiveTab: (tab: ProjectPageTab) => void;
 	addProject: (project: Project) => void;
 	addTimesheet: (timesheet: Timesheet) => void;
@@ -30,6 +32,7 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 			projectModalActive: false,
 			timesheetModalActive: false,
 			settingsModalActive: false,
+			invoiceModalActive: false,
 			activeProjectId: undefined,
 			activeTimesheetId: undefined,
 			projects: [],
@@ -54,6 +57,8 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 				})),
 			toggleSettingsModal: () =>
 				set((state) => ({ settingsModalActive: !state.settingsModalActive })),
+			toggleInvoiceModal: () =>
+				set((state) => ({ invoiceModalActive: !state.invoiceModalActive })),
 			changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
 			addProject: (project) =>
 				set((state) => ({ projects: [project, ...state.projects] })),

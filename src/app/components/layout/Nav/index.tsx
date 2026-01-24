@@ -1,4 +1,4 @@
-import { NotebookPen, Settings, Table, Timer } from "lucide-react";
+import { HandCoins, Settings, Table, Timer } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { Button } from "@/components/ui/Button";
 import { usePaperTrailStore } from "@/lib/store";
@@ -50,7 +50,7 @@ export const Nav = () => {
 					)}
 					aria-pressed={activeTab === ProjectPageTab.Invoices}
 				>
-					<NotebookPen size={40} />
+					<HandCoins size={40} />
 				</Button>
 			</div>
 

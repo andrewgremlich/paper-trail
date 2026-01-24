@@ -196,14 +196,20 @@ h6 {
 	--success-hover: light-dark(var(--green-600), var(--green-700));
 	--success-foreground: var(--neutral-50);
 	--success-background: var(--green-100);
-	--success-background-foreground: light-dark(var(--green-700), var(--green-800));
+	--success-background-foreground: light-dark(
+		var(--green-700),
+		var(--green-800)
+	);
 
 	/* Semantic colors - warning */
 	--warning: light-dark(var(--yellow-600), var(--yellow-500));
 	--warning-hover: light-dark(var(--yellow-700), var(--yellow-600));
 	--warning-foreground: var(--neutral-50);
 	--warning-background: light-dark(var(--yellow-100), var(--yellow-50));
-	--warning-background-foreground: light-dark(var(--yellow-800), var(--yellow-700));
+	--warning-background-foreground: light-dark(
+		var(--yellow-800),
+		var(--yellow-700)
+	);
 
 	/* Semantic colors - error */
 	--error: light-dark(var(--red-600), var(--red-500));

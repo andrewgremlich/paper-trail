@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { InvoiceModal } from "@/components/features/invoices/InvoiceModal";
 import { ProjectModal } from "@/components/features/projects/ProjectModal";
 import { SettingsModal } from "@/components/features/settings/SettingsModal";
 import { TimesheetModal } from "@/components/features/timesheets/TimesheetModal";
@@ -41,6 +42,7 @@ createRoot(rootElement).render(
 					<TimesheetModal />
 					<ProjectModal />
 					<SettingsModal />
+					<InvoiceModal />
 					<PageWrapper>
 						<Nav />
 						<App />

@@ -1,11 +1,16 @@
 import { useQueries } from "@tanstack/react-query";
+import { NotebookPen } from "lucide-react";
 import { useState } from "react";
 import { H1, Main } from "@/components/layout/HtmlElements";
 import { Select } from "@/components/ui/Select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
 import { getAllCustomers, getAllInvoices } from "@/lib/stripeApi";
+import { Flex } from "./components/layout/Flex";
+import { Button } from "./components/ui/Button";
+import { usePaperTrailStore } from "./lib/store";
 
 export const Invoices = () => {
+	const { toggleInvoiceModal } = usePaperTrailStore();
 	const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
 	const [{ data: invoices, isLoading: invoicesLoading }, { data: customers }] =
@@ -25,7 +30,17 @@ export const Invoices = () => {
 
 	return (
 		<Main>
-			<H1>Invoices</H1>
+			<Flex justify="between" items="center">
+				<H1>Invoices</H1>
+				<Button
+					type="button"
+					variant="ghost"
+					onClick={toggleInvoiceModal}
+					leftIcon={<NotebookPen size={16} />}
+				>
+					Generate Invoice
+				</Button>
+			</Flex>
 			{(customers?.length ?? 0) > 1 && (
 				<Select
 					name="customerId"

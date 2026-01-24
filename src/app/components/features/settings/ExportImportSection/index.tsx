@@ -38,7 +38,7 @@ export const ExportImportSection = () => {
 					}}
 					disabled={isLoading}
 					isLoading={exportMutation.isPending}
-					leftIcon={<Download size={16} />}
+					leftIcon={<Upload size={16} />}
 					variant="default"
 				>
 					Export Data
@@ -51,7 +51,7 @@ export const ExportImportSection = () => {
 					}}
 					disabled={isLoading}
 					isLoading={importMutation.isPending}
-					leftIcon={<Upload size={16} />}
+					leftIcon={<Download size={16} />}
 					variant="secondary"
 				>
 					Import Data
