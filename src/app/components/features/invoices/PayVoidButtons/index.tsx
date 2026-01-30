@@ -87,12 +87,12 @@ export const PayVoidButtons = ({
 			{invoiceData?.status === "paid" && (
 				<P>Invoice has been marked as paid.</P>
 			)}
-			{invoiceData?.pdf && (
+			{invoiceData?.invoice_pdf && (
 				<P>
 					Invoice PDF is available.{" "}
 					<a
 						className={styles.pdfLink}
-						href={invoiceData.pdf}
+						href={invoiceData.invoice_pdf}
 						target="_blank"
 						rel="noopener noreferrer"
 					>
