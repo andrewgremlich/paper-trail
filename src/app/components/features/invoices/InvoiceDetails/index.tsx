@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, FileText } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ExternalLink, FileText, Mail } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
+import { Grid } from "@/components/ui/Grid";
 import { getTimesheetByInvoiceId } from "@/lib/db";
 import { usePaperTrailStore } from "@/lib/store";
-import type { StripeInvoiceListItem } from "@/lib/stripeApi";
 import { getInvoice } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
 
@@ -29,29 +30,27 @@ function formatDate(timestamp: number): string {
 	});
 }
 
-function getStatusClass(status: string | null): string {
+function getStatusLabel(status: string | null): string {
 	switch (status) {
 		case "paid":
-			return styles.statusPaid;
+			return "Paid";
 		case "void":
-			return styles.statusVoid;
+			return "Void";
 		case "open":
-			return styles.statusOpen;
+			return "Open";
 		case "draft":
-			return styles.statusDraft;
+			return "Draft";
 		default:
-			return "";
+			return "Unknown";
 	}
 }
 
 export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 	const { toggleInvoiceModal, toggleTimesheetModal } = usePaperTrailStore();
-
 	const { data: invoice, isLoading: invoiceLoading } = useQuery({
 		queryKey: ["invoice-detail", invoiceId],
 		queryFn: () => getInvoice(invoiceId),
 	});
-
 	const { data: timesheet, isLoading: timesheetLoading } = useQuery({
 		queryKey: ["timesheet-by-invoice", invoiceId],
 		queryFn: () => getTimesheetByInvoiceId(invoiceId),
@@ -74,89 +73,70 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 		return <P>Invoice not found.</P>;
 	}
 
-	const invoiceData = invoice as StripeInvoiceListItem;
-
 	return (
-		<div className={styles.container}>
-			<Flex direction="col" gap={16}>
-				<div className={styles.detailRow}>
-					<span className={styles.label}>Invoice ID</span>
-					<span className={styles.value}>{invoiceData.id}</span>
-				</div>
+		<>
+			{invoice.description && <P>{invoice.description}</P>}
 
-				{invoiceData.number && (
-					<div className={styles.detailRow}>
-						<span className={styles.label}>Invoice Number</span>
-						<span className={styles.value}>{invoiceData.number}</span>
-					</div>
-				)}
-
-				<div className={styles.detailRow}>
-					<span className={styles.label}>Customer</span>
-					<span className={styles.value}>
-						{invoiceData.customerName || invoiceData.customerEmail || "N/A"}
-					</span>
-				</div>
-
-				<div className={styles.detailRow}>
-					<span className={styles.label}>Amount</span>
-					<span className={styles.value}>
-						{invoiceData.amountDue !== undefined
-							? formatCurrency(
-									invoiceData.amountDue,
-									invoiceData.currency || "usd",
-								)
-							: "N/A"}
-					</span>
-				</div>
-
-				<div className={styles.detailRow}>
-					<span className={styles.label}>Status</span>
-					<span
-						className={`${styles.value} ${styles.status} ${getStatusClass(invoiceData.status)}`}
+			<Grid rows={4} flow="col" columnGap={24}>
+				<P>Invoice ID: {invoice.id}</P>
+				{invoice.number && <P>Invoice Number: {invoice.number}</P>}
+				<P>
+					Customer:{" "}
+					<button
+						type="button"
+						className={styles.linkButton}
+						onClick={() => {
+							if (invoice.customer_email) {
+								openUrl(`mailto:${invoice.customer_email}`);
+							}
+						}}
 					>
-						{invoiceData.status || "Unknown"}
+						<Mail size={14} />
+						{invoice.customer_name}
+					</button>
+				</P>
+				<P>
+					Amount:{" "}
+					{invoice.amount_due !== undefined
+						? formatCurrency(invoice.amount_due, invoice.currency || "usd")
+						: "N/A"}
+				</P>
+				<P>Status: {getStatusLabel(invoice.status)}</P>
+				{invoice.created && <P>Created: {formatDate(invoice.created)}</P>}
+			</Grid>
+
+			{invoice.footer && <P>{invoice.footer}</P>}
+
+			<Flex gap={12} className={styles.actions} items="center">
+				{invoice.invoice_pdf ? (
+					<Button
+						type="button"
+						variant="secondary"
+						onClick={() => {
+							const pdfUrl = invoice.invoice_pdf;
+							if (pdfUrl) openUrl(pdfUrl);
+						}}
+						leftIcon={<ExternalLink size={16} />}
+					>
+						View PDF
+					</Button>
+				) : null}
+
+				{timesheet ? (
+					<Button
+						type="button"
+						variant="secondary"
+						onClick={handleViewTimesheet}
+						leftIcon={<FileText size={16} />}
+					>
+						View Timesheet: {timesheet.name}
+					</Button>
+				) : (
+					<span>
+						<em>No linked timesheet found</em>
 					</span>
-				</div>
-
-				{invoiceData.created && (
-					<div className={styles.detailRow}>
-						<span className={styles.label}>Created</span>
-						<span className={styles.value}>
-							{formatDate(invoiceData.created)}
-						</span>
-					</div>
 				)}
-
-				<Flex gap={12} className={styles.actions}>
-					{invoiceData.pdf && (
-						<a
-							href={invoiceData.pdf}
-							target="_blank"
-							rel="noopener noreferrer"
-							className={styles.pdfLink}
-						>
-							<ExternalLink size={16} />
-							View PDF
-						</a>
-					)}
-
-					{timesheet ? (
-						<Button
-							type="button"
-							variant="secondary"
-							onClick={handleViewTimesheet}
-							leftIcon={<FileText size={16} />}
-						>
-							View Timesheet: {timesheet.name}
-						</Button>
-					) : (
-						<P className={styles.noTimesheet}>
-							<em>No linked timesheet found</em>
-						</P>
-					)}
-				</Flex>
 			</Flex>
-		</div>
+		</>
 	);
 };
