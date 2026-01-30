@@ -1,7 +1,6 @@
-import { X } from "lucide-react";
-import { useId, useRef } from "react";
-import { H2, P } from "@/components/layout/HtmlElements";
-import { Button } from "@/components/ui/Button";
+import { useId } from "react";
+import { P } from "@/components/layout/HtmlElements";
+import { ModalHeader } from "@/components/shared/ModalHeader";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
@@ -12,7 +11,6 @@ import styles from "./styles.module.css";
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
 	const headingId = useId();
-	const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
 	return (
 		<Dialog
@@ -20,22 +18,13 @@ export const SettingsModal = () => {
 			variant="liquidGlass"
 			onClose={toggleSettingsModal}
 			titleId={headingId}
-			returnFocusRef={closeButtonRef as unknown as React.RefObject<HTMLElement>}
 		>
-			<header className={styles.header}>
-				<H2 id={headingId}>Settings</H2>
-				<Button
-					ref={closeButtonRef}
-					type="button"
-					variant="ghost"
-					size="md"
-					onClick={toggleSettingsModal}
-					aria-label="Close settings"
-					className={styles.closeButton}
-				>
-					<X />
-				</Button>
-			</header>
+			<ModalHeader
+				title="Settings"
+				headingId={headingId}
+				onClose={toggleSettingsModal}
+				closeAriaLabel="Close settings"
+			/>
 			<P>
 				Application settings. Store your Stripe Secret Key securely (never
 				exposed outside the local vault).

@@ -1,9 +1,3 @@
-.header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
-
 .closeButton {
 	cursor: pointer;
 	color: var(--muted-foreground);
