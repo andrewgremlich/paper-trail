@@ -6,7 +6,6 @@ import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
 import { StripeSecretSection } from "../StripeSecretSection";
 import { ThemeSection } from "../ThemeSection";
-import styles from "./styles.module.css";
 
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
@@ -32,15 +31,6 @@ export const SettingsModal = () => {
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
 			<ThemeSection />
 			<ExportImportSection />
-			<div className={styles.footer}>
-				<button
-					type="button"
-					onClick={toggleSettingsModal}
-					className={styles.footerButton}
-				>
-					Close
-				</button>
-			</div>
 		</Dialog>
 	);
 };
