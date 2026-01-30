@@ -224,6 +224,64 @@ export interface GetAllInvoicesOptions {
 	customerId?: string;
 }
 
+export interface CreateOneOffInvoiceParams {
+	customerId: string;
+	amountCents: number;
+	description?: string;
+}
+
+export async function createOneOffInvoice(
+	params: CreateOneOffInvoiceParams,
+): Promise<StripeInvoiceListItem> {
+	const { customerId, amountCents, description } = params;
+
+	if (amountCents <= 0) {
+		throw new Error("Amount must be greater than zero");
+	}
+
+	const stripe = await getStripeClient();
+
+	const invoice = await stripe.invoices.create({
+		customer: customerId,
+		collection_method: "send_invoice",
+		days_until_due: DAYS_UNTIL_DUE,
+		currency: CURRENCY,
+		description: description || undefined,
+	});
+
+	await stripe.invoiceItems.create({
+		customer: customerId,
+		invoice: invoice.id,
+		currency: CURRENCY,
+		amount: amountCents,
+		description: description || "One-off invoice",
+	});
+
+	const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
+	await stripe.invoices.sendInvoice(finalized.id);
+
+	const status = finalized.status ?? null;
+	return {
+		id: finalized.id,
+		status,
+		disabled: ["paid", "void"].includes(status ?? ""),
+		pdf: finalized.invoice_pdf,
+		amountDue: finalized.amount_due ?? 0,
+		amountPaid: finalized.amount_paid ?? 0,
+		currency: finalized.currency ?? CURRENCY,
+		customerEmail: finalized.customer_email ?? null,
+		customerName: finalized.customer_name ?? null,
+		customerId:
+			typeof finalized.customer === "string"
+				? finalized.customer
+				: (finalized.customer?.id ?? null),
+		created: finalized.created,
+		dueDate: finalized.due_date ?? null,
+		number: finalized.number ?? null,
+		hostedInvoiceUrl: finalized.hosted_invoice_url ?? null,
+	};
+}
+
 export async function getAllInvoices(
 	options: GetAllInvoicesOptions = {},
 ): Promise<StripeInvoiceListItem[]> {
