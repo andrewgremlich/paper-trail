@@ -108,6 +108,29 @@ export const deleteTimesheet = async (id: number): Promise<void> => {
 	await db.execute(`DELETE FROM timesheets WHERE id = $1`, [id]);
 };
 
+export const getTimesheetByInvoiceId = async (
+	invoiceId: string,
+): Promise<TimesheetWithProject | null> => {
+	try {
+		const db = await getDb();
+		const rows = await db.select<TimesheetWithProject[]>(
+			`SELECT t.id, t.projectId, t.invoiceId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
+						p.customerId as customerId, p.rate_in_cents as projectRate
+			 FROM timesheets t
+			 JOIN projects p ON p.id = t.projectId
+			 WHERE t.invoiceId = $1`,
+			[invoiceId],
+		);
+
+		if (rows.length === 0) return null;
+
+		return { ...rows[0], active: !!rows[0].active };
+	} catch (error) {
+		console.error("Error in getTimesheetByInvoiceId:", error);
+		throw error;
+	}
+};
+
 export const updateTimesheet = async ({
 	id,
 	name,

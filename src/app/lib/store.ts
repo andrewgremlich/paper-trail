@@ -12,6 +12,7 @@ type PaperTrailState = {
 	invoiceModalActive: boolean;
 	activeProjectId: number | undefined;
 	activeTimesheetId: number | undefined;
+	activeInvoiceId: string | undefined;
 	projects: Project[];
 	timesheets: Timesheet[];
 	activeTab: ProjectPageTab;
@@ -19,7 +20,7 @@ type PaperTrailState = {
 	toggleProjectModal: (args?: { projectId?: number }) => void;
 	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
-	toggleInvoiceModal: () => void;
+	toggleInvoiceModal: (args?: { invoiceId?: string }) => void;
 	changeActiveTab: (tab: ProjectPageTab) => void;
 	addProject: (project: Project) => void;
 	addTimesheet: (timesheet: Timesheet) => void;
@@ -35,6 +36,7 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 			invoiceModalActive: false,
 			activeProjectId: undefined,
 			activeTimesheetId: undefined,
+			activeInvoiceId: undefined,
 			projects: [],
 			timesheets: [],
 			activeTab: ProjectPageTab.Timesheets,
@@ -57,8 +59,14 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 				})),
 			toggleSettingsModal: () =>
 				set((state) => ({ settingsModalActive: !state.settingsModalActive })),
-			toggleInvoiceModal: () =>
-				set((state) => ({ invoiceModalActive: !state.invoiceModalActive })),
+			toggleInvoiceModal: (args) =>
+				set((state) => ({
+					invoiceModalActive:
+						args && "invoiceId" in args
+							? !!args.invoiceId
+							: !state.invoiceModalActive,
+					activeInvoiceId: args?.invoiceId,
+				})),
 			changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
 			addProject: (project) =>
 				set((state) => ({ projects: [project, ...state.projects] })),
