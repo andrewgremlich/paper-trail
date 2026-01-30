@@ -113,10 +113,13 @@ export const generateInvoice = async (formData: FormData): Promise<void> => {
 
 export async function getInvoice(
 	invoiceId: string,
-): Promise<StripeInvoiceMinimal> {
+): Promise<Stripe.Invoice & { disabled: boolean }> {
 	const stripe = await getStripeClient();
 	const invoice = await stripe.invoices.retrieve(invoiceId);
-	return toMinimalInvoice(invoice);
+	return {
+		...invoice,
+		disabled: ["paid", "void"].includes(invoice.status ?? ""),
+	};
 }
 
 export async function markInvoiceAsPaid(
