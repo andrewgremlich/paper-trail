@@ -6,6 +6,7 @@ import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { usePaperTrailStore } from "@/lib/store";
 import { createOneOffInvoice, getAllCustomers } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
@@ -82,21 +83,15 @@ export const CreateInvoiceForm = () => {
 					disabled={isPending}
 				/>
 
-				<div className={styles.textareaContainer}>
-					<label htmlFor="invoice-description" className={styles.label}>
-						Description
-					</label>
-					<textarea
-						id="invoice-description"
-						name="description"
-						className={styles.textarea}
-						placeholder="Invoice description (optional)"
-						value={description}
-						onChange={(e) => setDescription(e.target.value)}
-						disabled={isPending}
-						rows={4}
-					/>
-				</div>
+				<Textarea
+					label="Description"
+					name="description"
+					placeholder="Invoice description (optional)"
+					value={description}
+					onChange={(e) => setDescription(e.target.value)}
+					disabled={isPending}
+					rows={4}
+				/>
 
 				{isError && (
 					<P className={styles.errorMessage}>
