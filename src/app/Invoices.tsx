@@ -1,12 +1,12 @@
 import { useQueries } from "@tanstack/react-query";
 import { NotebookPen } from "lucide-react";
 import { useState } from "react";
+import { Flex } from "@/components/layout/Flex";
 import { H1, Main } from "@/components/layout/HtmlElements";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
 import { getAllCustomers, getAllInvoices } from "@/lib/stripeApi";
-import { Flex } from "./components/layout/Flex";
-import { Button } from "./components/ui/Button";
 import { usePaperTrailStore } from "./lib/store";
 
 export const Invoices = () => {
@@ -35,7 +35,7 @@ export const Invoices = () => {
 				<Button
 					type="button"
 					variant="ghost"
-					onClick={toggleInvoiceModal}
+					onClick={() => toggleInvoiceModal()}
 					leftIcon={<NotebookPen size={16} />}
 				>
 					Generate Invoice
@@ -74,7 +74,11 @@ export const Invoices = () => {
 					)}
 					{(filteredInvoices?.length ?? 0) > 0 &&
 						filteredInvoices?.map((i) => (
-							<TR key={i.id}>
+							<TR
+								key={i.id}
+								style={{ cursor: "pointer" }}
+								onClick={() => toggleInvoiceModal({ invoiceId: i.id })}
+							>
 								<TD>{i.number || "N/A"}</TD>
 								<TD>{i.customerEmail}</TD>
 								<TD>{(i.amountDue / 100).toFixed(2)}</TD>
