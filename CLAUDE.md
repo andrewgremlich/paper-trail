@@ -46,6 +46,16 @@ npx vitest run src/app/lib/utils.test.ts
 3. Stripe API calls via `src/app/lib/stripeApi.ts` using keys from Stronghold
 4. Optional cloud sync via Turso embedded replicas (configurable in `src/app/lib/db/syncConfig.ts`)
 
+### Key Files to Understand
+- `src/app/lib/store.ts` - Zustand state management, UI state and localStorage persistence
+- `src/app/lib/db/client.ts` - SQLite connection manager and database initialization
+- `src/app/lib/stripeApi.ts` - Stripe API integration functions
+- `src/app/lib/stronghold.ts` - Secure credential storage wrapper
+- `src/app/lib/types.ts` - Core TypeScript type definitions
+- `src-tauri/db/seed.sql` - Database schema and migration logic
+- `src-tauri/src/lib.rs` - Tauri application setup and Rust commands
+- `src/app/index.tsx` - Main app router and page layout
+
 ### Database Tables
 - `projects` - Clients with Stripe customer IDs and hourly rates
 - `timesheets` - Time tracking documents linked to projects
@@ -59,6 +69,9 @@ npx vitest run src/app/lib/utils.test.ts
 - Use ES modules, not CommonJS
 - Use arrow functions in predicates
 - Test files use `.test.ts`/`.test.tsx` extension with Vitest
+- Use React Query's `invalidateQueries` to refresh data after mutations
+- Store money values in cents (integers) to avoid floating-point errors
+- Dates use ISO format (YYYY-MM-DD)
 
 ### Component File Naming Conventions
 
@@ -72,6 +85,8 @@ ComponentName/
 
 - **CSS modules**: Always name `styles.module.css`, import as `import styles from "./styles.module.css"`
 - **Test files**: Always name `ComponentName.test.tsx` (matching the folder name)
+- Use Lucide icons for UI elements
+- The app uses light/dark theme toggle - ensure new components respect theme classes
 
 ## Stripe Integration
 
@@ -100,3 +115,38 @@ The app uses **Turso (libSQL)** with embedded replicas for local-first database 
 - `execute_statement` - Run INSERT/UPDATE/DELETE
 - `sync_database` - Manually trigger sync
 - `update_sync_config` - Update sync credentials
+
+## Security Considerations
+
+- Stripe API keys MUST be stored in Stronghold, never in plain text or localStorage
+- Validate all user inputs before database operations
+- Use parameterized queries to prevent SQL injection
+- Sanitize file names and paths for transaction attachments
+
+## Common Tasks
+
+### Adding a New Page
+1. Create new component in `src/app/`
+2. Add route to `src/app/index.tsx`
+3. Add navigation link if needed
+4. Create database operations if needed in `src/app/lib/db/`
+5. Set up React Query hooks for data fetching
+
+### Adding a Database Table
+1. Add table definition to `src-tauri/db/seed.sql`
+2. Create TypeScript types in `src/app/lib/db/types.ts`
+3. Create CRUD functions in `src/app/lib/db/[table-name].ts`
+4. Set up React Query hooks in components
+5. Test database operations
+
+### Adding a Stripe Feature
+1. Update `src/app/lib/stripeApi.ts` with new Stripe SDK calls
+2. Ensure proper error handling
+3. Add UI components for the feature
+4. Test with Stripe test keys first
+
+### Adding a Tauri Command
+1. Define Rust function in `src-tauri/src/lib.rs`
+2. Add to Tauri app builder
+3. Invoke from React with `@tauri-apps/api/core`
+4. Handle async operations properly
