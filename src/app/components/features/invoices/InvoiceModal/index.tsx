@@ -1,6 +1,5 @@
 import { useId } from "react";
 import { ModalHeader } from "@/components/shared/ModalHeader";
-import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { CreateInvoiceForm } from "../CreateInvoiceForm";
@@ -31,18 +30,6 @@ export const InvoiceModal = () => {
 				<InvoiceDetails invoiceId={activeInvoiceId} />
 			) : (
 				<CreateInvoiceForm />
-			)}
-
-			{isViewMode && (
-				<div>
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={() => toggleInvoiceModal()}
-					>
-						Close
-					</Button>
-				</div>
 			)}
 		</Dialog>
 	);
