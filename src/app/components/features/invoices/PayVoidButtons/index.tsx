@@ -2,14 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
-import type { TimesheetDetails } from "@/lib/db/types";
+import type { Timesheet } from "@/lib/db/types";
 import { getInvoice, markInvoiceAsPaid, voidInvoice } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
+import { ExternalLink } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export const PayVoidButtons = ({
 	timesheet,
 }: {
-	timesheet: TimesheetDetails;
+	timesheet: Pick<Timesheet, "invoiceId">;
 }) => {
 	const queryClient = useQueryClient();
 	const invoiceId = timesheet?.invoiceId;
@@ -64,7 +66,7 @@ export const PayVoidButtons = ({
 
 	return (
 		<>
-			<Flex gap={8}>
+			<Flex gap={8} className={styles.buttonContainer}>
 				<Button
 					size="sm"
 					onClick={async () => {
@@ -87,19 +89,19 @@ export const PayVoidButtons = ({
 			{invoiceData?.status === "paid" && (
 				<P>Invoice has been marked as paid.</P>
 			)}
-			{invoiceData?.invoice_pdf && (
-				<P>
-					Invoice PDF is available.{" "}
-					<a
-						className={styles.pdfLink}
-						href={invoiceData.invoice_pdf}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						Open PDF
-					</a>
-				</P>
-			)}
+			{invoiceData?.invoice_pdf ? (
+				<Button
+					type="button"
+					variant="secondary"
+					onClick={() => {
+						const pdfUrl = invoiceData.invoice_pdf;
+						if (pdfUrl) openUrl(pdfUrl);
+					}}
+					leftIcon={<ExternalLink size={16} />}
+				>
+					View PDF
+				</Button>
+			) : null}
 			{invoiceData?.status === "void" && <P>Invoice has been voided.</P>}
 		</>
 	);

@@ -20,3 +20,7 @@
 .linkButton:hover {
 	color: var(--color-link-hover);
 }
+
+.preLine {
+	white-space: pre-line;
+}

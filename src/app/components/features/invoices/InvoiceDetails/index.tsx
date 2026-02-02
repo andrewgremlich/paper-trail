@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ExternalLink, FileText, Mail } from "lucide-react";
+import { FileText, Mail } from "lucide-react";
+import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
@@ -75,7 +76,7 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 
 	return (
 		<>
-			{invoice.description && <P>{invoice.description}</P>}
+			{invoice.description && <P className={styles.preLine}>{invoice.description}</P>}
 
 			<Grid rows={4} flow="col" columnGap={24}>
 				<P>Invoice ID: {invoice.id}</P>
@@ -105,23 +106,9 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 				{invoice.created && <P>Created: {formatDate(invoice.created)}</P>}
 			</Grid>
 
-			{invoice.footer && <P>{invoice.footer}</P>}
+			{invoice.footer && <P className={styles.preLine}>{invoice.footer}</P>}
 
 			<Flex gap={12} className={styles.actions} items="center">
-				{invoice.invoice_pdf ? (
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={() => {
-							const pdfUrl = invoice.invoice_pdf;
-							if (pdfUrl) openUrl(pdfUrl);
-						}}
-						leftIcon={<ExternalLink size={16} />}
-					>
-						View PDF
-					</Button>
-				) : null}
-
 				{timesheet ? (
 					<Button
 						type="button"
@@ -137,6 +124,8 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 					</span>
 				)}
 			</Flex>
+
+			{timesheet && <PayVoidButtons timesheet={timesheet} />}
 		</>
 	);
 };
