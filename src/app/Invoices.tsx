@@ -30,8 +30,8 @@ export const Invoices = () => {
 
 	return (
 		<Main>
-			<Flex justify="between" items="center">
-				<H1>Invoices</H1>
+			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
+				<H1 style={{ marginBottom: "0px" }}>Invoices</H1>
 				<Button
 					type="button"
 					variant="ghost"

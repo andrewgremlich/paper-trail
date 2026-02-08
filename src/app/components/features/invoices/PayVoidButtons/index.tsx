@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ExternalLink } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import type { Timesheet } from "@/lib/db/types";
 import { getInvoice, markInvoiceAsPaid, voidInvoice } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
-import { ExternalLink } from "lucide-react";
-import { openUrl } from "@tauri-apps/plugin-opener";
 
 export const PayVoidButtons = ({
 	timesheet,

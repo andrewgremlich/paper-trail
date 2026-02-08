@@ -76,7 +76,9 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 
 	return (
 		<>
-			{invoice.description && <P className={styles.preLine}>{invoice.description}</P>}
+			{invoice.description && (
+				<P className={styles.preLine}>{invoice.description}</P>
+			)}
 
 			<Grid rows={4} flow="col" columnGap={24}>
 				<P>Invoice ID: {invoice.id}</P>
