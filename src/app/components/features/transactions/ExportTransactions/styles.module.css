@@ -6,8 +6,8 @@
 	position: absolute;
 	right: 0;
 	top: 100%;
-	background: var(--color-surface);
-	border: 1px solid var(--color-border);
+	background: var(--card);
+	border: 1px solid var(--border);
 	border-radius: 6px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	z-index: 10;
@@ -24,9 +24,9 @@
 	cursor: pointer;
 	text-align: left;
 	font-size: 14px;
-	color: var(--color-text);
+	color: var(--foreground);
 }
 
 .menuItem:hover {
-	background: var(--color-hover);
+	background: var(--secondary-hover);
 }
