@@ -1,6 +1,6 @@
 -- Enable foreign keys and set write-ahead logging for better concurrency
 PRAGMA foreign_keys = ON;
-PRAGMA journal_mode = WAL;
+PRAGMA journal_mode = WAL; -- be sure to comment out this line when syncing with Turso db remote.
 
 -- =====================
 -- Projects
@@ -75,6 +75,25 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 
 -- =====================
+-- User Profile
+-- =====================
+CREATE TABLE IF NOT EXISTS user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL UNIQUE,
+  displayName TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- =====================
+-- Schema Migrations
+-- =====================
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY
+);
+
+-- =====================
 -- Indexes
 -- =====================
 CREATE INDEX IF NOT EXISTS idx_projects_customerId
@@ -132,6 +151,16 @@ AFTER UPDATE ON transactions
 FOR EACH ROW
 BEGIN
   UPDATE transactions
+  SET updatedAt = datetime('now')
+  WHERE id = OLD.id;
+END;
+
+-- User Profile
+CREATE TRIGGER IF NOT EXISTS trg_user_profile_set_updatedAt
+AFTER UPDATE ON user_profile
+FOR EACH ROW
+BEGIN
+  UPDATE user_profile
   SET updatedAt = datetime('now')
   WHERE id = OLD.id;
 END;
