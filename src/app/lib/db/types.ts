@@ -2,6 +2,7 @@ export type Nullable<T> = T | null | undefined;
 
 export type Project = {
 	id: number;
+	userId: number;
 	name: string;
 	active: boolean;
 	customerId: Nullable<string>;
@@ -18,6 +19,7 @@ export type GenerateProject = Pick<
 
 export type Timesheet = {
 	id: number;
+	userId: number;
 	projectId: number;
 	invoiceId: Nullable<string>;
 	name: string;
@@ -44,6 +46,7 @@ export type TimesheetWithProject = Timesheet & {
 
 export type TimesheetEntry = {
 	id: number;
+	userId: number;
 	timesheetId: number;
 	date: string;
 	minutes: number;
@@ -71,6 +74,7 @@ export type TimesheetDetails = Timesheet & {
 
 export type Transaction = {
 	id: number;
+	userId: number;
 	projectId: number;
 	date: string;
 	description: string;
@@ -90,6 +94,23 @@ export type UpdateTransaction = Pick<
 	"id" | "projectId" | "date" | "description" | "amount" | "filePath"
 >;
 
+export type UserProfile = {
+	id: number;
+	uuid: string;
+	displayName: string;
+	email: string;
+	createdAt: number;
+	updatedAt: number;
+};
+
+export type UpdateUserProfile = Pick<UserProfile, "displayName" | "email">;
+
+export type SyncCode = {
+	uuid: string;
+	syncUrl: string;
+	authToken: string;
+};
+
 export type ExportData = {
 	version: string;
 	exportDate: string;
@@ -97,4 +118,5 @@ export type ExportData = {
 	timesheets: Timesheet[];
 	timesheetEntries: TimesheetEntry[];
 	transactions: Transaction[];
+	userProfile?: UserProfile;
 };

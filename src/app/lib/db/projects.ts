@@ -6,13 +6,17 @@ import type {
 	Project,
 	Timesheet,
 } from "./types";
+import { getCurrentUserId } from "./userProfile";
 
 export const getAllProjects = async (): Promise<Project[]> => {
 	const db = await getDb();
+	const userId = await getCurrentUserId();
 	const rows = await db.select<Project[]>(
-		`SELECT id, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
+		`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
 		 FROM projects
+		 WHERE userId = $1
 		 ORDER BY createdAt DESC`,
+		[userId],
 	);
 	return rows.map((r: Project) => ({ ...r, active: !!r.active }));
 };
@@ -26,10 +30,11 @@ export const getProjectById = async (
 ): Promise<ProjectWithTimesheets | null> => {
 	try {
 		const db = await getDb();
+		const userId = await getCurrentUserId();
 		const projects = await db.select<Project[]>(
-			`SELECT id, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
-			FROM projects WHERE id = $1`,
-			[projectId],
+			`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
+			FROM projects WHERE id = $1 AND userId = $2`,
+			[projectId, userId],
 		);
 		const project = projects[0];
 		if (!project) return null;
@@ -38,8 +43,8 @@ export const getProjectById = async (
 			Array<MinimalTimesheet & { active: number | boolean }>
 		>(
 			`SELECT id, name, description, active, createdAt, updatedAt
-		 FROM timesheets WHERE projectId = $1 ORDER BY createdAt DESC`,
-			[projectId],
+		 FROM timesheets WHERE projectId = $1 AND userId = $2 ORDER BY createdAt DESC`,
+			[projectId, userId],
 		);
 
 		const normalized: MinimalTimesheet[] = timesheets.map((t) => ({
@@ -64,18 +69,19 @@ export const generateProject = async ({
 > => {
 	try {
 		const db = await getDb();
+		const userId = await getCurrentUserId();
 
 		const { lastInsertId: createdProjectId } = await db.execute(
-			`INSERT INTO projects (name, customerId, rate_in_cents, description)
-		 VALUES ($1, $2, $3, $4)`,
-			[name, customerId, rate_in_cents, description],
+			`INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
+		 VALUES ($1, $2, $3, $4, $5)`,
+			[name, customerId, rate_in_cents, description, userId],
 		);
 
 		const createdProjectRow = (
 			await db.select<Project[]>(
-				`SELECT id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
-				FROM projects WHERE id = $1`,
-				[createdProjectId],
+				`SELECT id, userId, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
+				FROM projects WHERE id = $1 AND userId = $2`,
+				[createdProjectId, userId],
 			)
 		)[0];
 		const createdProject: Project = {
@@ -98,9 +104,13 @@ export const generateProject = async ({
 
 export const deleteProject = async (id: number): Promise<void> => {
 	const db = await getDb();
+	const userId = await getCurrentUserId();
 
 	try {
-		await db.execute(`DELETE FROM projects WHERE id = $1`, [id]);
+		await db.execute(`DELETE FROM projects WHERE id = $1 AND userId = $2`, [
+			id,
+			userId,
+		]);
 	} catch (err) {
 		console.error(err);
 	}
@@ -115,6 +125,7 @@ export const updateProject = async ({
 	active,
 }: Project): Promise<Project | null> => {
 	const db = await getDb();
+	const userId = await getCurrentUserId();
 
 	let rate = rate_in_cents;
 
@@ -128,14 +139,14 @@ export const updateProject = async ({
 			await db.execute(
 				`UPDATE projects
 				SET name = $1, customerId = $2, rate_in_cents = $3, description = $4, active = $5, updatedAt = CURRENT_TIMESTAMP
-				WHERE id = $6`,
-				[name, customerId, rate * 100, description, active ? 1 : 0, id],
+				WHERE id = $6 AND userId = $7`,
+				[name, customerId, rate * 100, description, active ? 1 : 0, id, userId],
 			);
 			const updatedProject = (
 				await db.select<Project[]>(
-					`SELECT id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
-					FROM projects WHERE id = $1`,
-					[id],
+					`SELECT id, userId, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
+					FROM projects WHERE id = $1 AND userId = $2`,
+					[id, userId],
 				)
 			)[0];
 			return { ...updatedProject, active: !!updatedProject.active };

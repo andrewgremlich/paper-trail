@@ -46,12 +46,20 @@ class TursoDatabase {
 }
 
 let dbInstance: TursoDatabase | null = null;
+let migrationsRun = false;
 
 export const getDb = async (): Promise<TursoDatabase> => {
 	if (!dbInstance) {
 		dbInstance = new TursoDatabase();
 	}
 	return dbInstance;
+};
+
+export const initializeAppDb = async (): Promise<void> => {
+	if (migrationsRun) return;
+	migrationsRun = true;
+	const { runMigrations } = await import("./userProfile");
+	await runMigrations();
 };
 
 export type Database = TursoDatabase;
