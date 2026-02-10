@@ -6,6 +6,7 @@ import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
 import { StripeSecretSection } from "../StripeSecretSection";
 import { ThemeSection } from "../ThemeSection";
+import { SyncSettings } from "../SyncSettings";
 
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
@@ -29,6 +30,7 @@ export const SettingsModal = () => {
 				exposed outside the local vault).
 			</P>
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
+			<SyncSettings />
 			<ThemeSection />
 			<ExportImportSection />
 		</Dialog>

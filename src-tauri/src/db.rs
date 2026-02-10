@@ -1,12 +1,14 @@
 use libsql::{Builder, Connection, Database};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::{Mutex, RwLock};
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct DbConfig {
 	pub sync_url: Option<String>,
 	pub auth_token: Option<String>,
+	#[serde(skip)]
 	pub sync_interval: std::time::Duration,
 	pub enable_sync: bool, // Future: gate this behind paid feature
 }
@@ -22,46 +24,139 @@ impl Default for DbConfig {
 	}
 }
 
+const SYNC_CONFIG_FILE: &str = "sync-config.json";
+
+pub fn load_config(app_data_dir: &PathBuf) -> DbConfig {
+	let config_path = app_data_dir.join(SYNC_CONFIG_FILE);
+	match std::fs::read_to_string(&config_path) {
+		Ok(contents) => serde_json::from_str(&contents).unwrap_or_default(),
+		Err(_) => DbConfig::default(),
+	}
+}
+
+fn save_config(app_data_dir: &PathBuf, config: &DbConfig) -> Result<(), String> {
+	let config_path = app_data_dir.join(SYNC_CONFIG_FILE);
+	let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+	std::fs::write(&config_path, json).map_err(|e| e.to_string())
+}
+
 pub struct DbState {
 	pub db: Arc<Database>,
 	pub conn: Arc<Mutex<Connection>>,
 	pub config: DbConfig,
+	pub app_data_dir: PathBuf,
+}
+
+const DB_FILE: &str = "paper-trail.db";
+const DB_BACKUP_FILE: &str = "paper-trail.db.local-backup";
+
+async fn build_database(app_data_dir: &PathBuf, config: &DbConfig) -> Result<Database, libsql::Error> {
+	let db_path = app_data_dir.join(DB_FILE);
+
+	if config.enable_sync {
+		if let (Some(sync_url), Some(auth_token)) = (&config.sync_url, &config.auth_token) {
+			match Builder::new_remote_replica(&db_path, sync_url.clone(), auth_token.clone())
+				.build()
+				.await
+			{
+				Ok(db) => Ok(db),
+				Err(e) if e.to_string().contains("wal_index") => {
+					// Local DB exists without WAL index — transition to replica mode
+					// Back up the old file, then create a fresh replica
+					let backup_path = app_data_dir.join(DB_BACKUP_FILE);
+					std::fs::rename(&db_path, &backup_path)
+						.map_err(|io_err| libsql::Error::SqliteFailure(io_err.raw_os_error().unwrap_or(1), io_err.to_string()))?;
+					// Remove stale WAL/SHM files if present
+					let _ = std::fs::remove_file(app_data_dir.join("paper-trail.db-shm"));
+					let _ = std::fs::remove_file(app_data_dir.join("paper-trail.db-wal"));
+
+					Builder::new_remote_replica(&db_path, sync_url.clone(), auth_token.clone())
+						.build()
+						.await
+				}
+				Err(e) => Err(e),
+			}
+		} else {
+			Builder::new_local(db_path).build().await
+		}
+	} else {
+		Builder::new_local(db_path).build().await
+	}
+}
+
+/// Migrate data from local backup to new replica after transitioning.
+/// Opens the backup as a local DB, reads all rows, inserts into new connection.
+async fn migrate_from_local_backup(
+	app_data_dir: &PathBuf,
+	new_conn: &Connection,
+) -> Result<(), String> {
+	let backup_path = app_data_dir.join(DB_BACKUP_FILE);
+	if !backup_path.exists() {
+		return Ok(());
+	}
+
+	let old_db = Builder::new_local(&backup_path)
+		.build()
+		.await
+		.map_err(|e| format!("Failed to open backup: {e}"))?;
+	let old_conn = old_db.connect().map_err(|e| format!("Failed to connect to backup: {e}"))?;
+
+	// Tables in dependency order (parents first)
+	let tables = [
+		("user_profile", "id, uuid, displayName, email, createdAt, updatedAt"),
+		("projects", "id, active, name, customerId, rate_in_cents, description, createdAt, updatedAt, userId"),
+		("timesheets", "id, projectId, invoiceId, name, description, active, createdAt, updatedAt, userId"),
+		("timesheet_entries", "id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId"),
+		("transactions", "id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId"),
+		("schema_migrations", "version"),
+	];
+
+	for (table, columns) in &tables {
+		let col_list: Vec<&str> = columns.split(", ").collect();
+		let placeholders: Vec<String> = (1..=col_list.len()).map(|i| format!("${i}")).collect();
+
+		let select_sql = format!("SELECT {columns} FROM {table}");
+		let insert_sql = format!(
+			"INSERT OR IGNORE INTO {table} ({columns}) VALUES ({})",
+			placeholders.join(", ")
+		);
+
+		let mut rows = old_conn
+			.query(&select_sql, libsql::params::Params::None)
+			.await
+			.map_err(|e| format!("Failed to read {table} from backup: {e}"))?;
+
+		while let Some(row) = rows.next().await.map_err(|e| format!("Row read error: {e}"))? {
+			let mut params: Vec<libsql::Value> = Vec::new();
+			for i in 0..col_list.len() {
+				let val = row.get_value(i as i32).map_err(|e| format!("Value error: {e}"))?;
+				params.push(val);
+			}
+			new_conn
+				.execute(&insert_sql, libsql::params::Params::Positional(params))
+				.await
+				.map_err(|e| format!("Failed to insert into {table}: {e}"))?;
+		}
+	}
+
+	// Clean up backup
+	let _ = std::fs::remove_file(&backup_path);
+
+	Ok(())
 }
 
 impl DbState {
-	pub async fn new(app: &AppHandle, config: DbConfig) -> Result<Self, libsql::Error> {
-		let app_data_dir = app
-			.path()
-			.app_local_data_dir()
-			.expect("Failed to get app data directory");
-
+	pub async fn new(app_data_dir: PathBuf, config: DbConfig) -> Result<Self, libsql::Error> {
 		std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
 
-		let db_path = app_data_dir.join("paper-trail.db");
-
-		// Build the database with or without sync
-		let db = if config.enable_sync {
-			if let (Some(sync_url), Some(auth_token)) = (&config.sync_url, &config.auth_token) {
-				// Embedded replica with sync
-				Builder::new_remote_replica(db_path, sync_url.clone(), auth_token.clone())
-					.build()
-					.await?
-			} else {
-				// No sync credentials, fall back to local
-				Builder::new_local(db_path).build().await?
-			}
-		} else {
-			// Sync disabled (future: gated behind paid feature)
-			Builder::new_local(db_path).build().await?
-		};
-
-		// Create a single reusable connection to avoid "database is locked" errors
+		let db = build_database(&app_data_dir, &config).await?;
 		let conn = db.connect()?;
 
 		Ok(Self {
 			db: Arc::new(db),
 			conn: Arc::new(Mutex::new(conn)),
 			config,
+			app_data_dir,
 		})
 	}
 
@@ -77,8 +172,14 @@ impl DbState {
 	}
 }
 
-pub async fn initialize_db(app: &AppHandle, config: DbConfig) -> Result<(), libsql::Error> {
-	let db_state = DbState::new(app, config).await?;
+pub async fn initialize_db(app: &AppHandle) -> Result<(), libsql::Error> {
+	let app_data_dir = app
+		.path()
+		.app_local_data_dir()
+		.expect("Failed to get app data directory");
+
+	let config = load_config(&app_data_dir);
+	let db_state = DbState::new(app_data_dir.clone(), config).await?;
 
 	// Run migrations
 	let conn = db_state.get_connection();
@@ -88,6 +189,11 @@ pub async fn initialize_db(app: &AppHandle, config: DbConfig) -> Result<(), libs
 	// Execute the entire schema as a batch
 	// This handles PRAGMA statements and other commands that might return rows
 	conn_guard.execute_batch(schema_sql).await?;
+
+	// Migrate data from local backup if transitioning from local to replica
+	migrate_from_local_backup(&app_data_dir, &conn_guard)
+		.await
+		.unwrap_or_else(|e| eprintln!("Migration from local backup failed: {e}"));
 
 	drop(conn_guard); // Release lock before managing state
 
@@ -173,10 +279,40 @@ pub async fn update_sync_config(
 	auth_token: Option<String>,
 	enable_sync: bool,
 ) -> Result<(), String> {
-	let mut db = db_state.write().await;
-	db.config.sync_url = sync_url;
-	db.config.auth_token = auth_token;
-	db.config.enable_sync = enable_sync;
+	let mut state = db_state.write().await;
+
+	let new_config = DbConfig {
+		sync_url,
+		auth_token,
+		enable_sync,
+		..state.config.clone()
+	};
+
+	// Persist config to disk
+	save_config(&state.app_data_dir, &new_config)?;
+
+	// Rebuild database connection with new config
+	let app_data_dir = state.app_data_dir.clone();
+	let db = build_database(&app_data_dir, &new_config)
+		.await
+		.map_err(|e| e.to_string())?;
+
+	let conn = db.connect().map_err(|e| e.to_string())?;
+
+	// Run schema on the new connection
+	let schema_sql = include_str!("../db/seed.sql");
+	conn.execute_batch(schema_sql)
+		.await
+		.map_err(|e| e.to_string())?;
+
+	// Migrate data from local backup if transitioning from local to replica
+	migrate_from_local_backup(&app_data_dir, &conn).await?;
+
+	// Replace state
+	state.db = Arc::new(db);
+	state.conn = Arc::new(Mutex::new(conn));
+	state.config = new_config;
+
 	Ok(())
 }
 

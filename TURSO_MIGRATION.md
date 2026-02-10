@@ -16,7 +16,7 @@ This document explains the migration from Tauri's SQL plugin to Turso with embed
 - **Updated**: `src/app/lib/db/client.ts` - New database client that wraps Tauri commands
 - **Removed**: `@tauri-apps/plugin-sql` from package.json
 - **Added**: `src/app/lib/db/syncConfig.ts` - Sync configuration management
-- **Added**: `src/app/components/SyncSettings.tsx` - React component for sync settings UI
+- **Added**: `src/app/components/features/settings/SyncSettings/` - React component for sync settings UI
 
 ### Configuration
 
@@ -32,6 +32,10 @@ Your local database now supports syncing with a remote Turso database using embe
 - **Optional cloud sync**: Sync to Turso cloud when configured
 - **Offline support**: Works perfectly without network connection
 - **Conflict-free**: Turso handles synchronization conflicts automatically
+
+### Multi-User Data Isolation
+
+All data tables (`projects`, `timesheets`, `timesheet_entries`, `transactions`) include a `userId` foreign key referencing `user_profile.id`. This ensures each user's data is isolated when sharing a remote Turso database. The `userId` filtering is handled transparently by the data layer — no component code changes are needed.
 
 ### Sync Configuration
 
@@ -75,21 +79,23 @@ turso db tokens create paper-trail
 # Example output: eyJhbGc... (long token string)
 ```
 
-### 3. Configure Sync in the App
+### 3. Push the Schema to Turso
+
+The `seed.sql` file contains a `PRAGMA journal_mode = WAL` statement that is incompatible with Turso remote databases. Strip it when pushing the schema:
+
+```bash
+sed '3d' src-tauri/db/seed.sql | turso db shell paper-trail
+```
+
+This only creates the schema on the remote — your local data is unaffected.
+
+### 4. Configure Sync in the App
 
 You can configure sync in two ways:
 
-#### Option A: Use the UI Component
+#### Option A: Use the Settings UI
 
-Add the `SyncSettings` component to your app:
-
-```tsx
-import { SyncSettings } from "@/components/SyncSettings";
-
-function SettingsPage() {
-  return <SyncSettings />;
-}
-```
+The `SyncSettings` component is available in the app's Settings modal. Enter your Turso database URL and auth token there.
 
 #### Option B: Programmatically
 
@@ -106,7 +112,9 @@ await configureTursoSync(
 await syncNow();
 ```
 
-### 4. Enable Auto-Sync (Optional)
+**Note**: After configuring sync credentials for the first time, an app restart is required. The `update_sync_config` Tauri command updates the in-memory config but does not rebuild the database connection with the new remote replica URL.
+
+### 5. Enable Auto-Sync (Optional)
 
 To automatically sync in the background:
 
@@ -153,7 +161,7 @@ const db = await getDb();
 // Manually trigger sync
 await db.sync();
 
-// Update sync configuration
+// Update sync configuration (in-memory only; restart required to take effect)
 await db.updateSyncConfig(
   "libsql://your-db.turso.io",
   "your-token",
@@ -170,13 +178,14 @@ await db.updateSyncConfig(
 
 ### Existing Data
 
-Your existing database will be automatically migrated. The schema remains the same, and all your data will be preserved.
+Your existing database will be automatically migrated. The schema uses `CREATE TABLE IF NOT EXISTS`, so existing tables and data are preserved. On first launch after the update, a TypeScript migration adds `userId` columns to all data tables and backfills existing rows with the current user's profile ID.
 
 ### Sync Behavior
 
 - **Local-only mode**: If no sync URL/token is configured, works exactly like before
 - **Sync mode**: When configured, syncs with remote Turso database
 - **Sync trigger**: Manual via `syncNow()` or automatic via `startAutoSync()`
+- **First-time setup**: Requires app restart after entering sync credentials
 
 ## Future: Paid Feature
 
@@ -197,12 +206,12 @@ To enable this:
 
 ## Tauri Commands
 
-New Tauri commands available from the frontend:
+Tauri commands available from the frontend:
 
 - `execute_query(query, params)` - Execute SELECT queries
 - `execute_statement(query, params)` - Execute INSERT/UPDATE/DELETE
 - `sync_database()` - Trigger manual sync
-- `update_sync_config(syncUrl, authToken, enableSync)` - Update sync settings
+- `update_sync_config(syncUrl, authToken, enableSync)` - Update sync settings (in-memory only)
 
 ## Troubleshooting
 
@@ -216,12 +225,20 @@ If you get permission errors during build:
 1. Verify your Turso credentials are correct
 2. Check that `enableSync` is `true` in your config
 3. Look for errors in the console when calling `syncNow()`
+4. Restart the app after configuring sync credentials for the first time
 
 ### Data Not Syncing
 
 - Embedded replicas sync on-demand, not automatically
 - Call `syncNow()` explicitly or set up `startAutoSync()`
 - Check your Turso dashboard to verify data is being received
+
+### Schema Mismatch
+
+If the remote database schema is out of date, re-push it:
+```bash
+sed '3d' src-tauri/db/seed.sql | turso db shell paper-trail
+```
 
 ## Benefits of Turso
 

@@ -1,7 +1,7 @@
 mod db;
 mod demo_functions;
 
-use db::{execute_query, execute_statement, initialize_db, sync_database, update_sync_config, DbConfig};
+use db::{execute_query, execute_statement, initialize_db, sync_database, update_sync_config};
 use demo_functions::greet;
 use tauri::Manager;
 
@@ -22,9 +22,8 @@ pub fn run() {
                 .plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build())?;
 
             // Initialize Turso database with embedded replica support
-            let db_config = DbConfig::default();
             tauri::async_runtime::block_on(async {
-                initialize_db(&app.handle(), db_config)
+                initialize_db(&app.handle())
                     .await
                     .expect("Failed to initialize database")
             });
