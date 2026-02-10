@@ -7,6 +7,7 @@ describe("GenerateTimesheet", () => {
 	const queryClient = new QueryClient();
 	const mockProject = {
 		id: 1,
+		userId: 1,
 		name: "Test Project",
 		description: "Test Description",
 		rate_in_cents: 5000,

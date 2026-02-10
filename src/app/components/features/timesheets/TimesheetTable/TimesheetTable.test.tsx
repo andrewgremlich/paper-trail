@@ -25,6 +25,7 @@ describe("TimesheetTable", () => {
 	const mockEntries = [
 		{
 			id: 1,
+			userId: 1,
 			date: "2024-01-15",
 			minutes: 120,
 			description: "Testing feature A",
@@ -35,6 +36,7 @@ describe("TimesheetTable", () => {
 		},
 		{
 			id: 2,
+			userId: 1,
 			date: "2024-01-16",
 			minutes: 60,
 			description: "Testing feature B",

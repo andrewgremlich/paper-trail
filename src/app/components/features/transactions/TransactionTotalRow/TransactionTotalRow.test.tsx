@@ -7,6 +7,7 @@ describe("TransactionTotalRow", () => {
 	const mockTransactions: Transaction[] = [
 		{
 			id: 1,
+			userId: 1,
 			date: "2024-01-15",
 			description: "Test transaction 1",
 			projectId: 1,
@@ -17,6 +18,7 @@ describe("TransactionTotalRow", () => {
 		},
 		{
 			id: 2,
+			userId: 1,
 			date: "2024-01-16",
 			description: "Test transaction 2",
 			projectId: 1,
@@ -64,6 +66,7 @@ describe("TransactionTotalRow", () => {
 		const transactionsWithNegative: Transaction[] = [
 			{
 				id: 1,
+				userId: 1,
 				date: "2024-01-15",
 				description: "Income",
 				projectId: 1,
@@ -74,6 +77,7 @@ describe("TransactionTotalRow", () => {
 			},
 			{
 				id: 2,
+				userId: 1,
 				date: "2024-01-16",
 				description: "Expense",
 				projectId: 1,

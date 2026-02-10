@@ -6,6 +6,7 @@ import { TransactionViewRow } from "./index";
 describe("TransactionViewRow", () => {
 	const mockTransaction: Transaction = {
 		id: 1,
+		userId: 1,
 		date: "2024-01-15",
 		description: "Test transaction",
 		projectId: 1,
@@ -18,6 +19,7 @@ describe("TransactionViewRow", () => {
 	const mockProjects = [
 		{
 			id: 1,
+			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,
@@ -28,6 +30,7 @@ describe("TransactionViewRow", () => {
 		},
 		{
 			id: 2,
+			userId: 1,
 			name: "Project 2",
 			active: true,
 			customerId: null,

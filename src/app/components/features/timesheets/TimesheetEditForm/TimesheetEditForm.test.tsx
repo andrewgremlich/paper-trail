@@ -7,6 +7,7 @@ describe("TimesheetEditForm", () => {
 	const queryClient = new QueryClient();
 	const mockTimesheet = {
 		id: 1,
+		userId: 1,
 		name: "Test Timesheet",
 		description: "Test Description",
 		active: true,

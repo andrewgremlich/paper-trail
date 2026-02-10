@@ -7,6 +7,7 @@ describe("TransactionList", () => {
 	const mockTransactions: Transaction[] = [
 		{
 			id: 1,
+			userId: 1,
 			date: "2024-01-15",
 			description: "Test transaction 1",
 			projectId: 1,
@@ -17,6 +18,7 @@ describe("TransactionList", () => {
 		},
 		{
 			id: 2,
+			userId: 1,
 			date: "2024-01-16",
 			description: "Test transaction 2",
 			projectId: 1,
@@ -30,6 +32,7 @@ describe("TransactionList", () => {
 	const mockProjects = [
 		{
 			id: 1,
+			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,

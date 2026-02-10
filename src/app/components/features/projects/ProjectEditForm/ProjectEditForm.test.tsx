@@ -17,6 +17,7 @@ describe("ProjectEditForm", () => {
 	const queryClient = new QueryClient();
 	const mockProject: Project = {
 		id: 1,
+		userId: 1,
 		name: "Test Project",
 		description: "Test Description",
 		rate_in_cents: 5000,

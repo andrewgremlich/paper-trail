@@ -6,6 +6,7 @@ describe("TransactionForm", () => {
 	const mockProjects = [
 		{
 			id: 1,
+			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,
@@ -16,6 +17,7 @@ describe("TransactionForm", () => {
 		},
 		{
 			id: 2,
+			userId: 1,
 			name: "Project 2",
 			active: true,
 			customerId: null,

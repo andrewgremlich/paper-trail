@@ -8,6 +8,7 @@ describe("GenerateInvoice", () => {
 	const queryClient = new QueryClient();
 	const mockTimesheet: TimesheetDetails = {
 		id: 1,
+		userId: 1,
 		name: "Test Timesheet",
 		description: "Test Description",
 		projectId: 1,
@@ -18,6 +19,7 @@ describe("GenerateInvoice", () => {
 		entries: [
 			{
 				id: 1,
+				userId: 1,
 				timesheetId: 1,
 				date: "2024-01-01",
 				minutes: 60,
