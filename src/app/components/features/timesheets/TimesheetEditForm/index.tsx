@@ -42,9 +42,9 @@ export const TimesheetEditForm = ({
 			as="form"
 			cols={2}
 			gap={6}
-			onSubmit={async (evt: FormEvent<HTMLFormElement>) => {
+			onSubmit={async (evt: FormEvent<HTMLElement>) => {
 				evt.preventDefault();
-				const formData = new FormData(evt.currentTarget);
+				const formData = new FormData(evt.currentTarget as HTMLFormElement);
 				await mutation.mutateAsync(formData);
 			}}
 		>

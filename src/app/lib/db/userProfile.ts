@@ -75,7 +75,9 @@ export const generateSyncCode = async (): Promise<string> => {
 };
 
 export const applySyncCode = async (code: string): Promise<void> => {
-	const decoded = JSON.parse(new TextDecoder().decode(base64ToUint8(code))) as SyncCode;
+	const decoded = JSON.parse(
+		new TextDecoder().decode(base64ToUint8(code)),
+	) as SyncCode;
 
 	if (!decoded.uuid || !decoded.syncUrl || !decoded.authToken) {
 		throw new Error("Invalid sync code.");
@@ -91,48 +93,4 @@ export const applySyncCode = async (code: string): Promise<void> => {
 
 	await configureTursoSync(decoded.syncUrl, decoded.authToken);
 	await syncNow();
-};
-
-type ColumnInfo = { name: string };
-
-export const runMigrations = async (): Promise<void> => {
-	const db = await getDb();
-
-	const columns = await db.select<ColumnInfo[]>(
-		"SELECT name FROM pragma_table_info('projects')",
-	);
-	const hasUserId = columns.some((c) => c.name === "userId");
-
-	if (hasUserId) return;
-
-	const userId = await getCurrentUserId();
-
-	const tables = [
-		"projects",
-		"timesheets",
-		"timesheet_entries",
-		"transactions",
-	];
-
-	for (const table of tables) {
-		await db.execute(
-			`ALTER TABLE ${table} ADD COLUMN userId INTEGER REFERENCES user_profile(id)`,
-		);
-	}
-
-	for (const table of tables) {
-		await db.execute(`UPDATE ${table} SET userId = $1 WHERE userId IS NULL`, [
-			userId,
-		]);
-	}
-
-	for (const table of tables) {
-		await db.execute(
-			`CREATE INDEX IF NOT EXISTS idx_${table}_userId ON ${table}(userId)`,
-		);
-	}
-
-	await db.execute(
-		"INSERT OR IGNORE INTO schema_migrations (version) VALUES (1)",
-	);
 };

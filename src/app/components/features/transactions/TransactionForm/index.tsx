@@ -19,10 +19,11 @@ export const TransactionForm = ({
 	onProjectChange,
 	onSubmit,
 }: TransactionFormProps) => {
-	const handleSubmit = (evt: FormEvent<HTMLFormElement>) => {
+	const handleSubmit = (evt: FormEvent<HTMLElement>) => {
 		evt.preventDefault();
-		onSubmit(new FormData(evt.currentTarget));
-		evt.currentTarget.reset();
+		const form = evt.currentTarget as HTMLFormElement;
+		onSubmit(new FormData(form));
+		form.reset();
 	};
 
 	return (

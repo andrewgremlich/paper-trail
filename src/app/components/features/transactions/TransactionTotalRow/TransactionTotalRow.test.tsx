@@ -97,7 +97,7 @@ describe("TransactionTotalRow", () => {
 		expect(html).toContain("Total: $350.00");
 	});
 
-	it("renders seven table cells", () => {
+	it("renders three table cells with colSpan totaling seven columns", () => {
 		const html = renderToStaticMarkup(
 			<table>
 				<tbody>
@@ -106,6 +106,6 @@ describe("TransactionTotalRow", () => {
 			</table>,
 		);
 		const tdCount = (html.match(/<td/g) || []).length;
-		expect(tdCount).toBe(7);
+		expect(tdCount).toBe(3);
 	});
 });

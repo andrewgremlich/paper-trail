@@ -5,8 +5,8 @@ import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { ExportImportSection } from "../ExportImportSection";
 import { StripeSecretSection } from "../StripeSecretSection";
-import { ThemeSection } from "../ThemeSection";
 import { SyncSettings } from "../SyncSettings";
+import { ThemeSection } from "../ThemeSection";
 
 export const SettingsModal = () => {
 	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
