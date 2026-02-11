@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { ThemeSection } from "./index";
 
 describe("ThemeSection", () => {
-	it("renders heading and description", () => {
+	it("renders heading and legend", () => {
 		const html = renderToStaticMarkup(<ThemeSection />);
 		expect(html).toContain("Appearance");
-		expect(html).toContain("Choose your preferred color theme");
+		expect(html).toContain("Theme Selection");
 	});
 
 	it("renders all theme options", () => {

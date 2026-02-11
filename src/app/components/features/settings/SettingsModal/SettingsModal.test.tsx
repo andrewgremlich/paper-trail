@@ -33,7 +33,7 @@ describe("SettingsModal", () => {
 
 	it("renders description", () => {
 		const html = renderToStaticMarkup(wrapper(<SettingsModal />));
-		expect(html).toContain("Application settings");
+		expect(html).toContain("Modify settings for the application here.");
 		expect(html).toContain("Stripe Secret Key");
 	});
 
