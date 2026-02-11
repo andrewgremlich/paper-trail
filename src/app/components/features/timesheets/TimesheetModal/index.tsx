@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { GenerateInvoice } from "@/components/features/invoices/GenerateInvoice";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
@@ -17,6 +17,7 @@ import styles from "./styles.module.css";
 
 export const TimesheetModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
+	const headingId = useId();
 	const { timesheetModalActive, toggleTimesheetModal, activeTimesheetId } =
 		usePaperTrailStore();
 	const { data: timesheet } = useQuery({
@@ -31,13 +32,13 @@ export const TimesheetModal = () => {
 
 	return (
 		<Dialog
-			className={styles.dialog}
 			variant="liquidGlass"
 			isOpen={timesheetModalActive}
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
+			titleId={headingId}
 		>
 			<Flex justify="between">
-				<H2>
+				<H2 id={headingId}>
 					{timesheet?.name ?? "Timesheet Invoice Generator"}
 					{!timesheet?.active && " (Closed)"}
 				</H2>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { GenerateTimesheet } from "@/components/features/timesheets/GenerateTimesheet";
 import { Flex } from "@/components/layout/Flex";
 import { H2, P } from "@/components/layout/HtmlElements";
@@ -15,6 +15,7 @@ import styles from "./styles.module.css";
 
 export const ProjectModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
+	const headingId = useId();
 	const {
 		projectModalActive,
 		toggleProjectModal,
@@ -35,23 +36,19 @@ export const ProjectModal = () => {
 
 	return (
 		<Dialog
-			className={styles.dialog}
 			variant="liquidGlass"
 			isOpen={projectModalActive}
 			onClose={() => toggleProjectModal({ projectId: undefined })}
+			titleId={headingId}
 		>
 			<Flex className={styles.header} justify="between" items="start">
-				<H2>{project?.name}</H2>
-				{/* TODO: abstract editing so it's reusable */}
+				<H2 id={headingId}>{project?.name}</H2>
 				<Flex gap={2} items="center">
 					<EditToggleButton
 						enabled={!!project?.id}
 						isEditing={isEditing}
 						ariaLabel="Edit project"
 						onToggle={() => {
-							if (project?.id) {
-								console.log("Edit project", project.id);
-							}
 							setIsEditing(!isEditing);
 						}}
 					/>
@@ -96,7 +93,9 @@ export const ProjectModal = () => {
 							description={timesheet.description ?? "No description provided"}
 							action={() => {
 								toggleProjectModal({ projectId: undefined });
-								toggleTimesheetModal({ timesheetId: timesheet.id });
+								setTimeout(() => {
+									toggleTimesheetModal({ timesheetId: timesheet.id });
+								}, 160);
 							}}
 						/>
 					))}
