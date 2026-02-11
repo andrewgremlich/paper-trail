@@ -233,6 +233,13 @@ h6 {
 
 	/* Focus/ring shadow for dark backgrounds in focus states */
 	--focus-ring-outer: var(--neutral-950);
+
+	/* Glass overlay */
+	--glass-background: light-dark(
+		rgba(255, 255, 255, 0.6),
+		rgba(23, 37, 84, 0.2)
+	);
+	--glass-border: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
 }
 
 /* Explicit light theme override */

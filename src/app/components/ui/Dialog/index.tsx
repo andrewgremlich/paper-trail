@@ -8,6 +8,9 @@ import React, {
 } from "react";
 import styles from "./styles.module.css";
 
+const FOCUSABLE_SELECTOR =
+	'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 interface DialogProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -82,7 +85,13 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				if (!dialog.open) {
 					try {
 						modal ? dialog.showModal() : dialog.show();
-					} catch {}
+					} catch (e) {
+						if (e instanceof DOMException && e.name === "InvalidStateError") {
+							// Dialog is already open — safe to ignore
+						} else {
+							throw e;
+						}
+					}
 				}
 				if (animate) {
 					setStage((s) => (s === "closed" ? "opening" : s));
@@ -94,9 +103,8 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 					if (initialFocusRef?.current) {
 						initialFocusRef.current.focus();
 					} else {
-						const focusable = dialog.querySelector<HTMLElement>(
-							'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-						);
+						const focusable =
+							dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
 						focusable?.focus();
 					}
 				});
@@ -157,6 +165,33 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 			stage,
 			dialogRef,
 		]);
+
+		useEffect(() => {
+			if (!isOpen || !modal) return;
+			const dialog = dialogRef.current;
+			if (!dialog) return;
+			const handler = (e: KeyboardEvent) => {
+				if (e.key !== "Tab") return;
+				const focusableEls =
+					dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+				if (focusableEls.length === 0) return;
+				const first = focusableEls[0];
+				const last = focusableEls[focusableEls.length - 1];
+				if (e.shiftKey) {
+					if (document.activeElement === first) {
+						e.preventDefault();
+						last.focus();
+					}
+				} else {
+					if (document.activeElement === last) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			};
+			dialog.addEventListener("keydown", handler);
+			return () => dialog.removeEventListener("keydown", handler);
+		}, [isOpen, modal, dialogRef]);
 
 		useEffect(() => {
 			if (!isOpen || !closeOnEsc) return;

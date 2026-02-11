@@ -12,7 +12,7 @@
 /* Variant: Solid (default) */
 .solid {
 	border-radius: 0.375rem;
-	padding: 1rem;
+	padding: 2rem 2.5rem;
 	border: 1px solid var(--border);
 	background-color: var(--card);
 	color: var(--card-foreground);
@@ -26,9 +26,9 @@
 /* Variant: Liquid Glass */
 .liquidGlass {
 	border-radius: 0.75rem;
-	padding: 1rem;
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	background-color: rgba(23, 37, 84, 0.2);
+	padding: 2rem 2.5rem;
+	border: 1px solid var(--glass-border);
+	background-color: var(--glass-background);
 	color: var(--foreground);
 }
 
