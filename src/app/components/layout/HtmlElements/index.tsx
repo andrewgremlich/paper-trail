@@ -60,6 +60,16 @@ export const H3 = React.forwardRef<HTMLHeadingElement, H3Props>(
 );
 H3.displayName = "H3";
 
+export type H4Props = React.ComponentPropsWithoutRef<"h4">;
+export const H4 = React.forwardRef<HTMLHeadingElement, H4Props>(
+	({ className, children, ...rest }, ref) => (
+		<h4 ref={ref} className={cn(styles.h4, className)} {...rest}>
+			{children}
+		</h4>
+	),
+);
+H4.displayName = "H4";
+
 export type PProps = React.ComponentPropsWithoutRef<"p">;
 export const P = React.forwardRef<HTMLParagraphElement, PProps>(
 	({ className, children, ...rest }, ref) => (

@@ -3,6 +3,7 @@ import { useId } from "react";
 
 import { getStripeSecretKey, setStripeSecretKey } from "@/lib/files/stronghold";
 import styles from "./styles.module.css";
+import { H3, P } from "@/components/layout/HtmlElements";
 
 interface StripeSecretSectionProps {
 	active: boolean;
@@ -21,6 +22,7 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 		},
 		onSuccess: async () => {
 			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["invoices"] }),
 				queryClient.invalidateQueries({ queryKey: ["customers"] }),
 				queryClient.invalidateQueries({ queryKey: ["stripeSecretKey"] }),
 			]);
@@ -44,6 +46,11 @@ export const StripeSecretSection = ({ idPrefix }: StripeSecretSectionProps) => {
 				}
 			}}
 		>
+			<H3>Stripe</H3>
+			<P style={{ marginBottom: "0.5rem" }}>
+				Store your Stripe Secret Key securely (never exposed outside the local
+				vault).
+			</P>
 			<label
 				id={`${baseId}-stripe-label`}
 				htmlFor={inputId}

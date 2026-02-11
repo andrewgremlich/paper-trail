@@ -4,6 +4,7 @@ import { H3, P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { handleExportData, handleImportData } from "@/lib/files/exportImport";
 import styles from "./styles.module.css";
+import { Flex } from "@/components/layout/Flex";
 
 export const ExportImportSection = () => {
 	const queryClient = useQueryClient();
@@ -22,15 +23,13 @@ export const ExportImportSection = () => {
 
 	return (
 		<div className={styles.container}>
-			<div className={styles.header}>
-				<H3>Backup & Restore</H3>
-				<P className={styles.description}>
-					Export all your data to a JSON file for backup, or import a previously
-					exported backup file.
-				</P>
-			</div>
+			<H3>Backup & Restore</H3>
+			<P>
+				Export all your data to a JSON file for backup, or import a previously
+				exported backup file.
+			</P>
 
-			<div className={styles.buttonGroup}>
+			<Flex gap="1rem" className={styles.buttonGroup}>
 				<Button
 					onClick={() => {
 						exportMutation.reset();
@@ -56,7 +55,7 @@ export const ExportImportSection = () => {
 				>
 					Import Data
 				</Button>
-			</div>
+			</Flex>
 
 			{exportMutation.isSuccess && exportMutation.data && (
 				<div className={styles.successMessage}>

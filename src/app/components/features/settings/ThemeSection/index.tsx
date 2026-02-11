@@ -1,5 +1,5 @@
 import { Monitor, Moon, Sun } from "lucide-react";
-import { H3, P } from "@/components/layout/HtmlElements";
+import { H3 } from "@/components/layout/HtmlElements";
 import { type Theme, usePaperTrailStore } from "@/lib/store";
 import styles from "./styles.module.css";
 
@@ -14,15 +14,10 @@ export const ThemeSection = () => {
 
 	return (
 		<div className={styles.container}>
-			<div className={styles.header}>
-				<H3>Appearance</H3>
-				<P className={styles.description}>
-					Choose your preferred color theme for the application.
-				</P>
-			</div>
+			<H3>Appearance</H3>
 
 			<fieldset className={styles.fieldset}>
-				<legend className={styles.visuallyHidden}>Theme</legend>
+				<legend>Theme Selection</legend>
 				<div className={styles.buttonGroup}>
 					{themeOptions.map((option) => (
 						<label

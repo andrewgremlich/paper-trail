@@ -1,29 +1,11 @@
 .container {
-	border-top: 1px solid var(--border);
-	padding-top: 1rem;
-	margin-top: 1rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-
 	& svg {
 		color: inherit;
 	}
 }
 
-.header {
-	display: flex;
-	flex-direction: column;
-}
-
-.description {
-	font-size: 0.875rem;
-	color: var(--muted-foreground);
-}
-
 .buttonGroup {
-	display: flex;
-	gap: 0.75rem;
+	margin-bottom: 1rem;
 }
 
 .successMessage {

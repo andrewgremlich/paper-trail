@@ -8,6 +8,10 @@ import {
 	syncNow,
 } from "@/lib/db/syncConfig";
 import styles from "./styles.module.css";
+import { H3, H4, P, Span } from "@/components/layout/HtmlElements";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Flex } from "@/components/layout/Flex";
 
 export function SyncSettings() {
 	const [syncUrl, setSyncUrl] = useState("");
@@ -37,7 +41,6 @@ export function SyncSettings() {
 			setMessage(`Error: ${error}`);
 		},
 	});
-
 	const disableMutation = useMutation({
 		mutationFn: disableSync,
 		onSuccess: () => {
@@ -48,7 +51,6 @@ export function SyncSettings() {
 			setMessage(`Error: ${error}`);
 		},
 	});
-
 	const syncMutation = useMutation({
 		mutationFn: syncNow,
 		onSuccess: () => {
@@ -59,134 +61,104 @@ export function SyncSettings() {
 		},
 	});
 
-	const handleConfigureSync = () => {
-		setMessage("");
-		configureMutation.mutate({ url: syncUrl, token: authToken });
-	};
-
-	const handleDisableSync = () => {
-		setMessage("");
-		disableMutation.mutate();
-	};
-
-	const handleSyncNow = () => {
-		setMessage("");
-		syncMutation.mutate();
-	};
-
 	if (!config) return <div>Loading...</div>;
 
 	return (
 		<div className={styles.container}>
-			<h2 className={styles.heading}>Turso Sync Settings</h2>
+			<H3>Turso Sync Settings</H3>
 
 			{config.isPaidFeature && (
 				<div className={styles.banner}>
-					<p className={styles.bannerText}>
+					<P className={styles.bannerText}>
 						Note: Sync is a paid feature. Upgrade your subscription to enable
 						cloud synchronization.
-					</p>
+					</P>
 				</div>
 			)}
 
-			<div className={styles.statusContainer}>
-				<p className={styles.statusText}>
-					Status:{" "}
-					<span
-						className={
-							config.enableSync ? styles.statusEnabled : styles.statusDisabled
-						}
-					>
-						{config.enableSync ? "Enabled" : "Disabled"}
-					</span>
-				</p>
-			</div>
+			<P className={styles.statusText}>
+				Status:{" "}
+				<Span
+					className={
+						config.enableSync ? styles.statusEnabled : styles.statusDisabled
+					}
+				>
+					{config.enableSync ? "Enabled" : "Disabled"}
+				</Span>
+			</P>
 
-			<div className={styles.formContainer}>
-				<div className={styles.inputGroup}>
-					<label className={styles.inputLabel} htmlFor="syncUrl">
-						Turso Sync URL
-					</label>
-					<input
-						id="syncUrl"
-						type="text"
-						value={syncUrl}
-						onChange={(e) => setSyncUrl(e.target.value)}
-						placeholder="libsql://your-database.turso.io"
-						className={styles.input}
-					/>
-					<p className={styles.inputHelp}>
-						Your Turso database URL (e.g., libsql://[db-name]-[org].turso.io)
-					</p>
-				</div>
+			<Input
+				label="Turso Sync URL"
+				id="syncUrl"
+				type="text"
+				value={syncUrl}
+				onChange={(e) => setSyncUrl(e.target.value)}
+				placeholder="Your Turso database URL (e.g., libsql://[db-name]-[org].turso.io)"
+				className={styles.input}
+			/>
 
-				<div className={styles.inputGroup}>
-					<label className={styles.inputLabel} htmlFor="authToken">
-						Auth Token
-					</label>
-					<input
-						id="authToken"
-						type="password"
-						value={authToken}
-						onChange={(e) => setAuthToken(e.target.value)}
-						placeholder="your-turso-auth-token"
-						className={styles.input}
-					/>
-					<p className={styles.inputHelp}>
-						Your Turso database authentication token
-					</p>
-				</div>
+			<Input
+				label="Auth Token"
+				id="authToken"
+				type="password"
+				value={authToken}
+				onChange={(e) => setAuthToken(e.target.value)}
+				placeholder="Your Turso database authentication token"
+				className={styles.input}
+			/>
 
-				<div className={styles.buttonGroup}>
-					<button
-						type="button"
-						onClick={handleConfigureSync}
-						disabled={!syncUrl || !authToken || configureMutation.isPending}
-						className={styles.buttonPrimary}
-					>
-						{configureMutation.isPending ? "Configuring..." : "Configure Sync"}
-					</button>
+			<Flex gap={8} className={styles.buttonGroup}>
+				<Button
+					onClick={() => {
+						setMessage("");
+						configureMutation.mutate({ url: syncUrl, token: authToken });
+					}}
+					disabled={!syncUrl || !authToken || configureMutation.isPending}
+				>
+					{configureMutation.isPending ? "Configuring..." : "Configure Sync"}
+				</Button>
 
-					{config.enableSync && (
-						<>
-							<button
-								type="button"
-								onClick={handleSyncNow}
-								disabled={syncMutation.isPending}
-								className={styles.buttonSuccess}
-							>
-								{syncMutation.isPending ? "Syncing..." : "Sync Now"}
-							</button>
+				{config.enableSync && (
+					<>
+						<Button
+							variant="secondary"
+							onClick={() => {
+								setMessage("");
+								syncMutation.mutate();
+							}}
+							disabled={syncMutation.isPending}
+						>
+							{syncMutation.isPending ? "Syncing..." : "Sync Now"}
+						</Button>
 
-							<button
-								type="button"
-								onClick={handleDisableSync}
-								disabled={disableMutation.isPending}
-								className={styles.buttonDanger}
-							>
-								{disableMutation.isPending ? "Disabling..." : "Disable Sync"}
-							</button>
-						</>
-					)}
-				</div>
-
-				{message && (
-					<div
-						className={
-							message.startsWith("Error")
-								? styles.messageError
-								: styles.messageSuccess
-						}
-					>
-						{message}
-					</div>
+						<Button
+							variant="secondary"
+							onClick={() => {
+								setMessage("");
+								disableMutation.mutate();
+							}}
+							disabled={disableMutation.isPending}
+						>
+							{disableMutation.isPending ? "Disabling..." : "Disable Sync"}
+						</Button>
+					</>
 				)}
-			</div>
+			</Flex>
 
-			<div className={styles.instructionsContainer}>
-				<h3 className={styles.instructionsHeading}>
-					How to set up Turso sync:
-				</h3>
+			{message && (
+				<div
+					className={
+						message.startsWith("Error")
+							? styles.messageError
+							: styles.messageSuccess
+					}
+				>
+					{message}
+				</div>
+			)}
+
+			<div>
+				<H4>How to set up Turso sync:</H4>
 				<ol className={styles.instructionsList}>
 					<li>
 						Create a Turso account at{" "}

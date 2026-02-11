@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { P } from "@/components/layout/HtmlElements";
 import { ModalHeader } from "@/components/shared/ModalHeader";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
@@ -21,14 +20,11 @@ export const SettingsModal = () => {
 		>
 			<ModalHeader
 				title="Settings"
+				description="Modify settings for the application here."
 				headingId={headingId}
 				onClose={toggleSettingsModal}
 				closeAriaLabel="Close settings"
 			/>
-			<P>
-				Application settings. Store your Stripe Secret Key securely (never
-				exposed outside the local vault).
-			</P>
 			<StripeSecretSection active={settingsModalActive} idPrefix={headingId} />
 			<SyncSettings />
 			<ThemeSection />
