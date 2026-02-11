@@ -1,5 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Flex } from "@/components/layout/Flex";
+import { H3, H4, P, Span } from "@/components/layout/HtmlElements";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import {
 	configureTursoSync,
 	disableSync,
@@ -8,10 +12,6 @@ import {
 	syncNow,
 } from "@/lib/db/syncConfig";
 import styles from "./styles.module.css";
-import { H3, H4, P, Span } from "@/components/layout/HtmlElements";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Flex } from "@/components/layout/Flex";
 
 export function SyncSettings() {
 	const [syncUrl, setSyncUrl] = useState("");

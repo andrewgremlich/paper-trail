@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
-
+import { H3, P } from "@/components/layout/HtmlElements";
 import { getStripeSecretKey, setStripeSecretKey } from "@/lib/files/stronghold";
 import styles from "./styles.module.css";
-import { H3, P } from "@/components/layout/HtmlElements";
 
 interface StripeSecretSectionProps {
 	active: boolean;
