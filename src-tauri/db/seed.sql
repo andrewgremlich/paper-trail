@@ -1,7 +1,3 @@
--- Enable foreign keys and set write-ahead logging for better concurrency
-PRAGMA foreign_keys = ON;
-PRAGMA journal_mode = WAL; -- be sure to comment out this line when syncing with Turso db remote.
-
 -- =====================
 -- Projects
 -- =====================
@@ -12,6 +8,7 @@ CREATE TABLE IF NOT EXISTS projects (
   customerId TEXT NOT NULL, -- external id provided by stripe
   rate_in_cents INTEGER NOT NULL DEFAULT 0 CHECK (rate_in_cents >= 0), -- stored in integer cents to avoid floating point errors
   description TEXT NOT NULL DEFAULT '',
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -26,6 +23,7 @@ CREATE TABLE IF NOT EXISTS timesheets (
   name TEXT NOT NULL,
   description TEXT,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
@@ -47,6 +45,7 @@ CREATE TABLE IF NOT EXISTS timesheet_entries (
   minutes INTEGER NOT NULL CHECK (minutes >= 0),
   description TEXT NOT NULL,
   amount INTEGER NOT NULL CHECK (amount >= 0),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (timesheetId) REFERENCES timesheets(id) ON DELETE CASCADE
@@ -68,6 +67,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   description TEXT NOT NULL,
   amount INTEGER NOT NULL,
   filePath TEXT,
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
@@ -110,6 +110,18 @@ CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId_date
 
 CREATE INDEX IF NOT EXISTS idx_transactions_projectId
   ON transactions(projectId);
+
+CREATE INDEX IF NOT EXISTS idx_projects_userId
+  ON projects(userId);
+
+CREATE INDEX IF NOT EXISTS idx_timesheets_userId
+  ON timesheets(userId);
+
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_userId
+  ON timesheet_entries(userId);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_userId
+  ON transactions(userId);
 
 -- =====================
 -- Auto-update updatedAt triggers
