@@ -166,6 +166,32 @@ All UI components and pages must meet **WCAG 2.1 AA** standards:
 - Ensure visible focus indicators on all interactive elements — do not remove outline styles without providing an alternative
 - Tables must use `<th>` with `scope` attributes for proper header association
 
+## Claude Code Configuration
+
+Project-level Claude Code configuration lives in `.claude/`:
+
+```
+.claude/
+├── .mcp.json              # MCP servers (context7 for docs lookup)
+├── settings.json          # Project permissions (auto-allow safe commands)
+├── agents/
+│   └── code-reviewer/     # Reviews code for conventions, a11y, and security
+└── skills/
+    ├── new-component/     # /new-component - Scaffold a component
+    ├── db-table/          # /db-table - Add a database table
+    ├── check/             # /check - Run type checking and linting
+    └── test/              # /test - Run tests (optionally a specific file)
+```
+
+### Available Skills
+- `/new-component features/settings/NewSection` - Scaffold component with index.tsx, styles.module.css, and test file
+- `/db-table categories` - Add a new database table with schema, types, and CRUD operations
+- `/check` - Run `npm run check` (TypeScript + Biome)
+- `/test [file]` - Run all tests or a specific test file
+
+### Available Agents
+- **code-reviewer** - Reviews changes against project conventions, accessibility standards, and security practices
+
 ## Common Tasks
 
 ### Adding a New Page
