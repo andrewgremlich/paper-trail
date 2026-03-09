@@ -1,0 +1,72 @@
+import { Hono } from "hono";
+import { getDb } from "../lib/db";
+import type { Env } from "../lib/types";
+import { getCurrentUserId } from "../lib/userId";
+
+const app = new Hono<{ Bindings: Env }>();
+
+// POST /api/timesheet-entries - create entry
+app.post("/", async (c) => {
+	const body = await c.req.json<{
+		timesheetId: number;
+		date: string;
+		minutes: number;
+		description: string;
+		amount: number;
+	}>();
+	const db = getDb(c.env);
+	const userId = await getCurrentUserId(db);
+
+	await db.execute({
+		sql: `INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
+			VALUES (?, ?, ?, ?, ?, ?)`,
+		args: [
+			body.timesheetId,
+			body.date,
+			body.minutes,
+			body.description,
+			body.amount,
+			userId,
+		],
+	});
+
+	return c.json({ success: true }, 201);
+});
+
+// PUT /api/timesheet-entries/:id - update entry
+app.put("/:id", async (c) => {
+	const id = Number(c.req.param("id"));
+	const body = await c.req.json<{
+		date: string;
+		minutes: number;
+		description: string;
+		amount: number;
+	}>();
+	const db = getDb(c.env);
+	const userId = await getCurrentUserId(db);
+
+	await db.execute({
+		sql: `UPDATE timesheet_entries
+			SET date = ?, minutes = ?, description = ?, amount = ?
+			WHERE id = ? AND userId = ?`,
+		args: [body.date, body.minutes, body.description, body.amount, id, userId],
+	});
+
+	return c.json({ success: true });
+});
+
+// DELETE /api/timesheet-entries/:id
+app.delete("/:id", async (c) => {
+	const id = Number(c.req.param("id"));
+	const db = getDb(c.env);
+	const userId = await getCurrentUserId(db);
+
+	await db.execute({
+		sql: "DELETE FROM timesheet_entries WHERE id = ? AND userId = ?",
+		args: [id, userId],
+	});
+
+	return c.json({ success: true });
+});
+
+export { app as timesheetEntryRoutes };

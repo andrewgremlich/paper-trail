@@ -105,12 +105,6 @@ export type UserProfile = {
 
 export type UpdateUserProfile = Pick<UserProfile, "displayName" | "email">;
 
-export type SyncCode = {
-	uuid: string;
-	syncUrl: string;
-	authToken: string;
-};
-
 export type ExportData = {
 	version: string;
 	exportDate: string;

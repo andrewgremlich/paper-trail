@@ -1,26 +1,20 @@
 {
 	"name": "paper-trail",
 	"description": "A Paper Trail that integrates with Stripe in order to send invoices.",
-	"version": "2.0.0",
+	"version": "3.0.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src",
+		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers",
 		"dev": "vite",
+		"dev:api": "cd workers && npm run dev",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
-		"test": "vitest run",
-		"tauri": "tauri"
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.90.21",
 		"@tanstack/react-table": "^8.21.3",
-		"@tauri-apps/api": "^2.9.1",
-		"@tauri-apps/plugin-dialog": "^2.6.0",
-		"@tauri-apps/plugin-fs": "^2.4.5",
-		"@tauri-apps/plugin-opener": "^2.5.3",
-		"@tauri-apps/plugin-stronghold": "^2.3.1",
-		"@tauri-apps/plugin-updater": "^2.9.0",
 		"class-variance-authority": "^0.7.1",
 		"classnames": "^2.5.1",
 		"clsx": "^2.1.1",
@@ -29,15 +23,12 @@
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"sanitize-filename": "^1.6.3",
-		"stripe": "^20.3.1",
 		"summit-kit": "^3.2.2",
-		"tauri-plugin-keyring-api": "^0.1.1",
 		"zod": "^4.3.6",
 		"zustand": "^5.0.11"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.15",
-		"@tauri-apps/cli": "^2.9.6",
 		"@types/node": "^24.10.1",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",

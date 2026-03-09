@@ -10,11 +10,6 @@ vi.mock("@/lib/store", () => ({
 	}),
 }));
 
-vi.mock("@/lib/stronghold", () => ({
-	getStripeSecretKey: vi.fn(() => Promise.resolve(null)),
-	setStripeSecretKey: vi.fn(),
-}));
-
 describe("SettingsModal", () => {
 	const queryClient = new QueryClient({
 		defaultOptions: {
@@ -34,7 +29,6 @@ describe("SettingsModal", () => {
 	it("renders description", () => {
 		const html = renderToStaticMarkup(wrapper(<SettingsModal />));
 		expect(html).toContain("Modify settings for the application here.");
-		expect(html).toContain("Stripe Secret Key");
 	});
 
 	it("renders close button", () => {

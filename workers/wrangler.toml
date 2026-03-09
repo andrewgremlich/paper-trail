@@ -1,0 +1,12 @@
+name = "paper-trail-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 8787
+
+# R2 bucket for file attachments
+[[r2_buckets]]
+binding = "FILES_BUCKET"
+bucket_name = "paper-trail-files"

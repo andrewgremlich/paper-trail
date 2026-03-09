@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { openUrl } from "@tauri-apps/plugin-opener";
+
 import { FileText, Mail } from "lucide-react";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
@@ -90,7 +90,7 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 						className={styles.linkButton}
 						onClick={() => {
 							if (invoice.customer_email) {
-								openUrl(`mailto:${invoice.customer_email}`);
+								window.open(`mailto:${invoice.customer_email}`, "_blank");
 							}
 						}}
 					>
