@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import type { Env } from "./lib/types";
 import { exportImportRoutes } from "./routes/exportImport";
 import { fileRoutes } from "./routes/files";
 import { projectRoutes } from "./routes/projects";
@@ -19,17 +20,19 @@ app.use(
 	}),
 );
 
-app.route("/api/projects", projectRoutes);
-app.route("/api/timesheets", timesheetRoutes);
-app.route("/api/timesheet-entries", timesheetEntryRoutes);
-app.route("/api/transactions", transactionRoutes);
-app.route("/api/user-profile", userProfileRoutes);
-app.route("/api/stripe", stripeRoutes);
-app.route("/api/files", fileRoutes);
-app.route("/api/export", exportImportRoutes);
-app.route("/api/import", exportImportRoutes);
+// v1 API routes
+const v1 = new Hono<{ Bindings: Env }>();
+v1.route("/projects", projectRoutes);
+v1.route("/timesheets", timesheetRoutes);
+v1.route("/timesheet-entries", timesheetEntryRoutes);
+v1.route("/transactions", transactionRoutes);
+v1.route("/user-profile", userProfileRoutes);
+v1.route("/stripe", stripeRoutes);
+v1.route("/files", fileRoutes);
+v1.route("/export", exportImportRoutes);
+v1.route("/import", exportImportRoutes);
+v1.get("/health", (c) => c.json({ status: "ok", version: "v1" }));
 
-// Health check
-app.get("/api/health", (c) => c.json({ status: "ok" }));
+app.route("/api/v1", v1);
 
 export default app;

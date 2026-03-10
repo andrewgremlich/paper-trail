@@ -24,17 +24,14 @@ export const getProjectById = async (
 	}
 };
 
-export const generateProject = async ({
-	name,
-	customerId,
-	rate_in_cents,
-	description,
-}: GenerateProject): Promise<
-	{ project: Project; timesheet: Timesheet } | undefined
-> => {
+export const generateProject = async (
+	{ name, customerId, rate_in_cents, description }: GenerateProject,
+	{ createTimesheet = false }: { createTimesheet?: boolean } = {},
+): Promise<{ project: Project; timesheet: Timesheet | null } | undefined> => {
 	try {
-		return await api.post<{ project: Project; timesheet: Timesheet }>(
-			"/projects",
+		const query = createTimesheet ? "?createTimesheet=true" : "";
+		return await api.post<{ project: Project; timesheet: Timesheet | null }>(
+			`/projects${query}`,
 			{ name, customerId, rate_in_cents, description },
 		);
 	} catch (err) {

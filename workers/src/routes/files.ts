@@ -19,6 +19,8 @@ app.post("/upload", async (c) => {
 	);
 	const key = `${sanitizedProject}/attachments/${crypto.randomUUID()}-${file.name}`;
 
+	console.log(`Uploading file to R2 with key: ${key}`);
+
 	await c.env.FILES_BUCKET.put(key, file.stream(), {
 		httpMetadata: { contentType: file.type },
 	});

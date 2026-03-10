@@ -5,9 +5,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers",
+		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers/src",
 		"dev": "vite",
 		"dev:api": "cd workers && npm run dev",
+		"seed": "cd workers && npm run seed",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
 		"test": "vitest run"

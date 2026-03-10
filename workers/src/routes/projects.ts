@@ -53,7 +53,8 @@ app.get("/:id", async (c) => {
 	return c.json({ ...project, timesheets });
 });
 
-// POST /api/projects - create project + initial timesheet
+// POST /api/projects - create project, optionally with initial timesheet
+// Query params: ?createTimesheet=true (default: false)
 app.post("/", async (c) => {
 	const body = await c.req.json<{
 		name: string;
@@ -77,6 +78,10 @@ app.post("/", async (c) => {
 	});
 	const createdProjectId = insertResult.lastInsertRowid;
 
+	if (!createdProjectId) {
+		return c.json({ error: "Failed to create project" }, 500);
+	}
+
 	const projectResult = await db.execute({
 		sql: `SELECT id, userId, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
 			FROM projects WHERE id = ? AND userId = ?`,
@@ -87,13 +92,22 @@ app.post("/", async (c) => {
 		active: !!projectResult.rows[0].active,
 	};
 
-	// Auto-create initial timesheet
+	const createTimesheet = c.req.query("createTimesheet") === "true";
+
+	if (!createTimesheet) {
+		return c.json({ project, timesheet: null }, 201);
+	}
+
 	const timesheetName = `${new Date().toLocaleDateString()} Timesheet`;
 	const tsResult = await db.execute({
 		sql: `INSERT INTO timesheets (projectId, name, description, active, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		args: [createdProjectId, timesheetName, "Initial timesheet", 1, userId],
 	});
+
+	if (!tsResult.lastInsertRowid) {
+		return c.json({ project, timesheet: null }, 201);
+	}
 
 	const tsRow = await db.execute({
 		sql: `SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
@@ -111,8 +125,11 @@ app.put("/:id", async (c) => {
 	const body = await c.req.json<Project>();
 	const db = getDb(c.env);
 	const userId = await getCurrentUserId(db);
-
 	const rate = body.rate_in_cents ?? 0;
+
+	if (!body.name || !body.customerId || rate < 0) {
+		return c.json({ error: "Invalid project data" }, 400);
+	}
 
 	await db.execute({
 		sql: `UPDATE projects
@@ -122,7 +139,7 @@ app.put("/:id", async (c) => {
 			body.name,
 			body.customerId,
 			rate * 100,
-			body.description,
+			body.description ?? "",
 			body.active ? 1 : 0,
 			id,
 			userId,

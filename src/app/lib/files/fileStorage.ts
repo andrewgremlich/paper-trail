@@ -23,10 +23,10 @@ export const openAttachment = async (relPath: string): Promise<void> => {
 		window.open(relPath, "_blank");
 	} else {
 		// Open the file served from the API
-		window.open(`/api/files/${relPath}`, "_blank");
+		window.open(`/api/v1/files/${relPath}`, "_blank");
 	}
 };
 
 export const removeAttachment = async (relPath: string): Promise<void> => {
-	await api.delete(`/files/${relPath}`);
+	await api.delete(`/api/v1/files/${relPath}`);
 };

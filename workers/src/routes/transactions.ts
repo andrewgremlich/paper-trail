@@ -1,3 +1,4 @@
+import type { ResultSet } from "@libsql/client";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
@@ -11,7 +12,8 @@ app.get("/", async (c) => {
 	const userId = await getCurrentUserId(db);
 	const projectId = c.req.query("projectId");
 
-	let result;
+	let result: ResultSet;
+
 	if (projectId) {
 		result = await db.execute({
 			sql: `SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
