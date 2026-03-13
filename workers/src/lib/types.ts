@@ -2,6 +2,8 @@ export interface Env {
 	TURSO_DATABASE_URL: string;
 	TURSO_AUTH_TOKEN: string;
 	FILES_BUCKET: R2Bucket;
+	CF_ACCESS_BYPASS?: string;
+	CF_ACCESS_DEV_EMAIL?: string;
 }
 
 export type Nullable<T> = T | null | undefined;
