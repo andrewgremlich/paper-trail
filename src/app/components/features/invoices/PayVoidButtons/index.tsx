@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { openUrl } from "@tauri-apps/plugin-opener";
+
 import { ExternalLink } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
@@ -95,7 +95,7 @@ export const PayVoidButtons = ({
 					variant="secondary"
 					onClick={() => {
 						const pdfUrl = invoiceData.invoice_pdf;
-						if (pdfUrl) openUrl(pdfUrl);
+						if (pdfUrl) window.open(pdfUrl, "_blank");
 					}}
 					leftIcon={<ExternalLink size={16} />}
 				>

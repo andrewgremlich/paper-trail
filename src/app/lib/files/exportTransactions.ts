@@ -1,25 +1,4 @@
-import { documentDir, join } from "@tauri-apps/api/path";
-import {
-	BaseDirectory,
-	exists,
-	mkdir,
-	writeTextFile,
-} from "@tauri-apps/plugin-fs";
 import type { Transaction } from "../db/types";
-
-const ensureExportDir = async () => {
-	const exportDir = "paper-trail/exports";
-	const hasDir = await exists(exportDir, { baseDir: BaseDirectory.Document });
-
-	if (!hasDir) {
-		await mkdir(exportDir, {
-			baseDir: BaseDirectory.Document,
-			recursive: true,
-		});
-	}
-
-	return exportDir;
-};
 
 const transactionToCsvRow = (tx: Transaction, projectName: string): string => {
 	const escaped = (val: string) =>
@@ -35,31 +14,34 @@ const transactionToCsvRow = (tx: Transaction, projectName: string): string => {
 	].join(",");
 };
 
+function downloadBlob(blob: Blob, fileName: string) {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = fileName;
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
 export const exportTransactionsAsCsv = async (
 	transactions: Transaction[],
 	projectName: string,
 ) => {
-	const exportDir = await ensureExportDir();
 	const header = "Date,Project,Description,Amount";
 	const rows = transactions.map((tx) => transactionToCsvRow(tx, projectName));
 	const csv = [header, ...rows].join("\n");
 
 	const fileName = `transactions-${projectName.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.csv`;
-	const relPath = `${exportDir}/${fileName}`;
+	const blob = new Blob([csv], { type: "text/csv" });
+	downloadBlob(blob, fileName);
 
-	await writeTextFile(relPath, csv, { baseDir: BaseDirectory.Document });
-
-	const docDir = await documentDir();
-	const absPath = await join(docDir, relPath);
-
-	return { filePath: absPath, fileName };
+	return { filePath: fileName, fileName };
 };
 
 export const exportTransactionsAsJson = async (
 	transactions: Transaction[],
 	projectName: string,
 ) => {
-	const exportDir = await ensureExportDir();
 	const data = {
 		project: projectName,
 		exportedAt: new Date().toISOString(),
@@ -71,14 +53,10 @@ export const exportTransactionsAsJson = async (
 	};
 
 	const fileName = `transactions-${projectName.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.json`;
-	const relPath = `${exportDir}/${fileName}`;
-
-	await writeTextFile(relPath, JSON.stringify(data, null, 2), {
-		baseDir: BaseDirectory.Document,
+	const blob = new Blob([JSON.stringify(data, null, 2)], {
+		type: "application/json",
 	});
+	downloadBlob(blob, fileName);
 
-	const docDir = await documentDir();
-	const absPath = await join(docDir, relPath);
-
-	return { filePath: absPath, fileName };
+	return { filePath: fileName, fileName };
 };

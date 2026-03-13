@@ -1,12 +1,31 @@
 -- =====================
+-- User Profile (created first — referenced by other tables)
+-- =====================
+CREATE TABLE IF NOT EXISTS user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL UNIQUE,
+  displayName TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- =====================
+-- Schema Migrations
+-- =====================
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY
+);
+
+-- =====================
 -- Projects
 -- =====================
 CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   name TEXT NOT NULL,
-  customerId TEXT NOT NULL, -- external id provided by stripe
-  rate_in_cents INTEGER NOT NULL DEFAULT 0 CHECK (rate_in_cents >= 0), -- stored in integer cents to avoid floating point errors
+  customerId TEXT NOT NULL,
+  rate_in_cents INTEGER NOT NULL DEFAULT 0 CHECK (rate_in_cents >= 0),
   description TEXT NOT NULL DEFAULT '',
   userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
@@ -19,7 +38,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS timesheets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   projectId INTEGER NOT NULL,
-  invoiceId TEXT, -- external id provided by stripe
+  invoiceId TEXT,
   name TEXT NOT NULL,
   description TEXT,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
@@ -32,7 +51,6 @@ CREATE TABLE IF NOT EXISTS timesheets (
 -- =====================
 -- Timesheet Entries
 -- =====================
--- amount is stored in integer cents to avoid floating point errors
 CREATE TABLE IF NOT EXISTS timesheet_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timesheetId INTEGER NOT NULL,
@@ -50,7 +68,6 @@ CREATE TABLE IF NOT EXISTS timesheet_entries (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (timesheetId) REFERENCES timesheets(id) ON DELETE CASCADE
 );
-
 
 -- =====================
 -- Transactions
@@ -73,106 +90,54 @@ CREATE TABLE IF NOT EXISTS transactions (
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
 );
 
-
--- =====================
--- User Profile
--- =====================
-CREATE TABLE IF NOT EXISTS user_profile (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  uuid TEXT NOT NULL UNIQUE,
-  displayName TEXT NOT NULL DEFAULT '',
-  email TEXT NOT NULL DEFAULT '',
-  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- =====================
--- Schema Migrations
--- =====================
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  version INTEGER PRIMARY KEY
-);
-
 -- =====================
 -- Indexes
 -- =====================
-CREATE INDEX IF NOT EXISTS idx_projects_customerId
-  ON projects(customerId);
-
-CREATE INDEX IF NOT EXISTS idx_timesheets_projectId
-  ON timesheets(projectId);
-
-CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId
-  ON timesheet_entries(timesheetId);
-
-CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId_date
-  ON timesheet_entries(timesheetId, date);
-
-CREATE INDEX IF NOT EXISTS idx_transactions_projectId
-  ON transactions(projectId);
-
-CREATE INDEX IF NOT EXISTS idx_projects_userId
-  ON projects(userId);
-
-CREATE INDEX IF NOT EXISTS idx_timesheets_userId
-  ON timesheets(userId);
-
-CREATE INDEX IF NOT EXISTS idx_timesheet_entries_userId
-  ON timesheet_entries(userId);
-
-CREATE INDEX IF NOT EXISTS idx_transactions_userId
-  ON transactions(userId);
+CREATE INDEX IF NOT EXISTS idx_projects_customerId ON projects(customerId);
+CREATE INDEX IF NOT EXISTS idx_timesheets_projectId ON timesheets(projectId);
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId ON timesheet_entries(timesheetId);
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_timesheetId_date ON timesheet_entries(timesheetId, date);
+CREATE INDEX IF NOT EXISTS idx_transactions_projectId ON transactions(projectId);
+CREATE INDEX IF NOT EXISTS idx_projects_userId ON projects(userId);
+CREATE INDEX IF NOT EXISTS idx_timesheets_userId ON timesheets(userId);
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_userId ON timesheet_entries(userId);
+CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions(userId);
 
 -- =====================
 -- Auto-update updatedAt triggers
 -- =====================
 
--- Projects
 CREATE TRIGGER IF NOT EXISTS trg_projects_set_updatedAt
 AFTER UPDATE ON projects
 FOR EACH ROW
 BEGIN
-  UPDATE projects
-  SET updatedAt = datetime('now')
-  WHERE id = OLD.id;
+  UPDATE projects SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
 
--- Timesheets
 CREATE TRIGGER IF NOT EXISTS trg_timesheets_set_updatedAt
 AFTER UPDATE ON timesheets
 FOR EACH ROW
 BEGIN
-  UPDATE timesheets
-  SET updatedAt = datetime('now')
-  WHERE id = OLD.id;
+  UPDATE timesheets SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
 
--- Timesheet Entries
 CREATE TRIGGER IF NOT EXISTS trg_timesheet_entries_set_updatedAt
 AFTER UPDATE ON timesheet_entries
 FOR EACH ROW
 BEGIN
-  UPDATE timesheet_entries
-  SET updatedAt = datetime('now')
-  WHERE id = OLD.id;
+  UPDATE timesheet_entries SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
 
--- Transactions
 CREATE TRIGGER IF NOT EXISTS trg_transactions_set_updatedAt
 AFTER UPDATE ON transactions
 FOR EACH ROW
 BEGIN
-  UPDATE transactions
-  SET updatedAt = datetime('now')
-  WHERE id = OLD.id;
+  UPDATE transactions SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
 
--- User Profile
 CREATE TRIGGER IF NOT EXISTS trg_user_profile_set_updatedAt
 AFTER UPDATE ON user_profile
 FOR EACH ROW
 BEGIN
-  UPDATE user_profile
-  SET updatedAt = datetime('now')
-  WHERE id = OLD.id;
+  UPDATE user_profile SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;

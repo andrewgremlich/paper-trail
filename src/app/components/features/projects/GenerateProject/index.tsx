@@ -29,7 +29,9 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 			const { project, timesheet } = data;
 
 			addProject(project);
-			addTimesheet(timesheet);
+			if (timesheet) {
+				addTimesheet(timesheet);
+			}
 			await queryClient.invalidateQueries({ queryKey: ["projects"] });
 			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
 		},
