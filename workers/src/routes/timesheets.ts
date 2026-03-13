@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/timesheets - list all timesheets
 app.get("/", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const result = await db.execute({
 		sql: `SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE userId = ? ORDER BY createdAt DESC`,
@@ -20,7 +20,7 @@ app.get("/", async (c) => {
 // GET /api/timesheets/:id - get timesheet with entries
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const timesheetId = Number(c.req.param("id"));
 
 	const headerResult = await db.execute({
@@ -60,7 +60,7 @@ app.get("/:id", async (c) => {
 // GET /api/timesheets/by-invoice/:invoiceId
 app.get("/by-invoice/:invoiceId", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const invoiceId = c.req.param("invoiceId");
 
 	const result = await db.execute({
@@ -87,7 +87,7 @@ app.post("/", async (c) => {
 		description?: string;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	const insertResult = await db.execute({
 		sql: `INSERT INTO timesheets (projectId, name, description, active, userId)
@@ -113,7 +113,7 @@ app.put("/:id", async (c) => {
 		active: boolean;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: `UPDATE timesheets
@@ -145,7 +145,7 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: "DELETE FROM timesheets WHERE id = ? AND userId = ?",

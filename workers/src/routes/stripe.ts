@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import Stripe from "stripe";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
 const CURRENCY = "usd";
 const DAYS_UNTIL_DUE = 30;
@@ -56,7 +56,7 @@ function toInvoiceListItem(inv: Stripe.Invoice) {
 	};
 }
 
-const app = new Hono<{ Bindings: StripeEnv }>();
+const app = new Hono<{ Bindings: StripeEnv; Variables: AuthVariables }>();
 
 // GET /api/stripe/customers?max=N
 app.get("/customers", async (c) => {
@@ -165,7 +165,7 @@ app.post("/invoices", async (c) => {
 
 	const stripe = getStripeClient(c.env);
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	// One-off invoice (no timesheet)
 	if (!body.timesheetId) {
@@ -278,7 +278,7 @@ app.post("/invoices", async (c) => {
 app.post("/invoices/:id/pay", async (c) => {
 	const stripe = getStripeClient(c.env);
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const invoiceId = c.req.param("id");
 
 	const invoice = await stripe.invoices.pay(invoiceId, {

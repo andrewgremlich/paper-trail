@@ -1,15 +1,25 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
-import { getUserProfile } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/user-profile
 app.get("/", async (c) => {
 	const db = getDb(c.env);
-	const profile = await getUserProfile(db);
-	return c.json(profile);
+	const userId = c.get("userId");
+
+	const result = await db.execute({
+		sql: "SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
+		args: [userId],
+	});
+
+	if (result.rows.length === 0) {
+		return c.json({ error: "User not found" }, 404);
+	}
+
+	return c.json(result.rows[0]);
 });
 
 // PUT /api/user-profile
@@ -19,16 +29,16 @@ app.put("/", async (c) => {
 		email: string;
 	}>();
 	const db = getDb(c.env);
-	const existing = await getUserProfile(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: "UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?",
-		args: [body.displayName, body.email, existing.id],
+		args: [body.displayName, body.email, userId],
 	});
 
 	const updated = await db.execute({
 		sql: "SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
-		args: [existing.id],
+		args: [userId],
 	});
 
 	return c.json(updated.rows[0]);

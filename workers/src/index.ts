@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./lib/types";
+import type { AuthVariables } from "./middleware/auth";
+import { cfAccessAuth } from "./middleware/auth";
 import { exportImportRoutes } from "./routes/exportImport";
 import { fileRoutes } from "./routes/files";
 import { projectRoutes } from "./routes/projects";
@@ -21,7 +23,11 @@ app.use(
 );
 
 // v1 API routes
-const v1 = new Hono<{ Bindings: Env }>();
+const v1 = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
+
+// Apply Cloudflare Access auth to all v1 routes
+v1.use("/*", cfAccessAuth);
+
 v1.route("/projects", projectRoutes);
 v1.route("/timesheets", timesheetRoutes);
 v1.route("/timesheet-entries", timesheetEntryRoutes);

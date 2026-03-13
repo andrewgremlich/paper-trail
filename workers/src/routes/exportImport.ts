@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/export/data - export all data as JSON
 app.get("/data", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	const [
 		projects,
@@ -37,9 +37,10 @@ app.get("/data", async (c) => {
 					FROM transactions WHERE userId = ? ORDER BY id ASC`,
 			args: [userId],
 		}),
-		db.execute(
-			"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile LIMIT 1",
-		),
+		db.execute({
+			sql: "SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
+			args: [userId],
+		}),
 	]);
 
 	const data: ExportData = {
@@ -74,7 +75,7 @@ app.post("/data", async (c) => {
 	}
 
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	// Delete existing data in reverse dependency order
 	await db.execute({
@@ -172,17 +173,14 @@ app.post("/data", async (c) => {
 
 	// Update user profile if present
 	if (data.userProfile) {
-		const existing = await db.execute("SELECT id FROM user_profile LIMIT 1");
-		if (existing.rows.length > 0) {
-			await db.execute({
-				sql: "UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?",
-				args: [
-					data.userProfile.displayName,
-					data.userProfile.email,
-					existing.rows[0].id,
-				],
-			});
-		}
+		await db.execute({
+			sql: "UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?",
+			args: [
+				data.userProfile.displayName,
+				data.userProfile.email,
+				userId,
+			],
+		});
 	}
 
 	return c.json({
@@ -196,7 +194,7 @@ app.post("/data", async (c) => {
 // GET /api/export/transactions?projectId=X&projectName=Y&format=csv|json
 app.get("/transactions", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const projectId = c.req.query("projectId");
 	const projectName = c.req.query("projectName") ?? "unknown";
 	const format = c.req.query("format") ?? "csv";

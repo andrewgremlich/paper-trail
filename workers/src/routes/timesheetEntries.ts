@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // POST /api/timesheet-entries - create entry
 app.post("/", async (c) => {
@@ -15,7 +15,7 @@ app.post("/", async (c) => {
 		amount: number;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: `INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
@@ -43,7 +43,7 @@ app.put("/:id", async (c) => {
 		amount: number;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: `UPDATE timesheet_entries
@@ -59,7 +59,7 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: "DELETE FROM timesheet_entries WHERE id = ? AND userId = ?",

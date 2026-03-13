@@ -2,14 +2,14 @@ import type { ResultSet } from "@libsql/client";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/transactions?projectId=X - list transactions for a project
 app.get("/", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const projectId = c.req.query("projectId");
 
 	let result: ResultSet;
@@ -38,7 +38,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	const result = await db.execute({
 		sql: `SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
@@ -64,7 +64,7 @@ app.post("/", async (c) => {
 		filePath?: string;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
 	await db.execute({
@@ -94,7 +94,7 @@ app.put("/:id", async (c) => {
 		filePath?: string;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
 	await db.execute({
@@ -119,7 +119,7 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: "DELETE FROM transactions WHERE id = ? AND userId = ?",

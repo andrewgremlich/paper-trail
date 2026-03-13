@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env, Project } from "../lib/types";
-import { getCurrentUserId } from "../lib/userId";
+import type { AuthVariables } from "../middleware/auth";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/projects - list all projects
 app.get("/", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const result = await db.execute({
 		sql: `SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
 			FROM projects WHERE userId = ? ORDER BY createdAt DESC`,
@@ -21,7 +21,7 @@ app.get("/", async (c) => {
 // GET /api/projects/:id - get project with timesheets
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const projectId = Number(c.req.param("id"));
 
 	const projectResult = await db.execute({
@@ -63,7 +63,7 @@ app.post("/", async (c) => {
 		description: string;
 	}>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	const insertResult = await db.execute({
 		sql: `INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
@@ -124,7 +124,7 @@ app.put("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<Project>();
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 	const rate = body.rate_in_cents ?? 0;
 
 	if (!body.name || !body.customerId || rate < 0) {
@@ -163,7 +163,7 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);
-	const userId = await getCurrentUserId(db);
+	const userId = c.get("userId");
 
 	await db.execute({
 		sql: "DELETE FROM projects WHERE id = ? AND userId = ?",
