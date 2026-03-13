@@ -4,16 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Paper Trail is a desktop timesheet and invoicing application built with Tauri 2 (Rust backend) and React 19 (TypeScript frontend). It integrates with Stripe for invoice generation and payment processing.
+Paper Trail is a web-based timesheet and invoicing application built with Cloudflare Workers (Hono backend) and React 19 (TypeScript frontend). It integrates with Stripe for invoice generation and payment processing.
 
 ## Build & Development Commands
 
 ```bash
-# Development - starts both Vite dev server and Tauri app
-npm run tauri dev
-
-# Production build
-npm run tauri build
+# Frontend development
+npm run dev
 
 # Type checking and formatting
 npm run check
@@ -23,6 +20,21 @@ npm run test
 
 # Run a single test file
 npx vitest run src/app/lib/utils.test.ts
+
+# Workers API development
+cd workers && npm run dev
+
+# Deploy workers
+cd workers && npm run deploy
+
+# Seed D1 database (remote)
+cd workers && npm run seed
+
+# Seed D1 database (local)
+cd workers && npm run seed:local
+
+# Generate worker types
+cd workers && npm run types
 ```
 
 ## Architecture
@@ -35,30 +47,34 @@ npx vitest run src/app/lib/utils.test.ts
 - **Zod** for validation, **date-fns** for date utilities, **sanitize-filename** for file safety
 - Path aliases: `@/components/*`, `@/lib/*`, `@/*` map to `src/app/`
 
-### Backend (`src-tauri/`)
-- **Tauri 2** Rust framework for desktop capabilities
-- **Turso/libSQL** database with embedded replica support (see `src-tauri/src/db.rs`)
-- **Stronghold** plugin for encrypted Stripe key storage
-- **Keyring** plugin for vault password management
-- Database schema in `src-tauri/db/seed.sql`
+### Backend (`workers/`)
+- **Cloudflare Workers** with **Hono** web framework
+- **Cloudflare D1** (SQLite) database
+- **Cloudflare R2** for file storage (transaction attachments)
+- **Cloudflare Access** (GitHub OAuth) for authentication
+- **Stripe** API keys stored via Wrangler secrets
+- Database schema in `workers/db/seed.sql`
 
 ### Key Data Flow
-1. Frontend calls Tauri commands (`execute_query`, `execute_statement`) via `src/app/lib/db/client.ts`
-2. Database operations in `src/app/lib/db/` (projects, timesheets, timesheetEntries, transactions, userProfile)
-3. Stripe API calls via `src/app/lib/stripeApi.ts` using keys from Stronghold
-4. Optional cloud sync via Turso embedded replicas (configurable in `src/app/lib/db/syncConfig.ts`)
-5. File operations (export/import, file storage, Stronghold) via `src/app/lib/files/`
+1. Frontend calls API endpoints via `src/app/lib/db/client.ts` (thin fetch wrapper)
+2. Cloudflare Access authenticates user via GitHub OAuth, injects email header
+3. Auth middleware auto-creates user profile, sets userId in context
+4. Route handlers in `workers/src/routes/` perform D1 queries with userId isolation
+5. Stripe API calls via `workers/src/routes/stripe.ts` using Wrangler secrets
+6. File uploads/downloads via R2 bucket through `workers/src/routes/files.ts`
 
 ### Key Files to Understand
 - `src/app/lib/store.ts` - Zustand state management, UI state and localStorage persistence
-- `src/app/lib/db/client.ts` - Turso/libSQL connection manager (TursoDatabase class) and database initialization
+- `src/app/lib/db/client.ts` - API client (fetch wrapper for Workers backend)
 - `src/app/lib/db/types.ts` - Database entity type definitions (Project, Timesheet, Transaction, UserProfile, etc.)
-- `src/app/lib/stripeApi.ts` - Stripe API integration functions
-- `src/app/lib/files/stronghold.ts` - Secure credential storage wrapper (Stronghold + Keyring)
 - `src/app/lib/types.ts` - Shared TypeScript type definitions (Stripe types, enums)
-- `src-tauri/db/seed.sql` - Database schema and migration logic
-- `src-tauri/src/lib.rs` - Tauri application setup and Rust commands
-- `src-tauri/src/db.rs` - Rust database management, sync, and migration logic
+- `workers/src/index.ts` - Hono app entry point, route mounting, CORS
+- `workers/src/lib/db.ts` - D1 database binding accessor
+- `workers/src/lib/types.ts` - Backend type definitions (Env, entity types)
+- `workers/src/middleware/auth.ts` - Cloudflare Access auth middleware
+- `workers/src/routes/` - All API route handlers
+- `workers/db/seed.sql` - Database schema (tables, indexes, triggers)
+- `workers/wrangler.toml` - Cloudflare Workers configuration (D1, R2 bindings)
 - `src/app/index.tsx` - Main app router and page layout
 
 ### Database Tables
@@ -115,41 +131,48 @@ ComponentName/
 
 ## Stripe Integration
 
-Stripe API keys are stored encrypted via Stronghold plugin. The app supports:
+Stripe API keys are stored as Wrangler secrets (`wrangler secret put STRIPE_SECRET_KEY`). The app supports:
 - Creating invoices from timesheet entries
 - One-off invoice creation
 - Customer management synced with projects
 - Invoice lifecycle (pay, void, track status)
 - Automatic transaction creation when invoices are marked paid
 
-## Turso Database & Sync
+## Cloudflare D1 Database
 
-The app uses **Turso (libSQL)** with embedded replicas for local-first database with optional cloud sync:
+The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 
-### Local-First Architecture
-- Database stored locally at `{AppLocalData}/paper-trail.db`
-- Fast queries, works offline
-- No network required for basic operations
+### Setup
+1. Create the database: `wrangler d1 create paper-trail-db`
+2. Paste the `database_id` into `workers/wrangler.toml`
+3. Seed the schema: `cd workers && npm run seed` (remote) or `npm run seed:local` (local)
 
-### Optional Cloud Sync (Future Paid Feature)
-- Sync configuration in `src/app/lib/db/syncConfig.ts`
-- UI component at `src/app/components/features/settings/SyncSettings/`
-- Currently enabled by default, will be gated behind subscription in future
-- See [TURSO_MIGRATION.md](TURSO_MIGRATION.md) for setup instructions
+### D1 API Pattern
+```typescript
+// Single row
+const row = await db.prepare("SELECT * FROM table WHERE id = ?").bind(id).first();
 
-### Tauri Commands for Database
-- `execute_query` - Run SELECT queries
-- `execute_statement` - Run INSERT/UPDATE/DELETE
-- `sync_database` - Manually trigger sync
-- `update_sync_config` - Update sync credentials
+// Multiple rows
+const { results } = await db.prepare("SELECT * FROM table WHERE userId = ?").bind(userId).all();
+
+// Mutations (INSERT/UPDATE/DELETE)
+const result = await db.prepare("INSERT INTO table (col) VALUES (?)").bind(val).run();
+const lastId = result.meta.last_row_id;
+```
+
+### Local Development
+- `wrangler dev` automatically provisions a local D1 instance
+- Local data persists in `.wrangler/state/`
+- Use `npm run seed:local` to seed the local database
 
 ## Security Considerations
 
-- Stripe API keys MUST be stored in Stronghold, never in plain text or localStorage
-- Vault password managed via system Keyring plugin
-- Validate all user inputs before database operations
-- Use parameterized queries to prevent SQL injection
+- Stripe API keys stored as Wrangler secrets, never in code or localStorage
+- Authentication via Cloudflare Access (GitHub OAuth)
+- All queries include `WHERE userId = ?` for multi-user data isolation
+- Use parameterized queries (D1 `.bind()`) to prevent SQL injection
 - Sanitize file names and paths for transaction attachments
+- File uploads stored in Cloudflare R2 with sanitized paths
 
 ## Accessibility
 
@@ -207,20 +230,23 @@ Project-level Claude Code configuration lives in `.claude/`:
 3. Add `index.tsx`, `styles.module.css`, and optional `ComponentName.test.tsx`
 
 ### Adding a Database Table
-1. Add table definition to `src-tauri/db/seed.sql` (include `userId` column for multi-user isolation)
-2. Create TypeScript types in `src/app/lib/db/types.ts`
-3. Create CRUD functions in `src/app/lib/db/[table-name].ts`
-4. Set up React Query hooks in components
-5. Test database operations
+1. Add table definition to `workers/db/seed.sql` (include `userId` column for multi-user isolation)
+2. Create TypeScript types in `workers/src/lib/types.ts`
+3. Create route handler in `workers/src/routes/[table-name].ts`
+4. Mount route in `workers/src/index.ts`
+5. Add frontend API functions in `src/app/lib/db/[table-name].ts`
+6. Set up React Query hooks in components
+7. Run migration: `wrangler d1 execute paper-trail-db --file=db/seed.sql`
 
 ### Adding a Stripe Feature
-1. Update `src/app/lib/stripeApi.ts` with new Stripe SDK calls
+1. Update `workers/src/routes/stripe.ts` with new Stripe SDK calls
 2. Ensure proper error handling
 3. Add UI components for the feature
 4. Test with Stripe test keys first
 
-### Adding a Tauri Command
-1. Define Rust function in `src-tauri/src/lib.rs` (or `src-tauri/src/db.rs` for database commands)
-2. Add to Tauri app builder in `lib.rs`
-3. Invoke from React with `@tauri-apps/api/core`
-4. Handle async operations properly
+### Adding a Workers Route
+1. Create route handler in `workers/src/routes/[name].ts`
+2. Mount in `workers/src/index.ts` under the v1 router
+3. Use `getDb(c.env)` for database access
+4. Use `c.get("userId")` for authenticated user ID
+5. Add frontend API functions in `src/app/lib/db/`

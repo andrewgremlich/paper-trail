@@ -3,15 +3,18 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-TURSO_DATABASE_URL = "libsql://paper-trail-andrewgremlich.aws-us-west-2.turso.io"   # Set via wrangler secret
-
 [dev]
 port = 8787
 
 [env.dev.vars]
 CF_ACCESS_BYPASS = "true"
 CF_ACCESS_DEV_EMAIL = "dev@localhost"
+
+# D1 database
+[[d1_databases]]
+binding = "paper_trail_db"
+database_name = "paper-trail-db"
+database_id = "1efbb61f-4ec1-46d9-a99b-31bf65d67a29"
 
 # R2 bucket for file attachments
 [[r2_buckets]]

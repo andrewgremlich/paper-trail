@@ -17,18 +17,13 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.execute({
-		sql: `INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
+	await db
+		.prepare(
+			`INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
-		args: [
-			body.timesheetId,
-			body.date,
-			body.minutes,
-			body.description,
-			body.amount,
-			userId,
-		],
-	});
+		)
+		.bind(body.timesheetId, body.date, body.minutes, body.description, body.amount, userId)
+		.run();
 
 	return c.json({ success: true }, 201);
 });
@@ -45,12 +40,14 @@ app.put("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.execute({
-		sql: `UPDATE timesheet_entries
+	await db
+		.prepare(
+			`UPDATE timesheet_entries
 			SET date = ?, minutes = ?, description = ?, amount = ?
 			WHERE id = ? AND userId = ?`,
-		args: [body.date, body.minutes, body.description, body.amount, id, userId],
-	});
+		)
+		.bind(body.date, body.minutes, body.description, body.amount, id, userId)
+		.run();
 
 	return c.json({ success: true });
 });
@@ -61,10 +58,7 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.execute({
-		sql: "DELETE FROM timesheet_entries WHERE id = ? AND userId = ?",
-		args: [id, userId],
-	});
+	await db.prepare("DELETE FROM timesheet_entries WHERE id = ? AND userId = ?").bind(id, userId).run();
 
 	return c.json({ success: true });
 });

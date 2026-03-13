@@ -10,16 +10,16 @@ app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	const result = await db.execute({
-		sql: "SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
-		args: [userId],
-	});
+	const row = await db
+		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?")
+		.bind(userId)
+		.first();
 
-	if (result.rows.length === 0) {
+	if (!row) {
 		return c.json({ error: "User not found" }, 404);
 	}
 
-	return c.json(result.rows[0]);
+	return c.json(row);
 });
 
 // PUT /api/user-profile
@@ -31,17 +31,17 @@ app.put("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.execute({
-		sql: "UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?",
-		args: [body.displayName, body.email, userId],
-	});
+	await db
+		.prepare("UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?")
+		.bind(body.displayName, body.email, userId)
+		.run();
 
-	const updated = await db.execute({
-		sql: "SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
-		args: [userId],
-	});
+	const updated = await db
+		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?")
+		.bind(userId)
+		.first();
 
-	return c.json(updated.rows[0]);
+	return c.json(updated);
 });
 
 export { app as userProfileRoutes };

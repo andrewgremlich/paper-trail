@@ -1,4 +1,3 @@
-import type { ResultSet } from "@libsql/client";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
@@ -12,25 +11,31 @@ app.get("/", async (c) => {
 	const userId = c.get("userId");
 	const projectId = c.req.query("projectId");
 
-	let result: ResultSet;
+	let results: Record<string, unknown>[];
 
 	if (projectId) {
-		result = await db.execute({
-			sql: `SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+		const res = await db
+			.prepare(
+				`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
 				FROM transactions WHERE projectId = ? AND userId = ? ORDER BY date ASC, createdAt ASC`,
-			args: [Number(projectId), userId],
-		});
+			)
+			.bind(Number(projectId), userId)
+			.all();
+		results = res.results;
 	} else {
-		result = await db.execute({
-			sql: `SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+		const res = await db
+			.prepare(
+				`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
 				FROM transactions WHERE userId = ? ORDER BY date ASC, createdAt ASC`,
-			args: [userId],
-		});
+			)
+			.bind(userId)
+			.all();
+		results = res.results;
 	}
 
 	// Convert integer cents to dollars for UI
 	return c.json(
-		result.rows.map((r) => ({ ...r, amount: (r.amount as number) / 100 })),
+		results.map((r) => ({ ...r, amount: (r.amount as number) / 100 })),
 	);
 });
 
@@ -40,17 +45,18 @@ app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	const result = await db.execute({
-		sql: `SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+	const row = await db
+		.prepare(
+			`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
 			FROM transactions WHERE id = ? AND userId = ?`,
-		args: [id, userId],
-	});
+		)
+		.bind(id, userId)
+		.first();
 
-	if (result.rows.length === 0) {
+	if (!row) {
 		return c.json({ error: "Transaction not found" }, 404);
 	}
 
-	const row = result.rows[0];
 	return c.json({ ...row, amount: (row.amount as number) / 100 });
 });
 
@@ -67,18 +73,13 @@ app.post("/", async (c) => {
 	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
-	await db.execute({
-		sql: `INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
+	await db
+		.prepare(
+			`INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
-		args: [
-			body.projectId,
-			body.date,
-			body.description,
-			amountInCents,
-			body.filePath ?? null,
-			userId,
-		],
-	});
+		)
+		.bind(body.projectId, body.date, body.description, amountInCents, body.filePath ?? null, userId)
+		.run();
 
 	return c.json({ success: true }, 201);
 });
@@ -97,20 +98,14 @@ app.put("/:id", async (c) => {
 	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
-	await db.execute({
-		sql: `UPDATE transactions
+	await db
+		.prepare(
+			`UPDATE transactions
 			SET projectId = ?, date = ?, description = ?, amount = ?, filePath = ?
 			WHERE id = ? AND userId = ?`,
-		args: [
-			body.projectId,
-			body.date,
-			body.description,
-			amountInCents,
-			body.filePath ?? null,
-			id,
-			userId,
-		],
-	});
+		)
+		.bind(body.projectId, body.date, body.description, amountInCents, body.filePath ?? null, id, userId)
+		.run();
 
 	return c.json({ success: true });
 });
@@ -121,10 +116,7 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.execute({
-		sql: "DELETE FROM transactions WHERE id = ? AND userId = ?",
-		args: [id, userId],
-	});
+	await db.prepare("DELETE FROM transactions WHERE id = ? AND userId = ?").bind(id, userId).run();
 
 	return c.json({ success: true });
 });

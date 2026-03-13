@@ -199,36 +199,39 @@ app.post("/invoices", async (c) => {
 	const timesheetId = body.timesheetId;
 
 	// Get timesheet with entries
-	const headerResult = await db.execute({
-		sql: `SELECT t.id, t.projectId, t.name, t.description, t.active,
+	const ts = await db
+		.prepare(
+			`SELECT t.id, t.projectId, t.name, t.description, t.active,
 			p.rate_in_cents as projectRate
 			FROM timesheets t
 			JOIN projects p ON p.id = t.projectId
 			WHERE t.id = ? AND t.userId = ?`,
-		args: [timesheetId, userId],
-	});
+		)
+		.bind(timesheetId, userId)
+		.first();
 
-	if (headerResult.rows.length === 0) {
+	if (!ts) {
 		return c.json({ error: "Timesheet not found" }, 404);
 	}
 
-	const ts = headerResult.rows[0];
 	if (!ts.active) {
 		return c.json({ error: "Timesheet already closed" }, 400);
 	}
 
-	const entriesResult = await db.execute({
-		sql: `SELECT date, minutes, description FROM timesheet_entries
+	const { results: entriesRows } = await db
+		.prepare(
+			`SELECT date, minutes, description FROM timesheet_entries
 			WHERE timesheetId = ? AND userId = ? ORDER BY date ASC`,
-		args: [timesheetId, userId],
-	});
+		)
+		.bind(timesheetId, userId)
+		.all();
 
 	const projectRate = (ts.projectRate as number) ?? 0;
 	const lines: string[] = [];
 	let totalHours = 0;
 	let totalCents = 0;
 
-	for (const entry of entriesResult.rows) {
+	for (const entry of entriesRows) {
 		const entryMinutes = entry.minutes as number;
 		const amountCents = projectRate
 			? Math.round((entryMinutes * projectRate) / 60)
@@ -266,10 +269,10 @@ app.post("/invoices", async (c) => {
 	await stripe.invoices.sendInvoice(finalized.id);
 
 	// Update timesheet
-	await db.execute({
-		sql: `UPDATE timesheets SET invoiceId = ?, active = 0, updatedAt = datetime('now') WHERE id = ?`,
-		args: [invoice.id, timesheetId],
-	});
+	await db
+		.prepare(`UPDATE timesheets SET invoiceId = ?, active = 0, updatedAt = datetime('now') WHERE id = ?`)
+		.bind(invoice.id, timesheetId)
+		.run();
 
 	return c.json(toInvoiceListItem(finalized), 201);
 });
@@ -287,28 +290,30 @@ app.post("/invoices/:id/pay", async (c) => {
 
 	// Create transaction for the paid invoice
 	try {
-		const timesheetRows = await db.execute({
-			sql: "SELECT projectId FROM timesheets WHERE invoiceId = ? AND userId = ?",
-			args: [invoiceId, userId],
-		});
+		const timesheetRow = await db
+			.prepare("SELECT projectId FROM timesheets WHERE invoiceId = ? AND userId = ?")
+			.bind(invoiceId, userId)
+			.first();
 
-		if (timesheetRows.rows.length > 0) {
-			const projectId = timesheetRows.rows[0].projectId as number;
+		if (timesheetRow) {
+			const projectId = timesheetRow.projectId as number;
 			const amountCents = invoice.amount_paid ?? 0;
 			const pdfUrl = invoice.invoice_pdf ?? null;
 
-			await db.execute({
-				sql: `INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
+			await db
+				.prepare(
+					`INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
 					VALUES (?, ?, ?, ?, ?, ?)`,
-				args: [
+				)
+				.bind(
 					projectId,
 					new Date().toISOString().split("T")[0],
 					`Invoice ${invoiceId} marked as paid`,
 					amountCents,
 					pdfUrl,
 					userId,
-				],
-			});
+				)
+				.run();
 		}
 	} catch (error) {
 		console.error("Error creating transaction for paid invoice:", error);

@@ -32,30 +32,21 @@ export async function cfAccessAuth(c: Context<{ Bindings: Env; Variables: AuthVa
 	const db = getDb(env);
 
 	// Find existing user by email
-	const existing = await db.execute({
-		sql: "SELECT id, email FROM user_profile WHERE email = ?",
-		args: [email],
-	});
+	const existing = await db.prepare("SELECT id, email FROM user_profile WHERE email = ?").bind(email).first();
 
-	if (existing.rows.length > 0) {
-		c.set("userId", existing.rows[0].id as number);
+	if (existing) {
+		c.set("userId", existing.id as number);
 		c.set("userEmail", email);
 		return next();
 	}
 
 	// Create new user from Cloudflare Access identity
 	const uuid = crypto.randomUUID();
-	await db.execute({
-		sql: "INSERT INTO user_profile (uuid, email) VALUES (?, ?)",
-		args: [uuid, email],
-	});
+	await db.prepare("INSERT INTO user_profile (uuid, email) VALUES (?, ?)").bind(uuid, email).run();
 
-	const created = await db.execute({
-		sql: "SELECT id FROM user_profile WHERE email = ?",
-		args: [email],
-	});
+	const created = await db.prepare("SELECT id FROM user_profile WHERE email = ?").bind(email).first();
 
-	c.set("userId", created.rows[0].id as number);
+	c.set("userId", created!.id as number);
 	c.set("userEmail", email);
 	return next();
 }

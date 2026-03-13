@@ -7,7 +7,7 @@
 		"noEmit": true,
 		"skipLibCheck": true,
 		"lib": ["ES2022"],
-		"types": ["worker-configuration.d.ts"]
+		"types": []
 	},
-	"include": ["src"]
+	"include": ["src", "worker-configuration.d.ts"]
 }
