@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   uuid TEXT NOT NULL UNIQUE,
+  displayName TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL DEFAULT '',
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
