@@ -56,15 +56,17 @@ export const Nav = () => {
 					</Button>
 				</div>
 
-				<Button
-					variant="liquidGlass"
-					size="icon"
-					onClick={toggleSettingsModal}
-					type="button"
-					aria-label="Open settings"
-				>
-					<Settings size={40} />
-				</Button>
+				<div>
+					<Button
+						variant="liquidGlass"
+						size="icon"
+						onClick={toggleSettingsModal}
+						type="button"
+						aria-label="Open settings"
+					>
+						<Settings size={40} />
+					</Button>
+				</div>
 			</Flex>
 		</div>
 	);
