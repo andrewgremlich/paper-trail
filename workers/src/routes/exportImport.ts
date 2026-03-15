@@ -42,7 +42,7 @@ app.get("/data", async (c) => {
 				.all(),
 			db
 				.prepare(
-					"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?",
+					"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?",
 				)
 				.bind(userId)
 				.first(),
@@ -175,7 +175,7 @@ app.post("/data", async (c) => {
 	// Update user profile if present
 	if (data.userProfile) {
 		await db
-			.prepare("UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?")
+			.prepare("UPDATE users SET displayName = ?, email = ? WHERE id = ?")
 			.bind(data.userProfile.displayName, data.userProfile.email, userId)
 			.run();
 	}

@@ -1,10 +1,9 @@
 -- =====================
 -- User Profile (created first — referenced by other tables)
 -- =====================
-CREATE TABLE IF NOT EXISTS user_profile (
+CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   uuid TEXT NOT NULL UNIQUE,
-  displayName TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL DEFAULT '',
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -27,7 +26,7 @@ CREATE TABLE IF NOT EXISTS projects (
   customerId TEXT NOT NULL,
   rate_in_cents INTEGER NOT NULL DEFAULT 0 CHECK (rate_in_cents >= 0),
   description TEXT NOT NULL DEFAULT '',
-  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -42,7 +41,7 @@ CREATE TABLE IF NOT EXISTS timesheets (
   name TEXT NOT NULL,
   description TEXT,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
-  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
@@ -63,7 +62,7 @@ CREATE TABLE IF NOT EXISTS timesheet_entries (
   minutes INTEGER NOT NULL CHECK (minutes >= 0),
   description TEXT NOT NULL,
   amount INTEGER NOT NULL CHECK (amount >= 0),
-  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (timesheetId) REFERENCES timesheets(id) ON DELETE CASCADE
@@ -84,7 +83,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   description TEXT NOT NULL,
   amount INTEGER NOT NULL,
   filePath TEXT,
-  userId INTEGER NOT NULL DEFAULT 0 REFERENCES user_profile(id),
+  userId INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
@@ -135,9 +134,9 @@ BEGIN
   UPDATE transactions SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_user_profile_set_updatedAt
-AFTER UPDATE ON user_profile
+CREATE TRIGGER IF NOT EXISTS trg_users_set_updatedAt
+AFTER UPDATE ON users
 FOR EACH ROW
 BEGIN
-  UPDATE user_profile SET updatedAt = datetime('now') WHERE id = OLD.id;
+  UPDATE users SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;

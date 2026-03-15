@@ -11,7 +11,7 @@ app.get("/", async (c) => {
 	const userId = c.get("userId");
 
 	const row = await db
-		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?")
+		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?")
 		.bind(userId)
 		.first();
 
@@ -32,12 +32,12 @@ app.put("/", async (c) => {
 	const userId = c.get("userId");
 
 	await db
-		.prepare("UPDATE user_profile SET displayName = ?, email = ? WHERE id = ?")
+		.prepare("UPDATE users SET displayName = ?, email = ? WHERE id = ?")
 		.bind(body.displayName, body.email, userId)
 		.run();
 
 	const updated = await db
-		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM user_profile WHERE id = ?")
+		.prepare("SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?")
 		.bind(userId)
 		.first();
 
