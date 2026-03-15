@@ -4,11 +4,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --env dev",
 		"deploy": "wrangler deploy",
 		"types": "wrangler types",
 		"seed": "wrangler d1 execute paper-trail-db --file=db/seed.sql",
-		"seed:local": "wrangler d1 execute paper-trail-db --local --file=db/seed.sql"
+		"seed:remote": "wrangler d1 execute paper-trail-db --remote --file=db/seed.sql"
 	},
 	"dependencies": {
 		"hono": "^4.12.7",

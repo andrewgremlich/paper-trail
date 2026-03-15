@@ -6,17 +6,27 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 8787
 
-[env.dev.vars]
-CF_ACCESS_BYPASS = "true"
-CF_ACCESS_DEV_EMAIL = "dev@localhost"
-
 # D1 database
 [[d1_databases]]
-binding = "paper_trail_db"
+binding = "DB"
 database_name = "paper-trail-db"
 database_id = "1efbb61f-4ec1-46d9-a99b-31bf65d67a29"
 
 # R2 bucket for file attachments
 [[r2_buckets]]
+binding = "FILES_BUCKET"
+bucket_name = "paper-trail-files"
+
+# Dev environment (used by `wrangler dev --env dev`)
+[env.dev.vars]
+CF_ACCESS_BYPASS = "true"
+CF_ACCESS_DEV_EMAIL = "dev@localhost"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "paper-trail-db"
+database_id = "1efbb61f-4ec1-46d9-a99b-31bf65d67a29"
+
+[[env.dev.r2_buckets]]
 binding = "FILES_BUCKET"
 bucket_name = "paper-trail-files"
