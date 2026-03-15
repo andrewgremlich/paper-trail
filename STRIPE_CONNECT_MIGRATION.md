@@ -13,6 +13,7 @@
 - [ ] Add `stripe_connections` table to D1
 - [ ] Add OAuth routes (`/connect`, `/callback`, `/disconnect`, `/status`)
 - [ ] Build `StripeConnectSection` UI (replace `StripeSecretSection`)
+- [ ] Implement encryption for sensitive data at rest (tokens, financial records, file attachments)
 - [ ] End-to-end test with Stripe sandbox
 
 ---
@@ -140,8 +141,118 @@ Existing Stripe API calls work unchanged -- the access token returned by Connect
 ### Security
 
 - **CSRF**: Random `state` nonce per OAuth attempt, stored in signed cookie, validated on callback
-- **Token encryption**: Encrypt access tokens at rest in D1
 - **Platform key**: Lives only in Workers secrets, never sent to frontend
 - **Scope**: Request only `read_write` (minimum for invoicing)
 - **Revocation**: Call `stripe.oauth.deauthorize()` on disconnect
 - **Token lifetime**: Standard Connect tokens do not expire, but store refresh token as precaution
+
+---
+
+## Encryption & Data Protection
+
+This application handles financial data (invoices, transactions, payment tokens). All sensitive data must be encrypted at rest.
+
+### Encryption Key Management
+
+Store an AES-256 encryption key as a Workers secret:
+
+```
+wrangler secret put ENCRYPTION_KEY
+```
+
+Generate a 256-bit key:
+
+```bash
+openssl rand -base64 32
+```
+
+### What to Encrypt
+
+| Data | Storage | Encryption |
+|---|---|---|
+| Stripe access tokens | D1 `stripe_connections.access_token` | AES-256-GCM, per-row IV |
+| Stripe refresh tokens | D1 `stripe_connections.refresh_token` | AES-256-GCM, per-row IV |
+| Transaction amounts & descriptions | D1 `transactions` | AES-256-GCM (amount, description columns) |
+| File attachments | R2 | Encrypt before upload, decrypt on download |
+| Stripe platform keys | Workers secrets | Handled by Cloudflare (encrypted at rest by platform) |
+| User emails | D1 `users.email` | Not encrypted (needed for Cloudflare Access lookup) |
+
+### AES-256-GCM Implementation
+
+Use the Web Crypto API available in Workers (no Node.js dependencies):
+
+```typescript
+// api/src/lib/crypto.ts
+
+async function getKey(env: Env): Promise<CryptoKey> {
+  const rawKey = Uint8Array.from(atob(env.ENCRYPTION_KEY), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+export async function encrypt(plaintext: string, env: Env): Promise<string> {
+  const key = await getKey(env);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(plaintext);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    encoded,
+  );
+  // Store as base64: iv + ciphertext
+  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  return btoa(String.fromCharCode(...combined));
+}
+
+export async function decrypt(encrypted: string, env: Env): Promise<string> {
+  const key = await getKey(env);
+  const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext,
+  );
+  return new TextDecoder().decode(decrypted);
+}
+```
+
+Each encrypted value gets a unique random IV (12 bytes for GCM). The IV is stored alongside the ciphertext -- it does not need to be secret, only unique.
+
+### R2 File Encryption
+
+Encrypt file contents before uploading, decrypt after downloading:
+
+```typescript
+// In file upload route
+const fileBytes = await file.arrayBuffer();
+const encryptedBytes = await encryptBuffer(fileBytes, env);
+await bucket.put(key, encryptedBytes);
+
+// In file download route
+const object = await bucket.get(key);
+const encryptedBytes = await object.arrayBuffer();
+const decryptedBytes = await decryptBuffer(encryptedBytes, env);
+return new Response(decryptedBytes);
+```
+
+### Key Rotation
+
+When rotating the encryption key:
+
+1. Set new key: `wrangler secret put ENCRYPTION_KEY_NEW`
+2. Run a migration worker that re-encrypts all rows with the new key
+3. Swap: rename `ENCRYPTION_KEY_NEW` to `ENCRYPTION_KEY`
+4. Delete old secret
+
+### D1 Considerations
+
+- Encrypted columns cannot be queried with `WHERE` clauses (use IDs for lookups, not encrypted values)
+- Store encrypted values as TEXT (base64-encoded)
+- Keep `userId`, `id`, and foreign keys unencrypted for query performance
+- Amounts stored encrypted lose the ability to do SQL `SUM()` -- aggregate in application code after decryption if needed
