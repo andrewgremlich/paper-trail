@@ -15,6 +15,7 @@ export type AuthVariables = {
  * In development, set CF_ACCESS_BYPASS=true and CF_ACCESS_DEV_EMAIL to skip Access validation.
  */
 export async function cfAccessAuth(c: Context<{ Bindings: Env; Variables: AuthVariables }>, next: Next) {
+	console.log("Running auth middleware");
 	const env = c.env;
 	let email: string | null = null;
 
