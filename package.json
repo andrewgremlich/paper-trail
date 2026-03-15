@@ -1,43 +1,45 @@
 {
-	"name": "paper-trail",
-	"description": "A Paper Trail that integrates with Stripe in order to send invoices.",
-	"version": "3.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers/src",
-		"dev": "vite",
-		"dev:api": "cd workers && npm run dev",
-		"seed": "cd workers && npm run seed",
-		"build": "tsc && vite build",
-		"preview": "vite preview",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@tanstack/react-query": "^5.90.21",
-		"@tanstack/react-table": "^8.21.3",
-		"class-variance-authority": "^0.7.1",
-		"classnames": "^2.5.1",
-		"clsx": "^2.1.1",
-		"date-fns": "^4.1.0",
-		"lucide-react": "^0.577.0",
-		"react": "^19.2.4",
-		"react-dom": "^19.2.4",
-		"sanitize-filename": "^1.6.3",
-		"summit-kit": "^3.4.0",
-		"wrangler": "^4.73.0",
-		"zod": "^4.3.6",
-		"zustand": "^5.0.11"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.7",
-		"@types/node": "^24.10.1",
-		"@types/react": "^19.2.14",
-		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^5.2.0",
-		"typescript": "^5.9.3",
-		"vite": "^7.3.1",
-		"vite-tsconfig-paths": "^6.1.1",
-		"vitest": "^4.1.0"
-	}
+  "name": "paper-trail",
+  "description": "A Paper Trail that integrates with Stripe in order to send invoices.",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers/src",
+    "dev": "vite",
+    "dev:api": "cd workers && npm run dev",
+    "seed": "cd workers && npm run seed",
+    "build": "tsc && vite build",
+    "preview": "npm run build && wrangler dev",
+    "test": "vitest run",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-table": "^8.21.3",
+    "class-variance-authority": "^0.7.1",
+    "classnames": "^2.5.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "sanitize-filename": "^1.6.3",
+    "summit-kit": "^3.4.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
+    "@cloudflare/vite-plugin": "^1.28.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.73.0"
+  }
 }
