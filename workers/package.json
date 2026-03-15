@@ -13,8 +13,5 @@
 	"dependencies": {
 		"hono": "^4.12.7",
 		"stripe": "^20.4.1"
-	},
-	"devDependencies": {
-		"wrangler": "^4.73.0"
 	}
 }
