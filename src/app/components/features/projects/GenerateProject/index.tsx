@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -85,7 +86,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				className={styles.fullWidth}
 				label="Project Description"
 			/>
-			<Button type="submit" size="lg" variant="default">
+			<Button type="submit" size="lg" variant="default" leftIcon={<FolderPlus size={16} />}>
 				Generate Project
 			</Button>
 		</form>

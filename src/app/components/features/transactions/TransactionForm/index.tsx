@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Grid } from "@/components/ui/Grid";
 import { Input } from "@/components/ui/Input";
@@ -19,7 +19,7 @@ export const TransactionForm = ({
 	onProjectChange,
 	onSubmit,
 }: TransactionFormProps) => {
-	const handleSubmit = (evt: FormEvent<HTMLElement>) => {
+	const handleSubmit: React.SubmitEventHandler<HTMLElement> = (evt) => {
 		evt.preventDefault();
 		const form = evt.currentTarget as HTMLFormElement;
 		onSubmit(new FormData(form));
@@ -64,7 +64,7 @@ export const TransactionForm = ({
 			/>
 			<Input label="Amount" name="amount" step="0.01" type="number" required />
 			<Input label="File" name="file" type="file" />
-			<Button type="submit" variant="default" size="sm">
+			<Button type="submit" variant="default" size="sm" leftIcon={<ReceiptText size={16} />}>
 				Add Transaction
 			</Button>
 		</Grid>
