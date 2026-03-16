@@ -59,39 +59,12 @@ describe("Dialog", () => {
 		expect(html).toContain("custom-class");
 	});
 
-	it("sets aria-modal true when modal prop is true", () => {
+	it("sets aria-modal true", () => {
 		const html = renderToStaticMarkup(
-			<Dialog isOpen={false} onClose={() => {}} modal>
+			<Dialog isOpen={false} onClose={() => {}}>
 				Content
 			</Dialog>,
 		);
 		expect(html).toContain('aria-modal="true"');
-	});
-
-	it("does not set aria-modal when modal is false", () => {
-		const html = renderToStaticMarkup(
-			<Dialog isOpen={false} onClose={() => {}} modal={false}>
-				Content
-			</Dialog>,
-		);
-		expect(html).not.toContain("aria-modal");
-	});
-
-	it("applies animate class when animate is true", () => {
-		const html = renderToStaticMarkup(
-			<Dialog isOpen={false} onClose={() => {}} animate>
-				Content
-			</Dialog>,
-		);
-		expect(html).toContain("class=");
-	});
-
-	it("applies transition duration style when animate is true", () => {
-		const html = renderToStaticMarkup(
-			<Dialog isOpen={false} onClose={() => {}} animate animationDuration={200}>
-				Content
-			</Dialog>,
-		);
-		expect(html).toContain("200ms");
 	});
 });

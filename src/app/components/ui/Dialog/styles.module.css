@@ -46,7 +46,7 @@
 	will-change: transform, opacity;
 }
 
-.animate[data-state="open"] {
+.animate[open] {
 	opacity: 1;
 	scale: 1;
 }
