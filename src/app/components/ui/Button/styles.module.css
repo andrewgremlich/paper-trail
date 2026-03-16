@@ -12,7 +12,7 @@
 		border-color 0.15s ease;
 
 	& svg {
-		color: var(--card-foreground);
+		color: inherit;
 	}
 }
 
