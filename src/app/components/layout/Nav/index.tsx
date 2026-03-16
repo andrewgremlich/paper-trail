@@ -16,7 +16,7 @@ export const Nav = () => {
 				<div>
 					<Button
 						type="button"
-						variant="liquidGlass"
+						variant="secondary"
 						size="icon"
 						onClick={() => changeActiveTab(ProjectPageTab.Timesheets)}
 						className={cn(
@@ -29,7 +29,7 @@ export const Nav = () => {
 					</Button>
 					<Button
 						type="button"
-						variant="liquidGlass"
+						variant="secondary"
 						size="icon"
 						onClick={() => changeActiveTab(ProjectPageTab.Transactions)}
 						className={cn(
@@ -43,7 +43,7 @@ export const Nav = () => {
 					</Button>
 					<Button
 						type="button"
-						variant="liquidGlass"
+						variant="secondary"
 						size="icon"
 						onClick={() => changeActiveTab(ProjectPageTab.Invoices)}
 						className={cn(
@@ -58,7 +58,7 @@ export const Nav = () => {
 
 				<div>
 					<Button
-						variant="liquidGlass"
+						variant="ghost"
 						size="icon"
 						onClick={toggleSettingsModal}
 						type="button"
