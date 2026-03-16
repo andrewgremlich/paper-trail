@@ -1,21 +1,42 @@
 /* Base dialog styles */
 .dialog {
 	position: fixed;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
+	top: auto;
+	bottom: 0;
+	left: 0;
+	transform: none;
 	margin: 0;
-	width: 90%;
+	width: 100%;
 	max-width: 48rem;
+	max-height: 100dvh;
+	overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+	.dialog {
+		top: 50%;
+		left: 50%;
+		bottom: auto;
+		transform: translate(-50%, -50%);
+		width: 90%;
+		max-height: 85dvh;
+	}
 }
 
 /* Variant: Solid (default) */
 .solid {
-	border-radius: 0.375rem;
-	padding: 2rem 2.5rem;
+	border-radius: 0.75rem 0.75rem 0 0;
+	padding: 1.5rem 1rem;
 	border: 1px solid var(--border);
 	background-color: var(--card);
 	color: var(--card-foreground);
+}
+
+@media (min-width: 640px) {
+	.solid {
+		border-radius: 0.375rem;
+		padding: 2rem 2.5rem;
+	}
 }
 
 .solid::backdrop {
@@ -25,11 +46,18 @@
 
 /* Variant: Liquid Glass */
 .liquidGlass {
-	border-radius: 0.75rem;
-	padding: 2rem 2.5rem;
+	border-radius: 0.75rem 0.75rem 0 0;
+	padding: 1.5rem 1rem;
 	border: 1px solid var(--glass-border);
 	background-color: var(--glass-background);
 	color: var(--foreground);
+}
+
+@media (min-width: 640px) {
+	.liquidGlass {
+		border-radius: 0.75rem;
+		padding: 2rem 2.5rem;
+	}
 }
 
 .liquidGlass::backdrop {
@@ -39,8 +67,8 @@
 /* Animation states */
 .animate {
 	opacity: 0;
-	scale: 0.95;
-	transition-property: opacity, scale;
+	translate: 0 100%;
+	transition-property: opacity, translate;
 	transition-timing-function: ease-out;
 	transition-duration: 150ms;
 	will-change: transform, opacity;
@@ -48,5 +76,17 @@
 
 .animate[open] {
 	opacity: 1;
-	scale: 1;
+	translate: 0 0;
+}
+
+@media (min-width: 640px) {
+	.animate {
+		translate: 0;
+		scale: 0.95;
+		transition-property: opacity, scale;
+	}
+
+	.animate[open] {
+		scale: 1;
+	}
 }
