@@ -55,8 +55,7 @@ app.get("/data", async (c) => {
 		timesheets: timesheets.results as unknown as ExportData["timesheets"],
 		timesheetEntries:
 			timesheetEntries.results as unknown as ExportData["timesheetEntries"],
-		transactions:
-			transactions.results as unknown as ExportData["transactions"],
+		transactions: transactions.results as unknown as ExportData["transactions"],
 		userProfile: userProfile as unknown as ExportData["userProfile"],
 	};
 
@@ -83,9 +82,18 @@ app.post("/data", async (c) => {
 	const userId = c.get("userId");
 
 	// Delete existing data in reverse dependency order
-	await db.prepare("DELETE FROM timesheet_entries WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM transactions WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM timesheets WHERE userId = ?").bind(userId).run();
+	await db
+		.prepare("DELETE FROM timesheet_entries WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
+		.prepare("DELETE FROM transactions WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
+		.prepare("DELETE FROM timesheets WHERE userId = ?")
+		.bind(userId)
+		.run();
 	await db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId).run();
 
 	// Insert projects

@@ -270,7 +270,9 @@ app.post("/invoices", async (c) => {
 
 	// Update timesheet
 	await db
-		.prepare(`UPDATE timesheets SET invoiceId = ?, active = 0, updatedAt = datetime('now') WHERE id = ?`)
+		.prepare(
+			`UPDATE timesheets SET invoiceId = ?, active = 0, updatedAt = datetime('now') WHERE id = ?`,
+		)
 		.bind(invoice.id, timesheetId)
 		.run();
 
@@ -291,7 +293,9 @@ app.post("/invoices/:id/pay", async (c) => {
 	// Create transaction for the paid invoice
 	try {
 		const timesheetRow = await db
-			.prepare("SELECT projectId FROM timesheets WHERE invoiceId = ? AND userId = ?")
+			.prepare(
+				"SELECT projectId FROM timesheets WHERE invoiceId = ? AND userId = ?",
+			)
 			.bind(invoiceId, userId)
 			.first();
 
