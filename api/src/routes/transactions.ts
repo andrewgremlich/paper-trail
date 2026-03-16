@@ -78,7 +78,14 @@ app.post("/", async (c) => {
 			`INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(body.projectId, body.date, body.description, amountInCents, body.filePath ?? null, userId)
+		.bind(
+			body.projectId,
+			body.date,
+			body.description,
+			amountInCents,
+			body.filePath ?? null,
+			userId,
+		)
 		.run();
 
 	return c.json({ success: true }, 201);
@@ -104,7 +111,15 @@ app.put("/:id", async (c) => {
 			SET projectId = ?, date = ?, description = ?, amount = ?, filePath = ?
 			WHERE id = ? AND userId = ?`,
 		)
-		.bind(body.projectId, body.date, body.description, amountInCents, body.filePath ?? null, id, userId)
+		.bind(
+			body.projectId,
+			body.date,
+			body.description,
+			amountInCents,
+			body.filePath ?? null,
+			id,
+			userId,
+		)
 		.run();
 
 	return c.json({ success: true });
@@ -116,7 +131,10 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.prepare("DELETE FROM transactions WHERE id = ? AND userId = ?").bind(id, userId).run();
+	await db
+		.prepare("DELETE FROM transactions WHERE id = ? AND userId = ?")
+		.bind(id, userId)
+		.run();
 
 	return c.json({ success: true });
 });

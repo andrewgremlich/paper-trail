@@ -1,7 +1,19 @@
-name = "paper-trail-api"
-main = "src/index.ts"
+name = "paper-trail"
+main = "api/src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+STRIPE_APP_CLIENT_ID = "dev.gremlich.paper-trail"
 
 [dev]
 port = 8787

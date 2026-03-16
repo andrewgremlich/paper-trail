@@ -16,7 +16,10 @@ app.get("/", async (c) => {
 		)
 		.bind(userId)
 		.all();
-	const rows = results.map((r: Record<string, unknown>) => ({ ...r, active: !!r.active }));
+	const rows = results.map((r: Record<string, unknown>) => ({
+		...r,
+		active: !!r.active,
+	}));
 	return c.json(rows);
 });
 
@@ -49,7 +52,10 @@ app.get("/:id", async (c) => {
 	return c.json({
 		...project,
 		active: !!project.active,
-		timesheets: timesheets.map((t: Record<string, unknown>) => ({ ...t, active: !!t.active })),
+		timesheets: timesheets.map((t: Record<string, unknown>) => ({
+			...t,
+			active: !!t.active,
+		})),
 	});
 });
 
@@ -70,7 +76,13 @@ app.post("/", async (c) => {
 			`INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(body.name, body.customerId, body.rate_in_cents, body.description, userId)
+		.bind(
+			body.name,
+			body.customerId,
+			body.rate_in_cents,
+			body.description,
+			userId,
+		)
 		.run();
 	const createdProjectId = insertResult.meta.last_row_id;
 
@@ -115,7 +127,10 @@ app.post("/", async (c) => {
 		.bind(tsResult.meta.last_row_id, userId)
 		.first();
 
-	return c.json({ project: projectRow, timesheet: { ...tsRow, active: !!tsRow!.active } }, 201);
+	return c.json(
+		{ project: projectRow, timesheet: { ...tsRow, active: !!tsRow!.active } },
+		201,
+	);
 });
 
 // PUT /api/projects/:id - update project
@@ -136,7 +151,15 @@ app.put("/:id", async (c) => {
 			SET name = ?, customerId = ?, rate_in_cents = ?, description = ?, active = ?, updatedAt = datetime('now')
 			WHERE id = ? AND userId = ?`,
 		)
-		.bind(body.name, body.customerId, rate * 100, body.description ?? "", body.active ? 1 : 0, id, userId)
+		.bind(
+			body.name,
+			body.customerId,
+			rate * 100,
+			body.description ?? "",
+			body.active ? 1 : 0,
+			id,
+			userId,
+		)
 		.run();
 
 	const updated = await db
@@ -160,7 +183,10 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.prepare("DELETE FROM projects WHERE id = ? AND userId = ?").bind(id, userId).run();
+	await db
+		.prepare("DELETE FROM projects WHERE id = ? AND userId = ?")
+		.bind(id, userId)
+		.run();
 
 	return c.json({ success: true });
 });

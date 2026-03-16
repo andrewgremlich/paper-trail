@@ -22,19 +22,19 @@ npm run test
 npx vitest run src/app/lib/utils.test.ts
 
 # Workers API development
-cd workers && npm run dev
+npm run dev:api
 
-# Deploy workers
-cd workers && npm run deploy
-
-# Seed D1 database (remote)
-cd workers && npm run seed
+# Deploy (builds frontend + deploys worker with static assets)
+npm run deploy
 
 # Seed D1 database (local)
-cd workers && npm run seed:local
+npm run seed
+
+# Seed D1 database (remote)
+npm run seed:remote
 
 # Generate worker types
-cd workers && npm run types
+npm run types
 ```
 
 ## Architecture
@@ -47,34 +47,34 @@ cd workers && npm run types
 - **Zod** for validation, **date-fns** for date utilities, **sanitize-filename** for file safety
 - Path aliases: `@/components/*`, `@/lib/*`, `@/*` map to `src/app/`
 
-### Backend (`workers/`)
+### Backend (`api/`)
 - **Cloudflare Workers** with **Hono** web framework
 - **Cloudflare D1** (SQLite) database
 - **Cloudflare R2** for file storage (transaction attachments)
 - **Cloudflare Access** (GitHub OAuth) for authentication
 - **Stripe** API keys stored via Wrangler secrets
-- Database schema in `workers/db/seed.sql`
+- Database schema in `api/db/seed.sql`
 
 ### Key Data Flow
 1. Frontend calls API endpoints via `src/app/lib/db/client.ts` (thin fetch wrapper)
 2. Cloudflare Access authenticates user via GitHub OAuth, injects email header
 3. Auth middleware auto-creates user profile, sets userId in context
-4. Route handlers in `workers/src/routes/` perform D1 queries with userId isolation
-5. Stripe API calls via `workers/src/routes/stripe.ts` using Wrangler secrets
-6. File uploads/downloads via R2 bucket through `workers/src/routes/files.ts`
+4. Route handlers in `api/src/routes/` perform D1 queries with userId isolation
+5. Stripe API calls via `api/src/routes/stripe.ts` using Wrangler secrets
+6. File uploads/downloads via R2 bucket through `api/src/routes/files.ts`
 
 ### Key Files to Understand
 - `src/app/lib/store.ts` - Zustand state management, UI state and localStorage persistence
 - `src/app/lib/db/client.ts` - API client (fetch wrapper for Workers backend)
 - `src/app/lib/db/types.ts` - Database entity type definitions (Project, Timesheet, Transaction, UserProfile, etc.)
 - `src/app/lib/types.ts` - Shared TypeScript type definitions (Stripe types, enums)
-- `workers/src/index.ts` - Hono app entry point, route mounting, CORS
-- `workers/src/lib/db.ts` - D1 database binding accessor
-- `workers/src/lib/types.ts` - Backend type definitions (Env, entity types)
-- `workers/src/middleware/auth.ts` - Cloudflare Access auth middleware
-- `workers/src/routes/` - All API route handlers
-- `workers/db/seed.sql` - Database schema (tables, indexes, triggers)
-- `workers/wrangler.toml` - Cloudflare Workers configuration (D1, R2 bindings)
+- `api/src/index.ts` - Hono app entry point, route mounting, CORS
+- `api/src/lib/db.ts` - D1 database binding accessor
+- `api/src/lib/types.ts` - Backend type definitions (Env, entity types)
+- `api/src/middleware/auth.ts` - Cloudflare Access auth middleware
+- `api/src/routes/` - All API route handlers
+- `api/db/seed.sql` - Database schema (tables, indexes, triggers)
+- `wrangler.toml` - Cloudflare Workers configuration (D1, R2 bindings, static assets)
 - `src/app/index.tsx` - Main app router and page layout
 
 ### Database Tables
@@ -144,8 +144,8 @@ The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 
 ### Setup
 1. Create the database: `wrangler d1 create paper-trail-db`
-2. Paste the `database_id` into `workers/wrangler.toml`
-3. Seed the schema: `cd workers && npm run seed` (remote) or `npm run seed:local` (local)
+2. Paste the `database_id` into `wrangler.toml`
+3. Seed the schema: `cd workers && npm run seed` (local) or `npm run seed:remote` (remote)
 
 ### D1 API Pattern
 ```typescript
@@ -163,7 +163,7 @@ const lastId = result.meta.last_row_id;
 ### Local Development
 - `wrangler dev` automatically provisions a local D1 instance
 - Local data persists in `.wrangler/state/`
-- Use `npm run seed:local` to seed the local database
+- Use `npm run seed` to seed the local database
 
 ## Security Considerations
 
@@ -230,23 +230,23 @@ Project-level Claude Code configuration lives in `.claude/`:
 3. Add `index.tsx`, `styles.module.css`, and optional `ComponentName.test.tsx`
 
 ### Adding a Database Table
-1. Add table definition to `workers/db/seed.sql` (include `userId` column for multi-user isolation)
-2. Create TypeScript types in `workers/src/lib/types.ts`
-3. Create route handler in `workers/src/routes/[table-name].ts`
-4. Mount route in `workers/src/index.ts`
+1. Add table definition to `api/db/seed.sql` (include `userId` column for multi-user isolation)
+2. Create TypeScript types in `api/src/lib/types.ts`
+3. Create route handler in `api/src/routes/[table-name].ts`
+4. Mount route in `api/src/index.ts`
 5. Add frontend API functions in `src/app/lib/db/[table-name].ts`
 6. Set up React Query hooks in components
 7. Run migration: `wrangler d1 execute paper-trail-db --file=db/seed.sql`
 
 ### Adding a Stripe Feature
-1. Update `workers/src/routes/stripe.ts` with new Stripe SDK calls
+1. Update `api/src/routes/stripe.ts` with new Stripe SDK calls
 2. Ensure proper error handling
 3. Add UI components for the feature
 4. Test with Stripe test keys first
 
 ### Adding a Workers Route
-1. Create route handler in `workers/src/routes/[name].ts`
-2. Mount in `workers/src/index.ts` under the v1 router
+1. Create route handler in `api/src/routes/[name].ts`
+2. Mount in `api/src/index.ts` under the v1 router
 3. Use `getDb(c.env)` for database access
 4. Use `c.get("userId")` for authenticated user ID
 5. Add frontend API functions in `src/app/lib/db/`

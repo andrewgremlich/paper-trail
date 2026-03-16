@@ -206,6 +206,19 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				window.removeEventListener("keydown", handler, { capture: true });
 		}, [isOpen, closeOnEsc, onClose]);
 
+		useEffect(() => {
+			if (!isOpen) return;
+			history.pushState({ dialogModal: true }, "");
+			const handler = () => onClose();
+			window.addEventListener("popstate", handler);
+			return () => {
+				window.removeEventListener("popstate", handler);
+				if (history.state?.dialogModal) {
+					history.back();
+				}
+			};
+		}, [isOpen, onClose]);
+
 		const handlePointerDown = useCallback(
 			(e: React.MouseEvent<HTMLDialogElement>) => {
 				if (!closeOnBackdrop) return;

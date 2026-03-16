@@ -14,7 +14,10 @@ export type AuthVariables = {
  *
  * In development, set CF_ACCESS_BYPASS=true and CF_ACCESS_DEV_EMAIL to skip Access validation.
  */
-export async function cfAccessAuth(c: Context<{ Bindings: Env; Variables: AuthVariables }>, next: Next) {
+export async function cfAccessAuth(
+	c: Context<{ Bindings: Env; Variables: AuthVariables }>,
+	next: Next,
+) {
 	const env = c.env;
 	let email: string | null = null;
 
@@ -26,13 +29,19 @@ export async function cfAccessAuth(c: Context<{ Bindings: Env; Variables: AuthVa
 	}
 
 	if (!email) {
-		return c.json({ error: "Unauthorized: no Cloudflare Access identity" }, 401);
+		return c.json(
+			{ error: "Unauthorized: no Cloudflare Access identity" },
+			401,
+		);
 	}
 
 	const db = getDb(env);
 
 	// Find existing user by email
-	const existing = await db.prepare("SELECT id, email FROM users WHERE email = ?").bind(email).first();
+	const existing = await db
+		.prepare("SELECT id, email FROM users WHERE email = ?")
+		.bind(email)
+		.first();
 
 	if (existing) {
 		c.set("userId", existing.id as number);
@@ -42,9 +51,15 @@ export async function cfAccessAuth(c: Context<{ Bindings: Env; Variables: AuthVa
 
 	// Create new user from Cloudflare Access identity
 	const uuid = crypto.randomUUID();
-	await db.prepare("INSERT INTO users (uuid, email) VALUES (?, ?)").bind(uuid, email).run();
+	await db
+		.prepare("INSERT INTO users (uuid, email) VALUES (?, ?)")
+		.bind(uuid, email)
+		.run();
 
-	const created = await db.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+	const created = await db
+		.prepare("SELECT id FROM users WHERE email = ?")
+		.bind(email)
+		.first();
 
 	c.set("userId", created!.id as number);
 	c.set("userEmail", email);
