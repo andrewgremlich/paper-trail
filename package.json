@@ -6,8 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./api/src",
-		"dev": "wrangler dev --env dev",
-		"deploy": "npm run build && wrangler deploy",
+		"dev": "vite dev & wrangler dev --env dev",
+		"deploy": "pnpm run build && wrangler deploy",
 		"seed": "wrangler d1 execute paper-trail-db --env dev --file=api/db/seed.sql",
 		"seed:remote": "wrangler d1 execute paper-trail-db --remote --file=api/db/seed.sql",
 		"build": "tsc && vite build",

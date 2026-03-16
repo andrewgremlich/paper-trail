@@ -9,7 +9,8 @@ Paper Trail is a web-based timesheet and invoicing application built with Cloudf
 ## Build & Development Commands
 
 ```bash
-# Frontend development
+# Local development (builds frontend + runs Wrangler worker with --env dev)
+# Access at http://localhost:8787 — auth is bypassed via CF_ACCESS_BYPASS=true
 npm run dev
 
 # Type checking and formatting
@@ -20,9 +21,6 @@ npm run test
 
 # Run a single test file
 npx vitest run src/app/lib/utils.test.ts
-
-# Workers API development
-npm run dev:api
 
 # Deploy (builds frontend + deploys worker with static assets)
 npm run deploy
@@ -36,6 +34,13 @@ npm run seed:remote
 # Generate worker types
 npm run types
 ```
+
+### Local Development Notes
+- `npm run dev` builds the frontend with Vite, then starts Wrangler with `--env dev`
+- The `dev` environment sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
+- The app is served at `http://localhost:8787` (Wrangler serves both static assets and the API)
+- API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.toml`
+- All other routes fall through to the SPA via `not_found_handling = "single-page-application"`
 
 ## Architecture
 
@@ -145,7 +150,7 @@ The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 ### Setup
 1. Create the database: `wrangler d1 create paper-trail-db`
 2. Paste the `database_id` into `wrangler.toml`
-3. Seed the schema: `cd workers && npm run seed` (local) or `npm run seed:remote` (remote)
+3. Seed the schema: `npm run seed` (local) or `npm run seed:remote` (remote)
 
 ### D1 API Pattern
 ```typescript
