@@ -1,3 +1,12 @@
+.header {
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.header h2 {
+	word-break: break-word;
+}
+
 .infoGrid {
 	margin-bottom: 1.5rem;
 }

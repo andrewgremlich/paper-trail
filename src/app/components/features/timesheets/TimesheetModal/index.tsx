@@ -37,9 +37,9 @@ export const TimesheetModal = () => {
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
 			titleId={headingId}
 		>
-			<Flex justify="between">
-				<H2 id={headingId}>
-					{timesheet?.name ?? "Timesheet Invoice Generator"}
+			<Flex justify="between" className={styles.header}>
+				<H2 id={headingId} style={{ marginBottom: 0 }}>
+					{timesheet?.name}
 					{!timesheet?.active && " (Closed)"}
 				</H2>
 				<Flex gap={2} items="center">
@@ -70,12 +70,7 @@ export const TimesheetModal = () => {
 				/>
 			)}
 			{!isEditing && (
-				<Grid
-					rows={timesheet?.invoiceId ? 4 : 3}
-					flow="col"
-					columnGap={24}
-					className={styles.infoGrid}
-				>
+				<Grid gap={4} className={styles.infoGrid}>
 					{timesheet?.description ? (
 						<P>Description: {timesheet?.description}</P>
 					) : null}

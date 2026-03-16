@@ -1,0 +1,12 @@
+.formRow {
+	flex-direction: column;
+	gap: 0.75rem;
+	align-items: stretch;
+}
+
+@media (min-width: 640px) {
+	.formRow {
+		flex-direction: row;
+		align-items: flex-end;
+	}
+}

@@ -29,7 +29,6 @@ export const TransactionForm = ({
 	return (
 		<Grid
 			alignItems="end"
-			cols={3}
 			gap={12}
 			as="form"
 			onSubmit={handleSubmit}

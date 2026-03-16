@@ -1,5 +1,10 @@
-/* TransactionForm styles - currently using Grid component for layout */
-
 .form {
 	margin-bottom: 30px;
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+	.form {
+		grid-template-columns: repeat(3, 1fr);
+	}
 }

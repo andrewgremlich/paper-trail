@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createTimesheetEntry } from "@/lib/db";
 import { normalizeDateInput } from "@/lib/db/utils";
+import styles from "./styles.module.css";
 
 export const CreateTimesheetRecord = ({
 	timesheetId,
@@ -58,7 +59,7 @@ export const CreateTimesheetRecord = ({
 		>
 			<input type="hidden" name="timesheetId" value={timesheetId} />
 			<input type="hidden" name="projectRate" value={projectRate} />
-			<Flex justify="between" items="end">
+			<Flex justify="between" items="end" className={styles.formRow}>
 				<Input
 					name="date"
 					label="Date"
