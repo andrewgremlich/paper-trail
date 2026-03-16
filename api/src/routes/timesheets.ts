@@ -16,7 +16,9 @@ app.get("/", async (c) => {
 		)
 		.bind(userId)
 		.all();
-	return c.json(results.map((r: Record<string, unknown>) => ({ ...r, active: !!r.active })));
+	return c.json(
+		results.map((r: Record<string, unknown>) => ({ ...r, active: !!r.active })),
+	);
 });
 
 // GET /api/timesheets/:id - get timesheet with entries
@@ -155,7 +157,10 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.prepare("DELETE FROM timesheets WHERE id = ? AND userId = ?").bind(id, userId).run();
+	await db
+		.prepare("DELETE FROM timesheets WHERE id = ? AND userId = ?")
+		.bind(id, userId)
+		.run();
 
 	return c.json({ success: true });
 });

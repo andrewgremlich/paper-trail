@@ -22,7 +22,14 @@ app.post("/", async (c) => {
 			`INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(body.timesheetId, body.date, body.minutes, body.description, body.amount, userId)
+		.bind(
+			body.timesheetId,
+			body.date,
+			body.minutes,
+			body.description,
+			body.amount,
+			userId,
+		)
 		.run();
 
 	return c.json({ success: true }, 201);
@@ -58,7 +65,10 @@ app.delete("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	await db.prepare("DELETE FROM timesheet_entries WHERE id = ? AND userId = ?").bind(id, userId).run();
+	await db
+		.prepare("DELETE FROM timesheet_entries WHERE id = ? AND userId = ?")
+		.bind(id, userId)
+		.run();
 
 	return c.json({ success: true });
 });
