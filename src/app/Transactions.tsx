@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ExportTransactions } from "./components/features/transactions/ExportTransactions";
 import { TransactionForm } from "./components/features/transactions/TransactionForm";
 import { TransactionList } from "./components/features/transactions/TransactionList";
-import { Flex } from "./components/layout/Flex";
 import { H1, Main, P } from "./components/layout/HtmlElements";
 import {
 	deleteTransaction,
@@ -132,18 +130,9 @@ export const Transactions = () => {
 		);
 	}
 
-	const activeProjectName =
-		projects?.find((p) => p.id === activeProjectId)?.name || "unknown";
-
 	return (
 		<Main>
-			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
-				<H1 style={{ marginBottom: "0px" }}>Transactions</H1>
-				<ExportTransactions
-					transactions={transactions ?? []}
-					projectName={activeProjectName}
-				/>
-			</Flex>
+			<H1 style={{ marginBottom: "1.5rem" }}>Transactions</H1>
 
 			<TransactionForm
 				projects={projects}
