@@ -26,6 +26,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      hono:
+        specifier: ^4.12.8
+        version: 4.12.8
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -38,6 +41,9 @@ importers:
       sanitize-filename:
         specifier: ^1.6.3
         version: 1.6.3
+      stripe:
+        specifier: ^20.4.1
+        version: 20.4.1(@types/node@24.12.0)
       summit-kit:
         specifier: ^3.4.0
         version: 3.4.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1124,6 +1130,10 @@ packages:
   globrex@0.1.2:
     resolution: {integrity: sha512-uHJgbwAMwNFf5mLst7IWLNg14x1CkeqglJb/K3doi4dw6q2IvAAmM/Y81kevy83wP+Sst+nutFTYOGg3d1lsxg==}
 
+  hono@4.12.8:
+    resolution: {integrity: sha512-VJCEvtrezO1IAR+kqEYnxUOoStaQPGrCmX3j4wDTNOcD1uRPFpGlwQUIW8niPuvHXaTUxeOUl5MMDGrl+tmO9A==}
+    engines: {node: '>=16.9.0'}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -1251,6 +1261,15 @@ packages:
 
   std-env@4.0.0:
     resolution: {integrity: sha512-zUMPtQ/HBY3/50VbpkupYHbRroTRZJPRLvreamgErJVys0ceuzMkD44J/QjqhHjOzK42GQ3QZIeFG1OYfOtKqQ==}
+
+  stripe@20.4.1:
+    resolution: {integrity: sha512-axCguHItc8Sxt0HC6aSkdVRPffjYPV7EQqZRb2GkIa8FzWDycE7nHJM19C6xAIynH1Qp1/BHiopSi96jGBxT0w==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/node': '>=16'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   summit-kit@3.4.0:
     resolution: {integrity: sha512-zEaAHfkCpVDIdRcfDpOK9cU+Zy2ThIjVVDqLi2e2l+1B45Ayf2LZrTX9fjHrUqNRNsvdxEtMhPDAoJTdPcdEMg==}
@@ -2263,6 +2282,8 @@ snapshots:
 
   globrex@0.1.2: {}
 
+  hono@4.12.8: {}
+
   js-tokens@4.0.0: {}
 
   jsesc@3.1.0: {}
@@ -2417,6 +2438,10 @@ snapshots:
   stackback@0.0.2: {}
 
   std-env@4.0.0: {}
+
+  stripe@20.4.1(@types/node@24.12.0):
+    optionalDependencies:
+      '@types/node': 24.12.0
 
   summit-kit@3.4.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:

@@ -7,9 +7,11 @@
   "scripts": {
     "check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers/src",
     "build": "tsc && vite build",
-    "dev": "npm run build && wrangler dev",
+    "dev": "vite dev",
     "test": "vitest run",
-    "deploy": "npm run build && wrangler deploy"
+    "seed": "wrangler d1 execute paper-trail-db --local --file=api/db/seed.sql",
+    "seed:remote": "wrangler d1 execute paper-trail-db --remote --file=api/db/seed.sql",
+    "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
@@ -18,10 +20,12 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "hono": "^4.12.8",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "sanitize-filename": "^1.6.3",
+    "stripe": "^20.4.1",
     "summit-kit": "^3.4.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"

@@ -1,14 +1,57 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "paper-trail",
+  "main": "api/src/index.ts",
   "compatibility_date": "2026-03-12",
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true
   },
   "assets": {
-    "not_found_handling": "single-page-application"
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
   },
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
+  "vars": {
+    "STRIPE_APP_CLIENT_ID": "dev.gremlich.paper-trail"
+  },
+  "dev": {
+    "port": 8787
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "paper-trail-db",
+      "database_id": "1efbb61f-4ec1-46d9-a99b-31bf65d67a29"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES_BUCKET",
+      "bucket_name": "paper-trail-files"
+    }
+  ],
+  // Dev environment (used by `wrangler dev --env dev`)
+  "env": {
+    "dev": {
+      "vars": {
+        "CF_ACCESS_BYPASS": "true",
+        "CF_ACCESS_DEV_EMAIL": "dev@localhost"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "paper-trail-db",
+          "database_id": "local"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "FILES_BUCKET",
+          "bucket_name": "paper-trail-files"
+        }
+      ]
+    }
+  }
 }
