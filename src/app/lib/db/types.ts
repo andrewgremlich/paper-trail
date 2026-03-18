@@ -108,6 +108,7 @@ export type UpdateUserProfile = Pick<UserProfile, "displayName" | "email">;
 export type ExportData = {
 	version: string;
 	exportDate: string;
+	encrypted?: boolean;
 	projects: Project[];
 	timesheets: Timesheet[];
 	timesheetEntries: TimesheetEntry[];

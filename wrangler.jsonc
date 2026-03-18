@@ -37,7 +37,8 @@
     "dev": {
       "vars": {
         "CF_ACCESS_BYPASS": "true",
-        "CF_ACCESS_DEV_EMAIL": "dev@localhost"
+        "CF_ACCESS_DEV_EMAIL": "dev@localhost",
+        "ENCRYPTION_KEY": "ZGV2LWVuY3J5cHRpb24ta2V5LTMyLWJ5dGVzLWxvbmch"
       },
       "d1_databases": [
         {

@@ -3,6 +3,7 @@ export interface Env {
 	FILES_BUCKET: R2Bucket;
 	CF_ACCESS_BYPASS?: string;
 	CF_ACCESS_DEV_EMAIL?: string;
+	ENCRYPTION_KEY: string;
 }
 
 export type Nullable<T> = T | null | undefined;
@@ -78,6 +79,7 @@ export type UserProfile = {
 export type ExportData = {
 	version: string;
 	exportDate: string;
+	encrypted?: boolean;
 	projects: Project[];
 	timesheets: Timesheet[];
 	timesheetEntries: TimesheetEntry[];
