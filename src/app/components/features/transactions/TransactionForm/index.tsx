@@ -63,7 +63,12 @@ export const TransactionForm = ({
 			/>
 			<Input label="Amount" name="amount" step="0.01" type="number" required />
 			<Input label="File" name="file" type="file" />
-			<Button type="submit" variant="default" size="sm" leftIcon={<ReceiptText size={16} />}>
+			<Button
+				type="submit"
+				variant="default"
+				size="sm"
+				leftIcon={<ReceiptText size={16} />}
+			>
 				Add Transaction
 			</Button>
 		</Grid>

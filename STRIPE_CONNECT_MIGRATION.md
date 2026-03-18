@@ -8,12 +8,12 @@
 - [x] File operations (R2 upload/download, export/import)
 - [x] Stripe invoice/customer operations (server-side via Workers)
 - [x] Single-domain deployment (Workers static assets + API)
-- [ ] Delete stub files (`stronghold.ts`, `SyncSettings/`)
+- [x] Delete stub files (`stronghold.ts`, `SyncSettings/`)
 - [ ] Register as Stripe Connect platform
 - [ ] Add `stripe_connections` table to D1
 - [ ] Add OAuth routes (`/connect`, `/callback`, `/disconnect`, `/status`)
 - [ ] Build `StripeConnectSection` UI (replace `StripeSecretSection`)
-- [ ] Implement encryption for sensitive data at rest (tokens, financial records, file attachments)
+- [x] Implement encryption for sensitive data at rest (tokens, financial records, file attachments)
 - [ ] End-to-end test with Stripe sandbox
 
 ---

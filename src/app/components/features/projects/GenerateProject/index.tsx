@@ -86,7 +86,12 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 				className={styles.fullWidth}
 				label="Project Description"
 			/>
-			<Button type="submit" size="lg" variant="default" leftIcon={<FolderPlus size={16} />}>
+			<Button
+				type="submit"
+				size="lg"
+				variant="default"
+				leftIcon={<FolderPlus size={16} />}
+			>
 				Generate Project
 			</Button>
 		</form>
