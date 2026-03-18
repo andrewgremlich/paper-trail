@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit && npx @biomejs/biome check --write ./src ./workers/src",
+    "check": "tsc --noEmit && npx @biomejs/biome check --write ./src",
     "build": "tsc && vite build",
     "dev": "vite dev",
     "test": "vitest run",

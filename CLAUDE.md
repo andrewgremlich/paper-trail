@@ -9,8 +9,8 @@ Paper Trail is a web-based timesheet and invoicing application built with Cloudf
 ## Build & Development Commands
 
 ```bash
-# Local development (builds frontend + runs Wrangler worker with --env dev)
-# Access at http://localhost:8787 — auth is bypassed via CF_ACCESS_BYPASS=true
+# Local development (Vite + Cloudflare Workers runtime via @cloudflare/vite-plugin)
+# Access at http://localhost:5173 — auth is bypassed via .dev.vars
 npm run dev
 
 # Type checking and formatting
@@ -30,17 +30,15 @@ npm run seed
 
 # Seed D1 database (remote)
 npm run seed:remote
-
-# Generate worker types
-npm run types
 ```
 
 ### Local Development Notes
-- `npm run dev` builds the frontend with Vite, then starts Wrangler with `--env dev`
-- The `dev` environment sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
-- The app is served at `http://localhost:8787` (Wrangler serves both static assets and the API)
-- API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.toml`
+- `npm run dev` runs `vite dev` — the `@cloudflare/vite-plugin` runs the Workers runtime inside Vite's dev server
+- The app is served at `http://localhost:5173` (Vite serves both static assets and the API worker)
+- Dev environment variables come from `.dev.vars` — sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
+- API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.jsonc`
 - All other routes fall through to the SPA via `not_found_handling = "single-page-application"`
+- `ENCRYPTION_KEY` in `.dev.vars` must be a base64-encoded 32-byte value (256-bit AES key)
 
 ## Architecture
 
@@ -79,16 +77,16 @@ npm run types
 - `api/src/middleware/auth.ts` - Cloudflare Access auth middleware
 - `api/src/routes/` - All API route handlers
 - `api/db/seed.sql` - Database schema (tables, indexes, triggers)
-- `wrangler.toml` - Cloudflare Workers configuration (D1, R2 bindings, static assets)
+- `wrangler.jsonc` - Cloudflare Workers configuration (D1, R2 bindings, static assets)
 - `src/app/index.tsx` - Main app router and page layout
 
 ### Database Tables
 All tables include a `userId` column for multi-user data isolation:
+- `users` - User accounts (displayName, email, uuid) — auto-created on first login via Cloudflare Access
 - `projects` - Clients with Stripe customer IDs and hourly rates
 - `timesheets` - Time tracking documents linked to projects
 - `timesheet_entries` - Individual work entries (date, minutes, description)
 - `transactions` - Expense/income tracking separate from timesheets
-- `user_profile` - User information (displayName, email, uuid)
 - `schema_migrations` - Tracks applied migration versions
 
 ## Code Style
@@ -149,7 +147,7 @@ The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 
 ### Setup
 1. Create the database: `wrangler d1 create paper-trail-db`
-2. Paste the `database_id` into `wrangler.toml`
+2. Paste the `database_id` into `wrangler.jsonc`
 3. Seed the schema: `npm run seed` (local) or `npm run seed:remote` (remote)
 
 ### D1 API Pattern
@@ -166,9 +164,9 @@ const lastId = result.meta.last_row_id;
 ```
 
 ### Local Development
-- `wrangler dev` automatically provisions a local D1 instance
+- `npm run dev` (via `@cloudflare/vite-plugin`) automatically provisions a local D1 instance
 - Local data persists in `.wrangler/state/`
-- Use `npm run seed` to seed the local database
+- Use `npm run seed` to apply the schema to the local database (schema only — no seed data rows)
 
 ## Security Considerations
 
