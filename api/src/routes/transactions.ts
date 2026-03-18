@@ -1,9 +1,22 @@
 import { Hono } from "hono";
+import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
+
+async function decryptTransaction(
+	row: Record<string, unknown>,
+	env: Env,
+): Promise<Record<string, unknown>> {
+	const description = await decrypt(row.description as string, env);
+	const amount = isEncryptionEnabled(env)
+		? Number(await decrypt(row.amount as string, env))
+		: (row.amount as number);
+
+	return { ...row, description, amount: amount / 100 };
+}
 
 // GET /api/transactions?projectId=X - list transactions for a project
 app.get("/", async (c) => {
@@ -33,10 +46,11 @@ app.get("/", async (c) => {
 		results = res.results;
 	}
 
-	// Convert integer cents to dollars for UI
-	return c.json(
-		results.map((r) => ({ ...r, amount: (r.amount as number) / 100 })),
+	const decrypted = await Promise.all(
+		results.map((r) => decryptTransaction(r, c.env)),
 	);
+
+	return c.json(decrypted);
 });
 
 // GET /api/transactions/:id
@@ -57,7 +71,11 @@ app.get("/:id", async (c) => {
 		return c.json({ error: "Transaction not found" }, 404);
 	}
 
-	return c.json({ ...row, amount: (row.amount as number) / 100 });
+	const decrypted = await decryptTransaction(
+		row as Record<string, unknown>,
+		c.env,
+	);
+	return c.json(decrypted);
 });
 
 // POST /api/transactions - create transaction
@@ -73,6 +91,9 @@ app.post("/", async (c) => {
 	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
+	const encDescription = await encrypt(body.description, c.env);
+	const encAmount = await encrypt(String(amountInCents), c.env);
+
 	await db
 		.prepare(
 			`INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
@@ -81,8 +102,8 @@ app.post("/", async (c) => {
 		.bind(
 			body.projectId,
 			body.date,
-			body.description,
-			amountInCents,
+			encDescription,
+			encAmount,
 			body.filePath ?? null,
 			userId,
 		)
@@ -105,6 +126,9 @@ app.put("/:id", async (c) => {
 	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
 
+	const encDescription = await encrypt(body.description, c.env);
+	const encAmount = await encrypt(String(amountInCents), c.env);
+
 	await db
 		.prepare(
 			`UPDATE transactions
@@ -114,8 +138,8 @@ app.put("/:id", async (c) => {
 		.bind(
 			body.projectId,
 			body.date,
-			body.description,
-			amountInCents,
+			encDescription,
+			encAmount,
 			body.filePath ?? null,
 			id,
 			userId,

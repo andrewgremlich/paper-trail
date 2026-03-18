@@ -1,8 +1,10 @@
 import { api } from "./client";
 import type { ExportData } from "./types";
 
-export const exportAllData = async (): Promise<ExportData> => {
-	return api.get<ExportData>("/export/data");
+export const exportAllData = async (encrypted = false): Promise<ExportData> => {
+	return api.get<ExportData>(
+		`/export/data${encrypted ? "?encrypted=true" : ""}`,
+	);
 };
 
 export const importAllData = async (data: ExportData): Promise<void> => {

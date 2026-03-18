@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Upload } from "lucide-react";
+import { Download, Lock, Unlock, Upload } from "lucide-react";
+import { useState } from "react";
 import { Flex } from "@/components/layout/Flex";
 import { H3, P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
@@ -8,13 +9,14 @@ import styles from "./styles.module.css";
 
 export const ExportImportSection = () => {
 	const queryClient = useQueryClient();
+	const [encrypted, setEncrypted] = useState(false);
+
 	const exportMutation = useMutation({
-		mutationFn: handleExportData,
+		mutationFn: (encryptBackup: boolean) => handleExportData(encryptBackup),
 	});
 	const importMutation = useMutation({
 		mutationFn: handleImportData,
 		onSuccess: async () => {
-			// Invalidate all queries to refresh the UI
 			await queryClient.invalidateQueries();
 		},
 	});
@@ -29,11 +31,39 @@ export const ExportImportSection = () => {
 				exported backup file.
 			</P>
 
+			<Flex gap="1rem" className={styles.encryptToggle}>
+				<label className={styles.checkboxLabel}>
+					<input
+						type="checkbox"
+						checked={encrypted}
+						onChange={(e) => setEncrypted(e.target.checked)}
+						disabled={isLoading}
+					/>
+					<span className={styles.checkboxText}>
+						{encrypted ? (
+							<>
+								<Lock size={14} aria-hidden="true" /> Encrypted backup
+							</>
+						) : (
+							<>
+								<Unlock size={14} aria-hidden="true" /> Readable backup
+							</>
+						)}
+					</span>
+				</label>
+			</Flex>
+
+			<P className={styles.encryptHint}>
+				{encrypted
+					? "Sensitive fields will remain encrypted. Can only be restored with the same encryption key."
+					: "All data will be exported in plaintext. Portable across instances."}
+			</P>
+
 			<Flex gap="1rem" className={styles.buttonGroup}>
 				<Button
 					onClick={() => {
 						exportMutation.reset();
-						exportMutation.mutate();
+						exportMutation.mutate(encrypted);
 					}}
 					disabled={isLoading}
 					isLoading={exportMutation.isPending}

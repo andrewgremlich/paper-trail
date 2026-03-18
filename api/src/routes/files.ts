@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { decryptBuffer, encryptBuffer } from "../lib/crypto";
 import type { Env } from "../lib/types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -19,9 +20,10 @@ app.post("/upload", async (c) => {
 	);
 	const key = `${sanitizedProject}/attachments/${crypto.randomUUID()}-${file.name}`;
 
-	console.log(`Uploading file to R2 with key: ${key}`);
+	const fileBytes = await file.arrayBuffer();
+	const encrypted = await encryptBuffer(fileBytes, c.env);
 
-	await c.env.FILES_BUCKET.put(key, file.stream(), {
+	await c.env.FILES_BUCKET.put(key, encrypted, {
 		httpMetadata: { contentType: file.type },
 	});
 
@@ -41,7 +43,10 @@ app.get("/:key{.+}", async (c) => {
 	object.writeHttpMetadata(headers);
 	headers.set("etag", object.httpEtag);
 
-	return new Response(object.body, { headers });
+	const encryptedBytes = await object.arrayBuffer();
+	const decrypted = await decryptBuffer(encryptedBytes, c.env);
+
+	return new Response(decrypted, { headers });
 });
 
 // DELETE /api/files/:key+ - delete file from R2

@@ -4,13 +4,14 @@ import {
 	validateImportData,
 } from "../db/exportImport";
 
-export const handleExportData = async () => {
-	const data = await exportAllData();
+export const handleExportData = async (encrypted = false) => {
+	const data = await exportAllData(encrypted);
 	const json = JSON.stringify(data, null, 2);
 	const blob = new Blob([json], { type: "application/json" });
 	const url = URL.createObjectURL(blob);
 
-	const fileName = `paper-trail-backup-${new Date().toISOString().split("T")[0]}.json`;
+	const suffix = encrypted ? "encrypted" : "backup";
+	const fileName = `paper-trail-${suffix}-${new Date().toISOString().split("T")[0]}.json`;
 
 	const a = document.createElement("a");
 	a.href = url;

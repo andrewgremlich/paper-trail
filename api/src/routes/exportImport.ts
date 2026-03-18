@@ -1,14 +1,28 @@
 import { Hono } from "hono";
+import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// GET /api/export/data - export all data as JSON
+async function decryptTransactionRow(
+	row: Record<string, unknown>,
+	env: Env,
+): Promise<Record<string, unknown>> {
+	const description = await decrypt(row.description as string, env);
+	const amount = isEncryptionEnabled(env)
+		? Number(await decrypt(row.amount as string, env))
+		: (row.amount as number);
+
+	return { ...row, description, amount };
+}
+
+// GET /api/export/data?encrypted=true|false - export all data as JSON
 app.get("/data", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [projects, timesheets, timesheetEntries, transactions, userProfile] =
 		await Promise.all([
@@ -48,14 +62,23 @@ app.get("/data", async (c) => {
 				.first(),
 		]);
 
+	let transactionResults = transactions.results as Record<string, unknown>[];
+
+	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
+		transactionResults = await Promise.all(
+			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
+		);
+	}
+
 	const data: ExportData = {
 		version: "1.0.0",
 		exportDate: new Date().toISOString(),
+		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
 		projects: projects.results as unknown as ExportData["projects"],
 		timesheets: timesheets.results as unknown as ExportData["timesheets"],
 		timesheetEntries:
 			timesheetEntries.results as unknown as ExportData["timesheetEntries"],
-		transactions: transactions.results as unknown as ExportData["transactions"],
+		transactions: transactionResults as unknown as ExportData["transactions"],
 		userProfile: userProfile as unknown as ExportData["userProfile"],
 	};
 
@@ -159,8 +182,23 @@ app.post("/data", async (c) => {
 			.run();
 	}
 
-	// Insert transactions
+	// Insert transactions — encrypt if data is plaintext, store as-is if already encrypted
+	const isDataEncrypted = data.encrypted === true;
+
 	for (const tx of data.transactions) {
+		let description: string;
+		let amount: string | number;
+
+		if (isDataEncrypted) {
+			// Already encrypted with the same key — store as-is
+			description = tx.description;
+			amount = tx.amount;
+		} else {
+			// Plaintext import — encrypt before storing
+			description = await encrypt(tx.description, c.env);
+			amount = await encrypt(String(tx.amount), c.env);
+		}
+
 		await db
 			.prepare(
 				`INSERT INTO transactions (id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId)
@@ -170,8 +208,8 @@ app.post("/data", async (c) => {
 				tx.id,
 				tx.projectId,
 				tx.date,
-				tx.description,
-				tx.amount,
+				description,
+				amount,
 				tx.filePath,
 				tx.createdAt,
 				tx.updatedAt,
@@ -212,10 +250,16 @@ app.get("/transactions", async (c) => {
 		.bind(Number(projectId), userId)
 		.all();
 
-	const transactions = results.map((r: Record<string, unknown>) => ({
-		...r,
-		amount: (r.amount as number) / 100,
-	}));
+	const transactions = await Promise.all(
+		results.map(async (r: Record<string, unknown>) => {
+			const description = await decrypt(r.description as string, c.env);
+			const rawAmount = isEncryptionEnabled(c.env)
+				? Number(await decrypt(r.amount as string, c.env))
+				: (r.amount as number);
+
+			return { ...r, description, amount: rawAmount / 100 };
+		}),
+	);
 
 	if (format === "json") {
 		const data = {

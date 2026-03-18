@@ -4,6 +4,31 @@
 	}
 }
 
+.encryptToggle {
+	margin-bottom: 0.25rem;
+}
+
+.checkboxLabel {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	user-select: none;
+}
+
+.checkboxText {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.encryptHint {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin-bottom: 0.75rem;
+}
+
 .buttonGroup {
 	margin-bottom: 1rem;
 }
