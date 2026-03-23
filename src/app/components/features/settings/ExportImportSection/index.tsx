@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Lock, Unlock, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Lock, Unlock, Upload } from "lucide-react";
 import { useState } from "react";
 import { Flex } from "@/components/layout/Flex";
 import { H3, P } from "@/components/layout/HtmlElements";
@@ -84,6 +84,20 @@ export const ExportImportSection = () => {
 					variant="secondary"
 				>
 					Import Data
+				</Button>
+
+				<Button
+					onClick={() => {
+						const link = document.createElement("a");
+						link.href = "/api/v1/transactions/xlsx";
+						link.download = "transactions.xlsx";
+						link.click();
+					}}
+					disabled={isLoading}
+					leftIcon={<FileSpreadsheet size={16} />}
+					variant="secondary"
+				>
+					Download Transactions XLSX
 				</Button>
 			</Flex>
 
