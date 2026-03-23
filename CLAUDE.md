@@ -11,29 +11,29 @@ Paper Trail is a web-based timesheet and invoicing application built with Cloudf
 ```bash
 # Local development (Vite + Cloudflare Workers runtime via @cloudflare/vite-plugin)
 # Access at http://localhost:5173 — auth is bypassed via .dev.vars
-npm run dev
+pnpm run dev
 
 # Type checking and formatting
-npm run check
+pnpm run check
 
 # Run tests
-npm run test
+pnpm run test
 
 # Run a single test file
 npx vitest run src/app/lib/utils.test.ts
 
 # Deploy (builds frontend + deploys worker with static assets)
-npm run deploy
+pnpm run deploy
 
 # Seed D1 database (local)
-npm run seed
+pnpm run seed
 
 # Seed D1 database (remote)
-npm run seed:remote
+pnpm run seed:remote
 ```
 
 ### Local Development Notes
-- `npm run dev` runs `vite dev` — the `@cloudflare/vite-plugin` runs the Workers runtime inside Vite's dev server
+- `pnpm run dev` runs `vite dev` — the `@cloudflare/vite-plugin` runs the Workers runtime inside Vite's dev server
 - The app is served at `http://localhost:5173` (Vite serves both static assets and the API worker)
 - Dev environment variables come from `.dev.vars` — sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
 - API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.jsonc`
@@ -148,7 +148,7 @@ The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 ### Setup
 1. Create the database: `wrangler d1 create paper-trail-db`
 2. Paste the `database_id` into `wrangler.jsonc`
-3. Seed the schema: `npm run seed` (local) or `npm run seed:remote` (remote)
+3. Seed the schema: `pnpm run seed` (local) or `pnpm run seed:remote` (remote)
 
 ### D1 API Pattern
 ```typescript
@@ -164,9 +164,9 @@ const lastId = result.meta.last_row_id;
 ```
 
 ### Local Development
-- `npm run dev` (via `@cloudflare/vite-plugin`) automatically provisions a local D1 instance
+- `pnpm run dev` (via `@cloudflare/vite-plugin`) automatically provisions a local D1 instance
 - Local data persists in `.wrangler/state/`
-- Use `npm run seed` to apply the schema to the local database (schema only — no seed data rows)
+- Use `pnpm run seed` to apply the schema to the local database (schema only — no seed data rows)
 
 ## Security Considerations
 
@@ -212,7 +212,7 @@ Project-level Claude Code configuration lives in `.claude/`:
 ### Available Skills
 - `/new-component features/settings/NewSection` - Scaffold component with index.tsx, styles.module.css, and test file
 - `/db-table categories` - Add a new database table with schema, types, and CRUD operations
-- `/check` - Run `npm run check` (TypeScript + Biome)
+- `/check` - Run `pnpm run check` (TypeScript + Biome)
 - `/test [file]` - Run all tests or a specific test file
 
 ### Available Agents
