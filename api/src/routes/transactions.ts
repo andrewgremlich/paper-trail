@@ -54,6 +54,53 @@ app.get("/", async (c) => {
 	return c.json(decrypted);
 });
 
+// GET /api/v1/transactions/xlsx - download all transactions as XLSX
+app.get("/xlsx", async (c) => {
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const { results } = await db
+		.prepare(
+			`SELECT t.id, t.date, t.description, t.amount, p.name AS projectName
+			FROM transactions t
+			LEFT JOIN projects p ON t.projectId = p.id
+			WHERE t.userId = ?
+			ORDER BY t.date ASC, t.createdAt ASC`,
+		)
+		.bind(userId)
+		.all();
+
+	const rows = await Promise.all(
+		results.map(async (r: Record<string, unknown>) => {
+			const description = await decrypt(r.description as string, c.env);
+			const amount = isEncryptionEnabled(c.env)
+				? Number(await decrypt(r.amount as string, c.env))
+				: (r.amount as number);
+
+			return {
+				Date: r.date as string,
+				Project: (r.projectName as string) ?? "",
+				Description: description,
+				Amount: amount / 100,
+			};
+		}),
+	);
+
+	const worksheet = XLSX.utils.json_to_sheet(rows);
+	const workbook = XLSX.utils.book_new();
+	XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+	const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
+
+	return new Response(buffer, {
+		headers: {
+			"Content-Type":
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"Content-Disposition": 'attachment; filename="transactions.xlsx"',
+		},
+	});
+});
+
 // GET /api/transactions/:id
 app.get("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
@@ -162,53 +209,6 @@ app.delete("/:id", async (c) => {
 		.run();
 
 	return c.json({ success: true });
-});
-
-// GET /api/v1/transactions/xlsx - download all transactions as XLSX
-app.get("/xlsx", async (c) => {
-	const db = getDb(c.env);
-	const userId = c.get("userId");
-
-	const { results } = await db
-		.prepare(
-			`SELECT t.id, t.date, t.description, t.amount, p.name AS projectName
-			FROM transactions t
-			LEFT JOIN projects p ON t.projectId = p.id
-			WHERE t.userId = ?
-			ORDER BY t.date ASC, t.createdAt ASC`,
-		)
-		.bind(userId)
-		.all();
-
-	const rows = await Promise.all(
-		results.map(async (r: Record<string, unknown>) => {
-			const description = await decrypt(r.description as string, c.env);
-			const amount = isEncryptionEnabled(c.env)
-				? Number(await decrypt(r.amount as string, c.env))
-				: (r.amount as number);
-
-			return {
-				Date: r.date as string,
-				Project: (r.projectName as string) ?? "",
-				Description: description,
-				Amount: amount / 100,
-			};
-		}),
-	);
-
-	const worksheet = XLSX.utils.json_to_sheet(rows);
-	const workbook = XLSX.utils.book_new();
-	XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-
-	const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
-
-	return new Response(buffer, {
-		headers: {
-			"Content-Type":
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			"Content-Disposition": 'attachment; filename="transactions.xlsx"',
-		},
-	});
 });
 
 export { app as transactionRoutes };
