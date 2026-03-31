@@ -177,6 +177,23 @@ const lastId = result.meta.last_row_id;
 - Sanitize file names and paths for transaction attachments
 - File uploads stored in Cloudflare R2 with sanitized paths
 
+### Encryption at Rest
+
+All sensitive financial data is encrypted using AES-256-GCM before being stored in D1. The encryption key is a base64-encoded 32-byte value stored in `ENCRYPTION_KEY` (Wrangler secret in production, `.dev.vars` locally). Encryption is implemented in `api/src/lib/crypto.ts`.
+
+**Encrypted fields by table:**
+- **projects**: `customerId` (Stripe ID), `rate_in_cents`, `description`
+- **timesheets**: `invoiceId` (Stripe ID), `description`
+- **timesheet_entries**: `description`, `amount`
+- **transactions**: `description`, `amount`
+- **R2 files**: entire file contents via `encryptBuffer`/`decryptBuffer`
+
+**Important considerations:**
+- Encrypted values use a random IV per encryption, so the same plaintext produces different ciphertext each time. This means `WHERE column = ?` cannot match encrypted values — lookups by encrypted fields (e.g., `invoiceId`) must scan and decrypt
+- The `decrypt()` function gracefully handles unencrypted values (returns them as-is), so existing plaintext data continues to work after enabling encryption
+- The export/import system respects encryption: exports can be plaintext or encrypted, and imports encrypt plaintext data before storing
+- Project `name` and timesheet `name` are intentionally left unencrypted for display/sorting purposes
+
 ## Accessibility
 
 All UI components and pages must meet **WCAG 2.1 AA** standards:

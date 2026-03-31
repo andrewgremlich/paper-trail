@@ -1,63 +1,85 @@
 # Paper Trail
 
-A Paper Trail that integrates with Stripe in order to send invoices.
+A web-based timesheet and invoicing application that integrates with Stripe for invoice generation and payment processing.
 
 ## Reference
 
 [Stripe SDK Invoice Doc](https://docs.stripe.com/api/invoices?lang=node)
 
+## Tech Stack
+
+- **Frontend**: React 19, TypeScript, Vite, CSS Modules, Zustand, TanStack React Query
+- **Backend**: Cloudflare Workers with Hono
+- **Database**: Cloudflare D1 (SQLite at the edge)
+- **Storage**: Cloudflare R2 (file attachments)
+- **Auth**: Cloudflare Access (GitHub OAuth)
+- **Payments**: Stripe API
+
 ## Setup
 
-Create a `.env` file with the following variables. You will need to setup a Stripe Account and file the secret key in the developer dashboard.
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-```
-URL=http://localhost:3000
-DATABASE_URL="file:./dev.db"
-STRIPE_SECRET_KEY=
-```
+2. Create a `.dev.vars` file with the following variables:
+   ```
+   CF_ACCESS_BYPASS=true
+   CF_ACCESS_DEV_EMAIL=dev@localhost
+   ENCRYPTION_KEY=<base64-encoded 32-byte key>
+   ```
 
-This is also managed with Prisma SQLite, so the usual prisma commands are required to get the DB up and running.
+   Generate an encryption key:
+   ```bash
+   openssl rand -base64 32
+   ```
 
-## Grid Usage
+3. Create and seed the D1 database:
+   ```bash
+   pnpm run seed
+   ```
 
-The Grid component provides a Tailwind-powered CSS Grid with explicit class mappings so classes are statically detected. It supports columns, rows, auto-flow, and optional template definitions via inline styles.
+4. Start the dev server:
+   ```bash
+   pnpm run dev
+   ```
+   The app is served at `http://localhost:5173`.
 
-- **cols**: number of columns (1–12) → `grid-cols-N`
-- **rows**: number of rows (1–12) → `grid-rows-N`
-- **flow**: auto-flow direction → `grid-flow-row|col|row-dense|col-dense`
-- **gap**: inline gap (number interpreted as px or string)
-- **templateCols**: inline `grid-template-columns`
-- **templateRows**: inline `grid-template-rows`
-- **inline**: toggles `inline-grid`
-- **fullWidth**: applies `w-full` (default `true`)
+5. Store the Stripe secret key (for production):
+   ```bash
+   wrangler secret put STRIPE_SECRET_KEY
+   ```
 
-Example:
+## Security
 
-```tsx
-import { Grid, GridHeader, GridRow } from "src/app/components/Grid";
+### Encryption at Rest
 
-export function Example() {
-	return (
-		<div>
-			<GridHeader
-				headers={["A", "B", "C"]}
-				cols={3}
-				flow="row"
-				gap={8}
-			/>
+All sensitive financial data is encrypted using AES-256-GCM before being stored in D1. The encryption key is configured via the `ENCRYPTION_KEY` environment variable (Wrangler secret in production, `.dev.vars` locally).
 
-			<Grid cols={3} rows={2} flow="row-dense" templateCols="1fr 2fr 1fr" templateRows="auto auto">
-				<div>Item 1</div>
-				<div>Item 2</div>
-				<div>Item 3</div>
-				<div>Item 4</div>
-			</Grid>
+**Encrypted fields:**
+- **projects**: `customerId`, `rate_in_cents`, `description`
+- **timesheets**: `invoiceId`, `description`
+- **timesheet_entries**: `description`, `amount`
+- **transactions**: `description`, `amount`
+- **R2 files**: entire file contents
 
-			<GridRow cols={2} rows={3} flow="col">
-				<div>Left</div>
-				<div>Right</div>
-			</GridRow>
-		</div>
-	);
-}
-```
+Unencrypted values are handled gracefully on read, so enabling encryption on an existing database works without migration.
+
+### Other Security Measures
+
+- Stripe API keys stored as Wrangler secrets, never in code or localStorage
+- Authentication via Cloudflare Access (GitHub OAuth)
+- All database queries scoped by `userId` for multi-user data isolation
+- Parameterized queries (D1 `.bind()`) to prevent SQL injection
+- Sanitized file names and paths for attachments
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm run dev` | Start local dev server (Vite + Workers runtime) |
+| `pnpm run check` | TypeScript type checking + Biome linting/formatting |
+| `pnpm run test` | Run Vitest tests |
+| `pnpm run deploy` | Build and deploy to Cloudflare |
+| `pnpm run seed` | Seed local D1 database |
+| `pnpm run seed:remote` | Seed remote D1 database |

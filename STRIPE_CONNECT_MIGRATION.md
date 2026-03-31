@@ -13,7 +13,7 @@
 - [ ] Add `stripe_connections` table to D1
 - [ ] Add OAuth routes (`/connect`, `/callback`, `/disconnect`, `/status`)
 - [ ] Build `StripeConnectSection` UI (replace `StripeSecretSection`)
-- [x] Implement encryption for sensitive data at rest (tokens, financial records, file attachments)
+- [x] Implement encryption for sensitive data at rest (all financial fields, Stripe IDs, file attachments)
 - [ ] End-to-end test with Stripe sandbox
 
 ---
@@ -166,16 +166,20 @@ Generate a 256-bit key:
 openssl rand -base64 32
 ```
 
-### What to Encrypt
+### What Is Encrypted
 
 | Data | Storage | Encryption |
 |---|---|---|
 | Stripe access tokens | D1 `stripe_connections.access_token` | AES-256-GCM, per-row IV |
 | Stripe refresh tokens | D1 `stripe_connections.refresh_token` | AES-256-GCM, per-row IV |
-| Transaction amounts & descriptions | D1 `transactions` | AES-256-GCM (amount, description columns) |
-| File attachments | R2 | Encrypt before upload, decrypt on download |
+| Project financial data | D1 `projects.customerId`, `rate_in_cents`, `description` | AES-256-GCM, per-row IV |
+| Timesheet metadata | D1 `timesheets.invoiceId`, `description` | AES-256-GCM, per-row IV |
+| Timesheet entry data | D1 `timesheet_entries.description`, `amount` | AES-256-GCM, per-row IV |
+| Transaction data | D1 `transactions.description`, `amount` | AES-256-GCM, per-row IV |
+| File attachments | R2 | AES-256-GCM, encrypt before upload, decrypt on download |
 | Stripe platform keys | Workers secrets | Handled by Cloudflare (encrypted at rest by platform) |
 | User emails | D1 `users.email` | Not encrypted (needed for Cloudflare Access lookup) |
+| Project/timesheet names | D1 `projects.name`, `timesheets.name` | Not encrypted (used for display/sorting) |
 
 ### AES-256-GCM Implementation
 
