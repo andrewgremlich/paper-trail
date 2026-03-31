@@ -1,7 +1,21 @@
 import { Hono } from "hono";
+import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, Project } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
+
+async function decryptProjectRow(
+	row: Record<string, unknown>,
+	env: Env,
+): Promise<Record<string, unknown>> {
+	const customerId = await decrypt((row.customerId as string) ?? "", env);
+	const description = await decrypt((row.description as string) ?? "", env);
+	const rate_in_cents = isEncryptionEnabled(env)
+		? Number(await decrypt(row.rate_in_cents as string, env))
+		: (row.rate_in_cents as number);
+
+	return { ...row, customerId, description, rate_in_cents };
+}
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -16,10 +30,12 @@ app.get("/", async (c) => {
 		)
 		.bind(userId)
 		.all();
-	const rows = results.map((r: Record<string, unknown>) => ({
-		...r,
-		active: !!r.active,
-	}));
+	const rows = await Promise.all(
+		results.map(async (r: Record<string, unknown>) => ({
+			...(await decryptProjectRow(r, c.env)),
+			active: !!r.active,
+		})),
+	);
 	return c.json(rows);
 });
 
@@ -41,6 +57,11 @@ app.get("/:id", async (c) => {
 		return c.json({ error: "Project not found" }, 404);
 	}
 
+	const decryptedProject = await decryptProjectRow(
+		project as Record<string, unknown>,
+		c.env,
+	);
+
 	const { results: timesheets } = await db
 		.prepare(
 			`SELECT id, name, description, active, createdAt, updatedAt
@@ -50,7 +71,7 @@ app.get("/:id", async (c) => {
 		.all();
 
 	return c.json({
-		...project,
+		...decryptedProject,
 		active: !!project.active,
 		timesheets: timesheets.map((t: Record<string, unknown>) => ({
 			...t,
@@ -71,18 +92,16 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	const encCustomerId = await encrypt(body.customerId, c.env);
+	const encRate = await encrypt(String(body.rate_in_cents), c.env);
+	const encDescription = await encrypt(body.description, c.env);
+
 	const insertResult = await db
 		.prepare(
 			`INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(
-			body.name,
-			body.customerId,
-			body.rate_in_cents,
-			body.description,
-			userId,
-		)
+		.bind(body.name, encCustomerId, encRate, encDescription, userId)
 		.run();
 	const createdProjectId = insertResult.meta.last_row_id;
 
@@ -98,7 +117,11 @@ app.post("/", async (c) => {
 		.bind(createdProjectId, userId)
 		.first();
 
-	const projectRow = { ...project, active: !!project!.active };
+	const decrypted = await decryptProjectRow(
+		project as Record<string, unknown>,
+		c.env,
+	);
+	const projectRow = { ...decrypted, active: !!project!.active };
 
 	const createTimesheet = c.req.query("createTimesheet") === "true";
 
@@ -112,7 +135,13 @@ app.post("/", async (c) => {
 			`INSERT INTO timesheets (projectId, name, description, active, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(createdProjectId, timesheetName, "Initial timesheet", 1, userId)
+		.bind(
+			createdProjectId,
+			timesheetName,
+			await encrypt("Initial timesheet", c.env),
+			1,
+			userId,
+		)
 		.run();
 
 	if (!tsResult.meta.last_row_id) {
@@ -145,6 +174,10 @@ app.put("/:id", async (c) => {
 		return c.json({ error: "Invalid project data" }, 400);
 	}
 
+	const encCustomerId = await encrypt(body.customerId, c.env);
+	const encRate = await encrypt(String(rate * 100), c.env);
+	const encDescription = await encrypt(body.description ?? "", c.env);
+
 	await db
 		.prepare(
 			`UPDATE projects
@@ -153,9 +186,9 @@ app.put("/:id", async (c) => {
 		)
 		.bind(
 			body.name,
-			body.customerId,
-			rate * 100,
-			body.description ?? "",
+			encCustomerId,
+			encRate,
+			encDescription,
 			body.active ? 1 : 0,
 			id,
 			userId,
@@ -174,7 +207,11 @@ app.put("/:id", async (c) => {
 		return c.json({ error: "Project not found" }, 404);
 	}
 
-	return c.json({ ...updated, active: !!updated.active });
+	const decryptedUpdated = await decryptProjectRow(
+		updated as Record<string, unknown>,
+		c.env,
+	);
+	return c.json({ ...decryptedUpdated, active: !!updated.active });
 });
 
 // DELETE /api/projects/:id

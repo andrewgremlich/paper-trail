@@ -63,10 +63,41 @@ app.get("/data", async (c) => {
 		]);
 
 	let transactionResults = transactions.results as Record<string, unknown>[];
+	let projectResults = projects.results as Record<string, unknown>[];
+	let timesheetResults = timesheets.results as Record<string, unknown>[];
+	let entryResults = timesheetEntries.results as Record<string, unknown>[];
 
 	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
 			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
+		);
+		projectResults = await Promise.all(
+			projectResults.map(async (r) => ({
+				...r,
+				customerId: await decrypt(r.customerId as string, c.env),
+				description: await decrypt((r.description as string) ?? "", c.env),
+				rate_in_cents: Number(
+					await decrypt(r.rate_in_cents as string, c.env),
+				),
+			})),
+		);
+		timesheetResults = await Promise.all(
+			timesheetResults.map(async (r) => ({
+				...r,
+				description: r.description
+					? await decrypt(r.description as string, c.env)
+					: r.description,
+				invoiceId: r.invoiceId
+					? await decrypt(r.invoiceId as string, c.env)
+					: r.invoiceId,
+			})),
+		);
+		entryResults = await Promise.all(
+			entryResults.map(async (r) => ({
+				...r,
+				description: await decrypt(r.description as string, c.env),
+				amount: Number(await decrypt(r.amount as string, c.env)),
+			})),
 		);
 	}
 
@@ -74,10 +105,10 @@ app.get("/data", async (c) => {
 		version: "1.0.0",
 		exportDate: new Date().toISOString(),
 		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
-		projects: projects.results as unknown as ExportData["projects"],
-		timesheets: timesheets.results as unknown as ExportData["timesheets"],
+		projects: projectResults as unknown as ExportData["projects"],
+		timesheets: timesheetResults as unknown as ExportData["timesheets"],
 		timesheetEntries:
-			timesheetEntries.results as unknown as ExportData["timesheetEntries"],
+			entryResults as unknown as ExportData["timesheetEntries"],
 		transactions: transactionResults as unknown as ExportData["transactions"],
 		userProfile: userProfile as unknown as ExportData["userProfile"],
 	};
@@ -119,8 +150,21 @@ app.post("/data", async (c) => {
 		.run();
 	await db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId).run();
 
-	// Insert projects
+	// Determine if imported data is already encrypted
+	const isDataEncrypted = data.encrypted === true;
+
+	// Insert projects — encrypt if data is plaintext, store as-is if already encrypted
 	for (const project of data.projects) {
+		const customerId = isDataEncrypted
+			? project.customerId
+			: await encrypt(project.customerId ?? "", c.env);
+		const rate_in_cents = isDataEncrypted
+			? project.rate_in_cents
+			: await encrypt(String(project.rate_in_cents), c.env);
+		const description = isDataEncrypted
+			? project.description
+			: await encrypt(project.description ?? "", c.env);
+
 		await db
 			.prepare(
 				`INSERT INTO projects (id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt, userId)
@@ -130,9 +174,9 @@ app.post("/data", async (c) => {
 				project.id,
 				project.name,
 				project.active ? 1 : 0,
-				project.customerId,
-				project.rate_in_cents,
-				project.description,
+				customerId,
+				rate_in_cents,
+				description,
 				project.createdAt,
 				project.updatedAt,
 				userId,
@@ -140,8 +184,19 @@ app.post("/data", async (c) => {
 			.run();
 	}
 
-	// Insert timesheets
+	// Insert timesheets — encrypt if data is plaintext
 	for (const ts of data.timesheets) {
+		const description = isDataEncrypted
+			? ts.description
+			: ts.description
+				? await encrypt(ts.description, c.env)
+				: null;
+		const invoiceId = isDataEncrypted
+			? ts.invoiceId
+			: ts.invoiceId
+				? await encrypt(ts.invoiceId, c.env)
+				: null;
+
 		await db
 			.prepare(
 				`INSERT INTO timesheets (id, projectId, invoiceId, name, description, active, createdAt, updatedAt, userId)
@@ -150,9 +205,9 @@ app.post("/data", async (c) => {
 			.bind(
 				ts.id,
 				ts.projectId,
-				ts.invoiceId,
+				invoiceId,
 				ts.name,
-				ts.description,
+				description,
 				ts.active ? 1 : 0,
 				ts.createdAt,
 				ts.updatedAt,
@@ -161,8 +216,15 @@ app.post("/data", async (c) => {
 			.run();
 	}
 
-	// Insert timesheet entries
+	// Insert timesheet entries — encrypt if data is plaintext
 	for (const entry of data.timesheetEntries) {
+		const description = isDataEncrypted
+			? entry.description
+			: await encrypt(entry.description, c.env);
+		const amount = isDataEncrypted
+			? entry.amount
+			: await encrypt(String(entry.amount), c.env);
+
 		await db
 			.prepare(
 				`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId)
@@ -173,8 +235,8 @@ app.post("/data", async (c) => {
 				entry.timesheetId,
 				entry.date,
 				entry.minutes,
-				entry.description,
-				entry.amount,
+				description,
+				amount,
 				entry.createdAt,
 				entry.updatedAt,
 				userId,
@@ -183,8 +245,6 @@ app.post("/data", async (c) => {
 	}
 
 	// Insert transactions — encrypt if data is plaintext, store as-is if already encrypted
-	const isDataEncrypted = data.encrypted === true;
-
 	for (const tx of data.transactions) {
 		let description: string;
 		let amount: string | number;

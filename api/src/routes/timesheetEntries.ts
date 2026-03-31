@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -17,19 +18,15 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	const encDescription = await encrypt(body.description, c.env);
+	const encAmount = await encrypt(String(body.amount), c.env);
+
 	await db
 		.prepare(
 			`INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(
-			body.timesheetId,
-			body.date,
-			body.minutes,
-			body.description,
-			body.amount,
-			userId,
-		)
+		.bind(body.timesheetId, body.date, body.minutes, encDescription, encAmount, userId)
 		.run();
 
 	return c.json({ success: true }, 201);
@@ -47,13 +44,16 @@ app.put("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	const encDescription = await encrypt(body.description, c.env);
+	const encAmount = await encrypt(String(body.amount), c.env);
+
 	await db
 		.prepare(
 			`UPDATE timesheet_entries
 			SET date = ?, minutes = ?, description = ?, amount = ?
 			WHERE id = ? AND userId = ?`,
 		)
-		.bind(body.date, body.minutes, body.description, body.amount, id, userId)
+		.bind(body.date, body.minutes, encDescription, encAmount, id, userId)
 		.run();
 
 	return c.json({ success: true });

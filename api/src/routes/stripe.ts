@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import Stripe from "stripe";
+import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -226,18 +227,21 @@ app.post("/invoices", async (c) => {
 		.bind(timesheetId, userId)
 		.all();
 
-	const projectRate = (ts.projectRate as number) ?? 0;
+	const projectRate = isEncryptionEnabled(c.env)
+		? Number(await decrypt(ts.projectRate as string, c.env))
+		: ((ts.projectRate as number) ?? 0);
 	const lines: string[] = [];
 	let totalHours = 0;
 	let totalCents = 0;
 
 	for (const entry of entriesRows) {
 		const entryMinutes = entry.minutes as number;
+		const entryDescription = await decrypt(entry.description as string, c.env);
 		const amountCents = projectRate
 			? Math.round((entryMinutes * projectRate) / 60)
 			: 0;
 		lines.push(
-			`Date: ${entry.date} | Hours: ${entryMinutes / 60} | Amount: ${formatUsd(amountCents)} | Description: ${entry.description}`,
+			`Date: ${entry.date} | Hours: ${entryMinutes / 60} | Amount: ${formatUsd(amountCents)} | Description: ${entryDescription}`,
 		);
 		totalHours += entryMinutes / 60;
 		totalCents += amountCents;
@@ -251,7 +255,7 @@ app.post("/invoices", async (c) => {
 		collection_method: "send_invoice",
 		days_until_due: DAYS_UNTIL_DUE,
 		currency: CURRENCY,
-		description: `Rate: ${formatUsd(projectRate)} per hour | Total hours: ${totalHours}\n${ts.description ?? ""}`,
+		description: `Rate: ${formatUsd(projectRate)} per hour | Total hours: ${totalHours}\n${ts.description ? await decrypt(ts.description as string, c.env) : ""}`,
 		footer: taskLog,
 	});
 
@@ -269,11 +273,12 @@ app.post("/invoices", async (c) => {
 	await stripe.invoices.sendInvoice(finalized.id);
 
 	// Update timesheet
+	const encInvoiceId = await encrypt(invoice.id, c.env);
 	await db
 		.prepare(
 			`UPDATE timesheets SET invoiceId = ?, active = 0, updatedAt = datetime('now') WHERE id = ?`,
 		)
-		.bind(invoice.id, timesheetId)
+		.bind(encInvoiceId, timesheetId)
 		.run();
 
 	return c.json(toInvoiceListItem(finalized), 201);
@@ -292,17 +297,36 @@ app.post("/invoices/:id/pay", async (c) => {
 
 	// Create transaction for the paid invoice
 	try {
-		const timesheetRow = await db
+		// invoiceId is encrypted with random IV — scan and decrypt to match
+		const { results: tsRows } = await db
 			.prepare(
-				"SELECT projectId FROM timesheets WHERE invoiceId = ? AND userId = ?",
+				"SELECT projectId, invoiceId FROM timesheets WHERE invoiceId IS NOT NULL AND userId = ?",
 			)
-			.bind(invoiceId, userId)
-			.first();
+			.bind(userId)
+			.all();
+
+		let timesheetRow: Record<string, unknown> | null = null;
+		for (const row of tsRows) {
+			const decryptedId = await decrypt(
+				(row as Record<string, unknown>).invoiceId as string,
+				c.env,
+			);
+			if (decryptedId === invoiceId) {
+				timesheetRow = row as Record<string, unknown>;
+				break;
+			}
+		}
 
 		if (timesheetRow) {
 			const projectId = timesheetRow.projectId as number;
 			const amountCents = invoice.amount_paid ?? 0;
 			const pdfUrl = invoice.invoice_pdf ?? null;
+
+			const encDescription = await encrypt(
+				`Invoice ${invoiceId} marked as paid`,
+				c.env,
+			);
+			const encAmount = await encrypt(String(amountCents), c.env);
 
 			await db
 				.prepare(
@@ -312,8 +336,8 @@ app.post("/invoices/:id/pay", async (c) => {
 				.bind(
 					projectId,
 					new Date().toISOString().split("T")[0],
-					`Invoice ${invoiceId} marked as paid`,
-					amountCents,
+					encDescription,
+					encAmount,
 					pdfUrl,
 					userId,
 				)

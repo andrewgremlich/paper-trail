@@ -1,7 +1,22 @@
 import { Hono } from "hono";
+import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
+
+async function decryptTimesheetRow(
+	row: Record<string, unknown>,
+	env: Env,
+): Promise<Record<string, unknown>> {
+	const description = row.description
+		? await decrypt(row.description as string, env)
+		: row.description;
+	const invoiceId = row.invoiceId
+		? await decrypt(row.invoiceId as string, env)
+		: row.invoiceId;
+
+	return { ...row, description, invoiceId };
+}
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -16,9 +31,13 @@ app.get("/", async (c) => {
 		)
 		.bind(userId)
 		.all();
-	return c.json(
-		results.map((r: Record<string, unknown>) => ({ ...r, active: !!r.active })),
+	const rows = await Promise.all(
+		results.map(async (r: Record<string, unknown>) => ({
+			...(await decryptTimesheetRow(r, c.env)),
+			active: !!r.active,
+		})),
 	);
+	return c.json(rows);
 });
 
 // GET /api/timesheets/:id - get timesheet with entries
@@ -42,6 +61,19 @@ app.get("/:id", async (c) => {
 		return c.json({ error: "Timesheet not found" }, 404);
 	}
 
+	const decryptedHeader = await decryptTimesheetRow(
+		header as Record<string, unknown>,
+		c.env,
+	);
+
+	// Decrypt joined project fields
+	const customerId = decryptedHeader.customerId
+		? await decrypt(decryptedHeader.customerId as string, c.env)
+		: decryptedHeader.customerId;
+	const projectRate = isEncryptionEnabled(c.env)
+		? Number(await decrypt(decryptedHeader.projectRate as string, c.env))
+		: (decryptedHeader.projectRate as number);
+
 	const { results: entriesRows } = await db
 		.prepare(
 			`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
@@ -50,14 +82,21 @@ app.get("/:id", async (c) => {
 		.bind(timesheetId, userId)
 		.all();
 
-	// Convert amount from integer cents to dollars for UI
-	const entries = entriesRows.map((e: Record<string, unknown>) => ({
-		...e,
-		amount: (e.amount as number) / 100,
-	}));
+	// Decrypt entries and convert amount from integer cents to dollars for UI
+	const entries = await Promise.all(
+		entriesRows.map(async (e: Record<string, unknown>) => {
+			const description = await decrypt(e.description as string, c.env);
+			const amount = isEncryptionEnabled(c.env)
+				? Number(await decrypt(e.amount as string, c.env))
+				: (e.amount as number);
+			return { ...e, description, amount: amount / 100 };
+		}),
+	);
 
 	return c.json({
-		...header,
+		...decryptedHeader,
+		customerId,
+		projectRate,
 		active: !!header.active,
 		entries,
 	});
@@ -69,22 +108,50 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 	const userId = c.get("userId");
 	const invoiceId = c.req.param("invoiceId");
 
-	const result = await db
+	// invoiceId is encrypted with random IV, so we must scan and decrypt to match
+	const { results } = await db
 		.prepare(
 			`SELECT t.id, t.userId, t.projectId, t.invoiceId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
 			p.customerId as customerId, p.rate_in_cents as projectRate
 			FROM timesheets t
 			JOIN projects p ON p.id = t.projectId
-			WHERE t.invoiceId = ? AND t.userId = ?`,
+			WHERE t.invoiceId IS NOT NULL AND t.userId = ?`,
 		)
-		.bind(invoiceId, userId)
-		.first();
+		.bind(userId)
+		.all();
 
-	if (!result) {
+	let matched: Record<string, unknown> | null = null;
+	for (const row of results) {
+		const decryptedInvoiceId = await decrypt(
+			(row as Record<string, unknown>).invoiceId as string,
+			c.env,
+		);
+		if (decryptedInvoiceId === invoiceId) {
+			matched = row as Record<string, unknown>;
+			break;
+		}
+	}
+
+	if (!matched) {
 		return c.json(null);
 	}
 
-	return c.json({ ...result, active: !!result.active });
+	const decryptedResult = await decryptTimesheetRow(matched, c.env);
+
+	// Decrypt joined project fields
+	const customerId = decryptedResult.customerId
+		? await decrypt(decryptedResult.customerId as string, c.env)
+		: decryptedResult.customerId;
+	const projectRate = isEncryptionEnabled(c.env)
+		? Number(await decrypt(decryptedResult.projectRate as string, c.env))
+		: (decryptedResult.projectRate as number);
+
+	return c.json({
+		...decryptedResult,
+		customerId,
+		projectRate,
+		active: !!matched.active,
+	});
 });
 
 // POST /api/timesheets - create timesheet
@@ -97,12 +164,16 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	const encDescription = body.description
+		? await encrypt(body.description, c.env)
+		: null;
+
 	const insertResult = await db
 		.prepare(
 			`INSERT INTO timesheets (projectId, name, description, active, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(body.projectId, body.name, body.description ?? null, 1, userId)
+		.bind(body.projectId, body.name, encDescription, 1, userId)
 		.run();
 
 	const row = await db
@@ -113,7 +184,11 @@ app.post("/", async (c) => {
 		.bind(insertResult.meta.last_row_id, userId)
 		.first();
 
-	return c.json({ ...row, active: !!row!.active }, 201);
+	const decryptedRow = await decryptTimesheetRow(
+		row as Record<string, unknown>,
+		c.env,
+	);
+	return c.json({ ...decryptedRow, active: !!row!.active }, 201);
 });
 
 // PUT /api/timesheets/:id - update timesheet
@@ -127,13 +202,17 @@ app.put("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	const encDescription = body.description
+		? await encrypt(body.description, c.env)
+		: null;
+
 	await db
 		.prepare(
 			`UPDATE timesheets
 			SET name = ?, description = ?, active = ?, updatedAt = datetime('now')
 			WHERE id = ? AND userId = ?`,
 		)
-		.bind(body.name, body.description ?? null, body.active ? 1 : 0, id, userId)
+		.bind(body.name, encDescription, body.active ? 1 : 0, id, userId)
 		.run();
 
 	const updated = await db
@@ -148,7 +227,11 @@ app.put("/:id", async (c) => {
 		return c.json({ error: "Timesheet not found" }, 404);
 	}
 
-	return c.json({ ...updated, active: !!updated.active });
+	const decryptedUpdated = await decryptTimesheetRow(
+		updated as Record<string, unknown>,
+		c.env,
+	);
+	return c.json({ ...decryptedUpdated, active: !!updated.active });
 });
 
 // DELETE /api/timesheets/:id
