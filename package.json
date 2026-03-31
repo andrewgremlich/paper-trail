@@ -11,7 +11,8 @@
     "test": "vitest run",
     "seed": "wrangler d1 execute paper-trail-db --local --file=api/db/seed.sql",
     "seed:remote": "wrangler d1 execute paper-trail-db --remote --file=api/db/seed.sql",
-    "deploy": "pnpm run build && wrangler deploy"
+    "deploy": "pnpm run build && wrangler deploy",
+    "enc:key": "node ./scripts/generate-encryption-key.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
