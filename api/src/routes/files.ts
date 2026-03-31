@@ -8,17 +8,12 @@ const app = new Hono<{ Bindings: Env }>();
 app.post("/upload", async (c) => {
 	const formData = await c.req.formData();
 	const file = formData.get("file") as File | null;
-	const projectName = formData.get("projectName") as string | null;
 
 	if (!file) {
 		return c.json({ error: "No file provided" }, 400);
 	}
 
-	const sanitizedProject = (projectName ?? "default").replace(
-		/[^a-zA-Z0-9-_]/g,
-		"-",
-	);
-	const key = `${sanitizedProject}/attachments/${crypto.randomUUID()}-${file.name}`;
+	const key = crypto.randomUUID();
 
 	const fileBytes = await file.arrayBuffer();
 	const encrypted = await encryptBuffer(fileBytes, c.env);

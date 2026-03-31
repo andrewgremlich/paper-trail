@@ -1,12 +1,8 @@
 import { api } from "../db/client";
 
-export const saveAttachment = async (
-	file: File,
-	projectName: string,
-): Promise<string> => {
+export const saveAttachment = async (file: File): Promise<string> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	formData.append("projectName", projectName);
 
 	const result = await api.postFormData<{ key: string }>(
 		"/files/upload",

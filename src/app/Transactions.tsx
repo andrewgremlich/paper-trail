@@ -38,13 +38,10 @@ export const Transactions = () => {
 			const description = formData.get("description") as string;
 			const amount = formData.get("amount") as string;
 			const file = formData.get("file") as File | null;
-			const projectName =
-				projects?.find((p) => p.id === Number(projectId))?.name || "default";
-
 			let filePath = "";
 
 			if (file && file.size > 0) {
-				filePath = await saveAttachment(file, projectName);
+				filePath = await saveAttachment(file);
 			}
 
 			await upsertTransaction({
