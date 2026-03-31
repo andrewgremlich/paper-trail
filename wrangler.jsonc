@@ -13,9 +13,6 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
-  "vars": {
-    "STRIPE_APP_CLIENT_ID": "dev.gremlich.paper-trail"
-  },
   "dev": {
     "port": 8787
   },
@@ -35,11 +32,6 @@
   // Dev environment (used by `wrangler dev --env dev`)
   "env": {
     "dev": {
-      "vars": {
-        "CF_ACCESS_BYPASS": "true",
-        "CF_ACCESS_DEV_EMAIL": "dev@localhost",
-        "ENCRYPTION_KEY": "ZGV2LWVuY3J5cHRpb24ta2V5LTMyLWJ5dGVzLWxvbmch"
-      },
       "d1_databases": [
         {
           "binding": "DB",
