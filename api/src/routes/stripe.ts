@@ -66,36 +66,15 @@ app.get("/customers", async (c) => {
 
 	if (max <= 0) return c.json([]);
 
-	const customers: Array<{
-		id: string;
-		name: string | null;
-		email: string | null;
-	}> = [];
-	let startingAfter: string | undefined;
+	const results = await stripe.customers
+		.list({ limit: 100 })
+		.autoPagingToArray({ limit: max });
 
-	for (let page = 0; page < 50; page++) {
-		const remaining = Math.max(0, max - customers.length);
-		if (remaining <= 0) break;
-		const pageLimit = Math.min(100, remaining);
-
-		const list = await stripe.customers.list({
-			limit: pageLimit,
-			starting_after: startingAfter,
-		});
-
-		const pageItems = (list.data || []).map((cust) => ({
-			id: cust.id,
-			name: cust.name ?? null,
-			email: cust.email ?? null,
-		}));
-
-		customers.push(...pageItems);
-
-		if (!list.has_more || pageItems.length === 0) break;
-		if (customers.length >= max) break;
-		startingAfter = pageItems[pageItems.length - 1]?.id;
-		if (!startingAfter) break;
-	}
+	const customers = results.map((cust) => ({
+		id: cust.id,
+		name: cust.name ?? null,
+		email: cust.email ?? null,
+	}));
 
 	return c.json(customers);
 });
@@ -117,31 +96,11 @@ app.get("/invoices", async (c) => {
 		};
 	}
 
-	const invoices: ReturnType<typeof toInvoiceListItem>[] = [];
-	let startingAfter: string | undefined;
+	const results = await stripe.invoices
+		.list({ limit: 100, created: createdFilter, customer: customerId })
+		.autoPagingToArray({ limit: max });
 
-	for (let page = 0; page < 50; page++) {
-		const remaining = Math.max(0, max - invoices.length);
-		if (remaining <= 0) break;
-		const pageLimit = Math.min(100, remaining);
-
-		const list = await stripe.invoices.list({
-			limit: pageLimit,
-			starting_after: startingAfter,
-			created: createdFilter,
-			customer: customerId,
-		});
-
-		const pageItems = (list.data || []).map(toInvoiceListItem);
-		invoices.push(...pageItems);
-
-		if (!list.has_more || pageItems.length === 0) break;
-		if (invoices.length >= max) break;
-		startingAfter = pageItems[pageItems.length - 1]?.id;
-		if (!startingAfter) break;
-	}
-
-	return c.json(invoices);
+	return c.json(results.map(toInvoiceListItem));
 });
 
 // GET /api/stripe/invoices/:id
