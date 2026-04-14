@@ -25,10 +25,16 @@ async function getStripeClient(
 		.bind(userId)
 		.first<{ accessToken: string }>();
 
-	if (!row) throw new StripeNotConnectedError();
+	if (row) {
+		const accessToken = await decrypt(row.accessToken, env);
+		return new Stripe(accessToken, { telemetry: false });
+	}
 
-	const accessToken = await decrypt(row.accessToken, env);
-	return new Stripe(accessToken, { telemetry: false });
+	if (env.STRIPE_SECRET_KEY) {
+		return new Stripe(env.STRIPE_SECRET_KEY, { telemetry: false });
+	}
+
+	throw new StripeNotConnectedError();
 }
 
 function formatUsd(cents: number): string {
@@ -429,6 +435,9 @@ app.post("/invoices/:id/void", async (c) => {
 
 // GET /api/stripe/connect/authorize — redirect to Stripe OAuth
 app.get("/connect/authorize", (c) => {
+	if (!c.env.STRIPE_CLIENT_ID || !c.env.STRIPE_CONNECT_REDIRECT_URI) {
+		return c.json({ error: "Stripe Connect is not configured on this server." }, 501);
+	}
 	const params = new URLSearchParams({
 		response_type: "code",
 		client_id: c.env.STRIPE_CLIENT_ID,
@@ -552,17 +561,22 @@ app.get("/connect/status", async (c) => {
 			connectedAt: string;
 		}>();
 
-	if (!row) {
-		return c.json({ connected: false });
+	if (row) {
+		return c.json({
+			connected: true,
+			mode: "connect" as const,
+			stripeUserId: row.stripeUserId,
+			stripePublishableKey: row.stripePublishableKey,
+			scope: row.scope,
+			connectedAt: row.connectedAt,
+		});
 	}
 
-	return c.json({
-		connected: true,
-		stripeUserId: row.stripeUserId,
-		stripePublishableKey: row.stripePublishableKey,
-		scope: row.scope,
-		connectedAt: row.connectedAt,
-	});
+	if (c.env.STRIPE_SECRET_KEY) {
+		return c.json({ connected: true, mode: "secret_key" as const });
+	}
+
+	return c.json({ connected: false });
 });
 
 export { app as stripeRoutes };

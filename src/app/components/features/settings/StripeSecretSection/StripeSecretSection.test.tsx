@@ -46,6 +46,7 @@ describe("StripeSecretSection", () => {
 		const { getStripeConnectStatus } = await import("@/lib/stripeApi");
 		vi.mocked(getStripeConnectStatus).mockResolvedValueOnce({
 			connected: true,
+			mode: "connect",
 			stripeUserId: "acct_test123",
 			stripePublishableKey: "pk_test_abc",
 			scope: "read_write",
@@ -55,6 +56,7 @@ describe("StripeSecretSection", () => {
 		const queryClient = makeQueryClient();
 		queryClient.setQueryData(["stripe-connect-status"], {
 			connected: true,
+			mode: "connect",
 			stripeUserId: "acct_test123",
 			stripePublishableKey: "pk_test_abc",
 			scope: "read_write",
@@ -65,5 +67,17 @@ describe("StripeSecretSection", () => {
 		expect(html).toContain("acct_test123");
 		expect(html).toContain("Disconnect Stripe");
 		expect(html).not.toContain("Connect Stripe");
+	});
+
+	it("renders secret key mode when connected via API key", () => {
+		const queryClient = makeQueryClient();
+		queryClient.setQueryData(["stripe-connect-status"], {
+			connected: true,
+			mode: "secret_key",
+		});
+
+		const html = renderComponent(queryClient);
+		expect(html).toContain("Connected via API key");
+		expect(html).not.toContain("Disconnect Stripe");
 	});
 });

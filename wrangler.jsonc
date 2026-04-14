@@ -31,7 +31,6 @@
     }
   ],
   "vars": {
-    "STRIPE_CLIENT_ID": "ca_REPLACE_WITH_YOUR_CLIENT_ID",
     "STRIPE_CONNECT_REDIRECT_URI": "https://paper-trail.andrew-4ae.workers.dev/api/v1/stripe/connect/callback"
   },
   // Dev environment (used by `wrangler dev --env dev`)

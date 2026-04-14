@@ -101,8 +101,10 @@ export async function getAllInvoices(
 
 export type StripeConnectStatusResult =
 	| { connected: false }
+	| { connected: true; mode: "secret_key" }
 	| {
 			connected: true;
+			mode: "connect";
 			stripeUserId: string;
 			stripePublishableKey: string | null;
 			scope: string | null;

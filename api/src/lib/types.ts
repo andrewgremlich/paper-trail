@@ -4,9 +4,10 @@ export interface Env {
 	CF_ACCESS_BYPASS?: string;
 	CF_ACCESS_DEV_EMAIL?: string;
 	ENCRYPTION_KEY: string;
-	STRIPE_CLIENT_ID: string;
-	STRIPE_CLIENT_SECRET: string;
-	STRIPE_CONNECT_REDIRECT_URI: string;
+	STRIPE_SECRET_KEY?: string;
+	STRIPE_CLIENT_ID?: string;
+	STRIPE_CLIENT_SECRET?: string;
+	STRIPE_CONNECT_REDIRECT_URI?: string;
 }
 
 export type Nullable<T> = T | null | undefined;

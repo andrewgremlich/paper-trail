@@ -63,11 +63,11 @@ export const StripeSecretSection = () => {
 		<div className={styles.container}>
 			<H3>Stripe Account</H3>
 
-			{status?.connected ? (
+			{status?.connected && status.mode === "connect" ? (
 				<>
 					<div className={styles.statusBadge}>
 						<CheckCircle size={14} aria-hidden="true" />
-						<span>Connected</span>
+						<span>Connected via Stripe Connect</span>
 					</div>
 					<P className={styles.hint}>
 						Connected as Stripe account{" "}
@@ -104,6 +104,30 @@ export const StripeSecretSection = () => {
 								: "Unknown error"}
 						</P>
 					)}
+				</>
+			) : status?.connected && status.mode === "secret_key" ? (
+				<>
+					<div className={styles.statusBadge}>
+						<CheckCircle size={14} aria-hidden="true" />
+						<span>Connected via API key</span>
+					</div>
+					<P className={styles.hint}>
+						Using a Stripe secret key configured on the server. Invoices and
+						customers are managed through your Stripe account.
+					</P>
+					<P className={styles.hint}>
+						Once your Stripe Connect application is approved, you can connect
+						via OAuth below.
+					</P>
+					<div className={styles.buttonGroup}>
+						<Button
+							onClick={handleConnect}
+							leftIcon={<ExternalLink size={16} aria-hidden="true" />}
+							variant="outline"
+						>
+							Connect via Stripe OAuth
+						</Button>
+					</div>
 				</>
 			) : (
 				<>
