@@ -1,6 +1,6 @@
-import { zipSync } from "fflate";
+import { unzipSync, zipSync } from "fflate";
 import { Hono } from "hono";
-import { decrypt, decryptBuffer, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import { decrypt, decryptBuffer, encrypt, encryptBuffer, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -286,6 +286,197 @@ app.post("/data", async (c) => {
 			.bind(data.userProfile.displayName, data.userProfile.email, userId)
 			.run();
 	}
+
+	return c.json({
+		projectsCount: data.projects.length,
+		timesheetsCount: data.timesheets.length,
+		entriesCount: data.timesheetEntries.length,
+		transactionsCount: data.transactions.length,
+	});
+});
+
+// POST /api/import/zip - import a ZIP backup (data.json + files/)
+app.post("/zip", async (c) => {
+	const arrayBuffer = await c.req.arrayBuffer();
+	if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+		return c.json({ error: "No ZIP file provided" }, 400);
+	}
+
+	let entries: Record<string, Uint8Array>;
+	try {
+		entries = unzipSync(new Uint8Array(arrayBuffer));
+	} catch {
+		return c.json({ error: "Invalid ZIP file" }, 400);
+	}
+
+	const dataJsonBytes = entries["data.json"];
+	if (!dataJsonBytes) {
+		return c.json({ error: "ZIP does not contain data.json" }, 400);
+	}
+
+	let data: ExportData;
+	try {
+		data = JSON.parse(new TextDecoder().decode(dataJsonBytes));
+	} catch {
+		return c.json({ error: "data.json is not valid JSON" }, 400);
+	}
+
+	if (
+		!data.version ||
+		!data.exportDate ||
+		!Array.isArray(data.projects) ||
+		!Array.isArray(data.timesheets) ||
+		!Array.isArray(data.timesheetEntries) ||
+		!Array.isArray(data.transactions)
+	) {
+		return c.json({ error: "Invalid backup file format" }, 400);
+	}
+
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	// Delete existing data in reverse dependency order
+	await db.prepare("DELETE FROM timesheet_entries WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM transactions WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM timesheets WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId).run();
+
+	const isDataEncrypted = data.encrypted === true;
+
+	for (const project of data.projects) {
+		const customerId = isDataEncrypted
+			? project.customerId
+			: await encrypt(project.customerId ?? "", c.env);
+		const rate_in_cents = isDataEncrypted
+			? project.rate_in_cents
+			: await encrypt(String(project.rate_in_cents), c.env);
+		const description = isDataEncrypted
+			? project.description
+			: await encrypt(project.description ?? "", c.env);
+
+		await db
+			.prepare(
+				`INSERT INTO projects (id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.bind(
+				project.id,
+				project.name,
+				project.active ? 1 : 0,
+				customerId,
+				rate_in_cents,
+				description,
+				project.createdAt,
+				project.updatedAt,
+				userId,
+			)
+			.run();
+	}
+
+	for (const ts of data.timesheets) {
+		const description = isDataEncrypted
+			? ts.description
+			: ts.description
+				? await encrypt(ts.description, c.env)
+				: null;
+		const invoiceId = isDataEncrypted
+			? ts.invoiceId
+			: ts.invoiceId
+				? await encrypt(ts.invoiceId, c.env)
+				: null;
+
+		await db
+			.prepare(
+				`INSERT INTO timesheets (id, projectId, invoiceId, name, description, active, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.bind(
+				ts.id,
+				ts.projectId,
+				invoiceId,
+				ts.name,
+				description,
+				ts.active ? 1 : 0,
+				ts.createdAt,
+				ts.updatedAt,
+				userId,
+			)
+			.run();
+	}
+
+	for (const entry of data.timesheetEntries) {
+		const description = isDataEncrypted
+			? entry.description
+			: await encrypt(entry.description, c.env);
+		const amount = isDataEncrypted
+			? entry.amount
+			: await encrypt(String(entry.amount), c.env);
+
+		await db
+			.prepare(
+				`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.bind(
+				entry.id,
+				entry.timesheetId,
+				entry.date,
+				entry.minutes,
+				description,
+				amount,
+				entry.createdAt,
+				entry.updatedAt,
+				userId,
+			)
+			.run();
+	}
+
+	for (const tx of data.transactions) {
+		const description = isDataEncrypted
+			? tx.description
+			: await encrypt(tx.description, c.env);
+		const amount = isDataEncrypted
+			? tx.amount
+			: await encrypt(String(tx.amount), c.env);
+
+		await db
+			.prepare(
+				`INSERT INTO transactions (id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.bind(
+				tx.id,
+				tx.projectId,
+				tx.date,
+				description,
+				amount,
+				tx.filePath,
+				tx.createdAt,
+				tx.updatedAt,
+				userId,
+			)
+			.run();
+	}
+
+	if (data.userProfile) {
+		await db
+			.prepare("UPDATE users SET displayName = ?, email = ? WHERE id = ?")
+			.bind(data.userProfile.displayName, data.userProfile.email, userId)
+			.run();
+	}
+
+	// Restore R2 files from the ZIP's files/ directory
+	const fileEntries = Object.entries(entries).filter(([path]) =>
+		path.startsWith("files/"),
+	);
+	await Promise.all(
+		fileEntries.map(async ([path, bytes]) => {
+			const key = path.slice("files/".length);
+			if (!key) return;
+			const encrypted = await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
+			await c.env.FILES_BUCKET.put(key, encrypted);
+		}),
+	);
 
 	return c.json({
 		projectsCount: data.projects.length,

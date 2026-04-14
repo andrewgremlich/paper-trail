@@ -2,6 +2,7 @@ import {
 	exportAllData,
 	exportZipData,
 	importAllData,
+	importZipData,
 	validateImportData,
 } from "../db/exportImport";
 
@@ -45,7 +46,7 @@ export const handleImportData = async () => {
 	}>((resolve, reject) => {
 		const input = document.createElement("input");
 		input.type = "file";
-		input.accept = ".json";
+		input.accept = ".json,.zip";
 
 		input.onchange = async () => {
 			const file = input.files?.[0];
@@ -54,36 +55,42 @@ export const handleImportData = async () => {
 				return;
 			}
 
+			const confirmed = window.confirm(
+				"WARNING: This will replace ALL existing data with the imported data. This action cannot be undone. Continue?",
+			);
+
+			if (!confirmed) {
+				reject(new Error("Import cancelled by user"));
+				return;
+			}
+
 			try {
-				const text = await file.text();
-				const data = JSON.parse(text);
+				if (file.name.endsWith(".zip")) {
+					const zipBytes = await file.arrayBuffer();
+					const result = await importZipData(zipBytes);
+					resolve(result);
+				} else {
+					const text = await file.text();
+					const data = JSON.parse(text);
 
-				if (!validateImportData(data)) {
-					reject(
-						new Error(
-							"Invalid backup file format. Please select a valid Paper Trail backup file.",
-						),
-					);
-					return;
+					if (!validateImportData(data)) {
+						reject(
+							new Error(
+								"Invalid backup file format. Please select a valid Paper Trail backup file.",
+							),
+						);
+						return;
+					}
+
+					await importAllData(data);
+
+					resolve({
+						projectsCount: data.projects.length,
+						timesheetsCount: data.timesheets.length,
+						entriesCount: data.timesheetEntries.length,
+						transactionsCount: data.transactions.length,
+					});
 				}
-
-				const confirmed = window.confirm(
-					"WARNING: This will replace ALL existing data with the imported data. This action cannot be undone. Continue?",
-				);
-
-				if (!confirmed) {
-					reject(new Error("Import cancelled by user"));
-					return;
-				}
-
-				await importAllData(data);
-
-				resolve({
-					projectsCount: data.projects.length,
-					timesheetsCount: data.timesheets.length,
-					entriesCount: data.timesheetEntries.length,
-					transactionsCount: data.transactions.length,
-				});
 			} catch (err) {
 				reject(err);
 			}
