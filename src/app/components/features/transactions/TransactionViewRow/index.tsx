@@ -4,6 +4,7 @@ import {
 	Edit,
 	FolderOpen,
 	Globe,
+	Paperclip,
 	TrashIcon,
 } from "lucide-react";
 import { useRef } from "react";
@@ -95,6 +96,45 @@ interface TransactionViewRowProps {
 	onReplaceFile: (id: number, newPath: string) => Promise<void>;
 }
 
+const NoFileCell = ({
+	txId,
+	onReplaceFile,
+}: {
+	txId: number;
+	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+}) => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		const newPath = await saveAttachment(file);
+		await onReplaceFile(txId, newPath);
+	};
+
+	return (
+		<div className={styles.noFile}>
+			<Button
+				type="button"
+				size="sm"
+				variant="ghost"
+				onClick={() => fileInputRef.current?.click()}
+				aria-label="Upload file for this transaction"
+			>
+				<Paperclip size={14} aria-hidden="true" />
+				Upload
+			</Button>
+			<input
+				ref={fileInputRef}
+				type="file"
+				className={styles.hiddenInput}
+				onChange={handleFileChange}
+				aria-label="Upload file"
+			/>
+		</div>
+	);
+};
+
 export const TransactionViewRow = ({
 	tx,
 	projects,
@@ -126,7 +166,7 @@ export const TransactionViewRow = ({
 					onReplaceFile={onReplaceFile}
 				/>
 			) : (
-				<span className={styles.noFile}>No File</span>
+				<NoFileCell txId={tx.id} onReplaceFile={onReplaceFile} />
 			)}
 		</TD>
 		<TD>
