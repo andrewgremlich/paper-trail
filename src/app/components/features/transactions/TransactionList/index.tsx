@@ -3,6 +3,7 @@ import type { Project, Transaction } from "@/lib/db";
 import { TransactionEditRow } from "../TransactionEditRow";
 import { TransactionTotalRow } from "../TransactionTotalRow";
 import { TransactionViewRow } from "../TransactionViewRow";
+import styles from "./styles.module.css";
 
 interface TransactionListProps {
 	transactions: Transaction[];
@@ -30,7 +31,7 @@ export const TransactionList = ({
 	}
 
 	return (
-		<Table>
+		<Table wrapperClassName={styles.tableWrapper}>
 			<THead>
 				<TR>
 					<TH>Date</TH>

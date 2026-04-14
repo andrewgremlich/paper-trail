@@ -1,1 +1,6 @@
-/* TransactionList styles - currently using Table component for layout */
+.tableWrapper {
+	width: 100%;
+	min-width: 400px;
+	max-width: 1200px;
+	overflow-x: auto;
+}
