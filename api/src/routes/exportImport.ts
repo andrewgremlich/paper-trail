@@ -493,20 +493,39 @@ app.post("/zip", async (c) => {
 			.run();
 	}
 
-	// Restore R2 files from the ZIP's files/ directory
+	// Restore R2 files from the ZIP's files/ directory, assigning fresh UUIDs
 	const fileEntries = Object.entries(entries).filter(([path]) =>
 		path.startsWith("files/"),
 	);
+
+	// Build old key → new UUID remap before inserting transactions
+	const fileKeyRemap = new Map<string, string>();
+	for (const [path] of fileEntries) {
+		const oldKey = path.slice("files/".length);
+		if (!oldKey) continue;
+		fileKeyRemap.set(oldKey, crypto.randomUUID());
+	}
+
+	// Update filePaths in already-inserted transactions to use new UUIDs
+	for (const [oldKey, newKey] of fileKeyRemap) {
+		await db
+			.prepare("UPDATE transactions SET filePath = ? WHERE filePath = ? AND userId = ?")
+			.bind(newKey, oldKey, userId)
+			.run();
+	}
+
 	await Promise.all(
 		fileEntries.map(async ([path, bytes]) => {
-			const key = path.slice("files/".length);
-			if (!key) return;
+			const oldKey = path.slice("files/".length);
+			if (!oldKey) return;
+			const newKey = fileKeyRemap.get(oldKey);
+			if (!newKey) return;
 			// Encrypted backups store files already encrypted — upload as-is.
 			// Plaintext backups store raw file bytes — encrypt before storing.
 			const toStore = isDataEncrypted
 				? bytes.buffer as ArrayBuffer
 				: await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
-			await c.env.FILES_BUCKET.put(key, toStore);
+			await c.env.FILES_BUCKET.put(newKey, toStore);
 		}),
 	);
 
