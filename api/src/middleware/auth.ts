@@ -37,31 +37,23 @@ export async function cfAccessAuth(
 
 	const db = getDb(env);
 
-	// Find existing user by email
-	const existing = await db
-		.prepare("SELECT id, email FROM users WHERE email = ?")
-		.bind(email)
-		.first();
-
-	if (existing) {
-		c.set("userId", existing.id as number);
-		c.set("userEmail", email);
-		return next();
-	}
-
-	// Create new user from Cloudflare Access identity
-	const uuid = crypto.randomUUID();
+	// INSERT OR IGNORE is atomic — concurrent requests won't race-insert duplicates.
+	// If the row already exists the insert is silently skipped; we always SELECT after.
 	await db
-		.prepare("INSERT INTO users (uuid, email) VALUES (?, ?)")
-		.bind(uuid, email)
+		.prepare("INSERT OR IGNORE INTO users (uuid, email) VALUES (?, ?)")
+		.bind(crypto.randomUUID(), email)
 		.run();
 
-	const created = await db
+	const user = await db
 		.prepare("SELECT id FROM users WHERE email = ?")
 		.bind(email)
-		.first();
+		.first<{ id: number }>();
 
-	c.set("userId", created!.id as number);
+	if (!user) {
+		return c.json({ error: "Failed to resolve user identity" }, 500);
+	}
+
+	c.set("userId", user.id);
 	c.set("userEmail", email);
 	return next();
 }
