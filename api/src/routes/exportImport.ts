@@ -1,5 +1,6 @@
+import { zipSync } from "fflate";
 import { Hono } from "hono";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import { decrypt, decryptBuffer, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -355,6 +356,128 @@ app.get("/transactions", async (c) => {
 		headers: {
 			"Content-Type": "text/csv",
 			"Content-Disposition": `attachment; filename="transactions-${projectName}-${new Date().toISOString().split("T")[0]}.csv"`,
+		},
+	});
+});
+
+// GET /api/export/zip - export all data + R2 files as a ZIP archive
+app.get("/zip", async (c) => {
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const [projects, timesheets, timesheetEntries, transactions, userProfile] =
+		await Promise.all([
+			db
+				.prepare(
+					`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
+					FROM projects WHERE userId = ? ORDER BY id ASC`,
+				)
+				.bind(userId)
+				.all(),
+			db
+				.prepare(
+					`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
+					FROM timesheets WHERE userId = ? ORDER BY id ASC`,
+				)
+				.bind(userId)
+				.all(),
+			db
+				.prepare(
+					`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
+					FROM timesheet_entries WHERE userId = ? ORDER BY id ASC`,
+				)
+				.bind(userId)
+				.all(),
+			db
+				.prepare(
+					`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+					FROM transactions WHERE userId = ? ORDER BY id ASC`,
+				)
+				.bind(userId)
+				.all(),
+			db
+				.prepare(
+					"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?",
+				)
+				.bind(userId)
+				.first(),
+		]);
+
+	let transactionResults = transactions.results as Record<string, unknown>[];
+	let projectResults = projects.results as Record<string, unknown>[];
+	let timesheetResults = timesheets.results as Record<string, unknown>[];
+	let entryResults = timesheetEntries.results as Record<string, unknown>[];
+
+	if (isEncryptionEnabled(c.env)) {
+		transactionResults = await Promise.all(
+			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
+		);
+		projectResults = await Promise.all(
+			projectResults.map(async (r) => ({
+				...r,
+				customerId: await decrypt(r.customerId as string, c.env),
+				description: await decrypt((r.description as string) ?? "", c.env),
+				rate_in_cents: Number(await decrypt(r.rate_in_cents as string, c.env)),
+			})),
+		);
+		timesheetResults = await Promise.all(
+			timesheetResults.map(async (r) => ({
+				...r,
+				description: r.description
+					? await decrypt(r.description as string, c.env)
+					: r.description,
+				invoiceId: r.invoiceId
+					? await decrypt(r.invoiceId as string, c.env)
+					: r.invoiceId,
+			})),
+		);
+		entryResults = await Promise.all(
+			entryResults.map(async (r) => ({
+				...r,
+				description: await decrypt(r.description as string, c.env),
+				amount: Number(await decrypt(r.amount as string, c.env)),
+			})),
+		);
+	}
+
+	const data: ExportData = {
+		version: "1.0.0",
+		exportDate: new Date().toISOString(),
+		encrypted: false,
+		projects: projectResults as unknown as ExportData["projects"],
+		timesheets: timesheetResults as unknown as ExportData["timesheets"],
+		timesheetEntries: entryResults as unknown as ExportData["timesheetEntries"],
+		transactions: transactionResults as unknown as ExportData["transactions"],
+		userProfile: userProfile as unknown as ExportData["userProfile"],
+	};
+
+	const zipEntries: Record<string, Uint8Array> = {
+		"data.json": new TextEncoder().encode(JSON.stringify(data, null, 2)),
+	};
+
+	// Fetch and include all R2 files referenced by transactions
+	const filePaths = transactionResults
+		.map((tx) => tx.filePath as string | null | undefined)
+		.filter((p): p is string => !!p && !/^https?:\/\//i.test(p));
+
+	await Promise.all(
+		filePaths.map(async (key) => {
+			const object = await c.env.FILES_BUCKET.get(key);
+			if (!object) return;
+
+			const encryptedBytes = await object.arrayBuffer();
+			const decrypted = await decryptBuffer(encryptedBytes, c.env);
+			zipEntries[`files/${key}`] = new Uint8Array(decrypted);
+		}),
+	);
+
+	const zipped = zipSync(zipEntries, { level: 6 });
+
+	const dateStr = new Date().toISOString().split("T")[0];
+	return new Response(zipped, {
+		headers: {
+			"Content-Type": "application/zip",
+			"Content-Disposition": `attachment; filename="paper-trail-backup-${dateStr}.zip"`,
 		},
 	});
 });

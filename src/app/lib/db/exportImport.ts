@@ -7,6 +7,16 @@ export const exportAllData = async (encrypted = false): Promise<ExportData> => {
 	);
 };
 
+export const exportZipData = async (): Promise<ArrayBuffer> => {
+	const response = await fetch("/api/v1/export/zip", {
+		credentials: "include",
+	});
+	if (!response.ok) {
+		throw new Error(`Export failed: ${response.statusText}`);
+	}
+	return response.arrayBuffer();
+};
+
 export const importAllData = async (data: ExportData): Promise<void> => {
 	await api.post("/import/data", data);
 };

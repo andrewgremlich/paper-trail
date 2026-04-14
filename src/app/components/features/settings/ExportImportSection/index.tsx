@@ -27,8 +27,8 @@ export const ExportImportSection = () => {
 		<div className={styles.container}>
 			<H3>Backup & Restore</H3>
 			<P>
-				Export all your data to a JSON file for backup, or import a previously
-				exported backup file.
+				Export all your data for backup, or import a previously exported backup
+				file.
 			</P>
 
 			<Flex gap="1rem" className={styles.encryptToggle}>
@@ -55,8 +55,8 @@ export const ExportImportSection = () => {
 
 			<P className={styles.encryptHint}>
 				{encrypted
-					? "Sensitive fields will remain encrypted. Can only be restored with the same encryption key."
-					: "All data will be exported in plaintext. Portable across instances."}
+					? "Sensitive fields will remain encrypted. Can only be restored with the same encryption key. Exported as JSON."
+					: "All data exported in plaintext as a ZIP archive, including uploaded files."}
 			</P>
 
 			<Flex gap="1rem" className={styles.buttonGroup}>
