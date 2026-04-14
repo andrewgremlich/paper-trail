@@ -25,11 +25,11 @@ npx vitest run src/app/lib/utils.test.ts
 # Deploy (builds frontend + deploys worker with static assets)
 pnpm run deploy
 
-# Seed D1 database (local)
-pnpm run seed
+# Apply D1 migrations (local)
+pnpm run migrate
 
-# Seed D1 database (remote)
-pnpm run seed:remote
+# Apply D1 migrations (remote)
+pnpm run migrate:remote
 ```
 
 ### Local Development Notes
@@ -56,7 +56,7 @@ pnpm run seed:remote
 - **Cloudflare R2** for file storage (transaction attachments)
 - **Cloudflare Access** (GitHub OAuth) for authentication
 - **Stripe** API keys stored via Wrangler secrets
-- Database schema in `api/db/seed.sql`
+- Database migrations in `api/db/migrations/`
 
 ### Key Data Flow
 1. Frontend calls API endpoints via `src/app/lib/db/client.ts` (thin fetch wrapper)
@@ -76,7 +76,7 @@ pnpm run seed:remote
 - `api/src/lib/types.ts` - Backend type definitions (Env, entity types)
 - `api/src/middleware/auth.ts` - Cloudflare Access auth middleware
 - `api/src/routes/` - All API route handlers
-- `api/db/seed.sql` - Database schema (tables, indexes, triggers)
+- `api/db/migrations/` - Database migrations (tables, indexes, triggers)
 - `wrangler.jsonc` - Cloudflare Workers configuration (D1, R2 bindings, static assets)
 - `src/app/index.tsx` - Main app router and page layout
 
@@ -148,7 +148,7 @@ The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:
 ### Setup
 1. Create the database: `wrangler d1 create paper-trail-db`
 2. Paste the `database_id` into `wrangler.jsonc`
-3. Seed the schema: `pnpm run seed` (local) or `pnpm run seed:remote` (remote)
+3. Apply migrations: `pnpm run migrate` (local) or `pnpm run migrate:remote` (remote)
 
 ### D1 API Pattern
 ```typescript
@@ -166,7 +166,7 @@ const lastId = result.meta.last_row_id;
 ### Local Development
 - `pnpm run dev` (via `@cloudflare/vite-plugin`) automatically provisions a local D1 instance
 - Local data persists in `.wrangler/state/`
-- Use `pnpm run seed` to apply the schema to the local database (schema only — no seed data rows)
+- Use `pnpm run migrate` to apply pending migrations to the local database
 
 ## Security Considerations
 
@@ -250,13 +250,14 @@ Project-level Claude Code configuration lives in `.claude/`:
 3. Add `index.tsx`, `styles.module.css`, and optional `ComponentName.test.tsx`
 
 ### Adding a Database Table
-1. Add table definition to `api/db/seed.sql` (include `userId` column for multi-user isolation)
-2. Create TypeScript types in `api/src/lib/types.ts`
-3. Create route handler in `api/src/routes/[table-name].ts`
-4. Mount route in `api/src/index.ts`
-5. Add frontend API functions in `src/app/lib/db/[table-name].ts`
-6. Set up React Query hooks in components
-7. Run migration: `wrangler d1 execute paper-trail-db --file=db/seed.sql`
+1. Create a new migration: `wrangler d1 migrations create paper-trail-db "description_of_change"`
+2. Add the table/column SQL to the generated file in `api/db/migrations/`  (include `userId` column for multi-user isolation)
+3. Create TypeScript types in `api/src/lib/types.ts`
+4. Create route handler in `api/src/routes/[table-name].ts`
+5. Mount route in `api/src/index.ts`
+6. Add frontend API functions in `src/app/lib/db/[table-name].ts`
+7. Set up React Query hooks in components
+8. Apply migration: `pnpm run migrate` (local) or `pnpm run migrate:remote` (remote)
 
 ### Adding a Stripe Feature
 1. Update `api/src/routes/stripe.ts` with new Stripe SDK calls

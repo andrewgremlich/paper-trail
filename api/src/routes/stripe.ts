@@ -8,12 +8,27 @@ import type { AuthVariables } from "../middleware/auth";
 const CURRENCY = "usd";
 const DAYS_UNTIL_DUE = 30;
 
-interface StripeEnv extends Env {
-	STRIPE_SECRET_KEY: string;
+class StripeNotConnectedError extends Error {
+	constructor() {
+		super("Stripe account not connected");
+		this.name = "StripeNotConnectedError";
+	}
 }
 
-function getStripeClient(env: StripeEnv): Stripe {
-	return new Stripe(env.STRIPE_SECRET_KEY);
+async function getStripeClient(
+	env: Env,
+	db: D1Database,
+	userId: number,
+): Promise<Stripe> {
+	const row = await db
+		.prepare("SELECT accessToken FROM stripe_connections WHERE userId = ?")
+		.bind(userId)
+		.first<{ accessToken: string }>();
+
+	if (!row) throw new StripeNotConnectedError();
+
+	const accessToken = await decrypt(row.accessToken, env);
+	return new Stripe(accessToken, { telemetry: false });
 }
 
 function formatUsd(cents: number): string {
@@ -57,11 +72,27 @@ function toInvoiceListItem(inv: Stripe.Invoice) {
 	};
 }
 
-const app = new Hono<{ Bindings: StripeEnv; Variables: AuthVariables }>();
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // GET /api/stripe/customers?max=N
 app.get("/customers", async (c) => {
-	const stripe = getStripeClient(c.env);
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
+
 	const max = Number(c.req.query("max") ?? 100);
 
 	if (max <= 0) return c.json([]);
@@ -81,7 +112,23 @@ app.get("/customers", async (c) => {
 
 // GET /api/stripe/invoices?max=N&year=YYYY&customerId=X
 app.get("/invoices", async (c) => {
-	const stripe = getStripeClient(c.env);
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
+
 	const max = Number(c.req.query("max") ?? 100);
 	const year = c.req.query("year") ? Number(c.req.query("year")) : undefined;
 	const customerId = c.req.query("customerId") || undefined;
@@ -105,7 +152,23 @@ app.get("/invoices", async (c) => {
 
 // GET /api/stripe/invoices/:id
 app.get("/invoices/:id", async (c) => {
-	const stripe = getStripeClient(c.env);
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
+
 	const invoiceId = c.req.param("id");
 	const invoice = await stripe.invoices.retrieve(invoiceId);
 	return c.json({
@@ -123,9 +186,22 @@ app.post("/invoices", async (c) => {
 		description?: string;
 	}>();
 
-	const stripe = getStripeClient(c.env);
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
 
 	// One-off invoice (no timesheet)
 	if (!body.timesheetId) {
@@ -245,9 +321,23 @@ app.post("/invoices", async (c) => {
 
 // POST /api/stripe/invoices/:id/pay
 app.post("/invoices/:id/pay", async (c) => {
-	const stripe = getStripeClient(c.env);
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
+
 	const invoiceId = c.req.param("id");
 
 	const invoice = await stripe.invoices.pay(invoiceId, {
@@ -311,10 +401,168 @@ app.post("/invoices/:id/pay", async (c) => {
 
 // POST /api/stripe/invoices/:id/void
 app.post("/invoices/:id/void", async (c) => {
-	const stripe = getStripeClient(c.env);
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	let stripe: Stripe;
+	try {
+		stripe = await getStripeClient(c.env, db, userId);
+	} catch (err) {
+		if (err instanceof StripeNotConnectedError) {
+			return c.json(
+				{
+					error: "Stripe account not connected. Connect your Stripe account in Settings.",
+				},
+				402,
+			);
+		}
+		throw err;
+	}
+
 	const invoiceId = c.req.param("id");
 	const invoice = await stripe.invoices.voidInvoice(invoiceId);
 	return c.json({ invoice: toMinimalInvoice(invoice) });
+});
+
+// =====================
+// Stripe Connect OAuth routes
+// =====================
+
+// GET /api/stripe/connect/authorize — redirect to Stripe OAuth
+app.get("/connect/authorize", (c) => {
+	const params = new URLSearchParams({
+		response_type: "code",
+		client_id: c.env.STRIPE_CLIENT_ID,
+		scope: "read_write",
+		redirect_uri: c.env.STRIPE_CONNECT_REDIRECT_URI,
+	});
+	return c.redirect(
+		`https://connect.stripe.com/oauth/authorize?${params.toString()}`,
+	);
+});
+
+// GET /api/stripe/connect/callback — exchange code for tokens and store
+app.get("/connect/callback", async (c) => {
+	const code = c.req.query("code");
+	const error = c.req.query("error");
+
+	if (error || !code) {
+		return c.redirect(
+			`/?connect_error=${encodeURIComponent(error ?? "missing_code")}`,
+		);
+	}
+
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const tokenResponse = await fetch(
+		"https://connect.stripe.com/oauth/token",
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({
+				client_secret: c.env.STRIPE_CLIENT_SECRET,
+				code,
+				grant_type: "authorization_code",
+			}),
+		},
+	);
+
+	if (!tokenResponse.ok) {
+		const body = await tokenResponse.text();
+		console.error("Stripe OAuth token exchange error:", body);
+		return c.redirect("/?connect_error=token_exchange_failed");
+	}
+
+	const tokenData = await tokenResponse.json<{
+		access_token: string;
+		refresh_token: string | null;
+		stripe_user_id: string;
+		stripe_publishable_key: string;
+		scope: string;
+		error?: string;
+		error_description?: string;
+	}>();
+
+	if (tokenData.error) {
+		return c.redirect(
+			`/?connect_error=${encodeURIComponent(tokenData.error_description ?? tokenData.error)}`,
+		);
+	}
+
+	const encAccessToken = await encrypt(tokenData.access_token, c.env);
+	const encRefreshToken = tokenData.refresh_token
+		? await encrypt(tokenData.refresh_token, c.env)
+		: null;
+
+	await db
+		.prepare(
+			`INSERT INTO stripe_connections
+				(userId, accessToken, refreshToken, stripeUserId, stripePublishableKey, scope, connectedAt)
+			VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+			ON CONFLICT(userId) DO UPDATE SET
+				accessToken = excluded.accessToken,
+				refreshToken = excluded.refreshToken,
+				stripeUserId = excluded.stripeUserId,
+				stripePublishableKey = excluded.stripePublishableKey,
+				scope = excluded.scope,
+				connectedAt = datetime('now'),
+				updatedAt = datetime('now')`,
+		)
+		.bind(
+			userId,
+			encAccessToken,
+			encRefreshToken,
+			tokenData.stripe_user_id,
+			tokenData.stripe_publishable_key,
+			tokenData.scope,
+		)
+		.run();
+
+	return c.redirect("/?connect_success=1");
+});
+
+// POST /api/stripe/connect/disconnect — remove stored connection
+app.post("/connect/disconnect", async (c) => {
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	await db
+		.prepare("DELETE FROM stripe_connections WHERE userId = ?")
+		.bind(userId)
+		.run();
+
+	return c.json({ disconnected: true });
+});
+
+// GET /api/stripe/connect/status — return connection state (no token exposed)
+app.get("/connect/status", async (c) => {
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const row = await db
+		.prepare(
+			`SELECT stripeUserId, stripePublishableKey, scope, connectedAt
+			FROM stripe_connections WHERE userId = ?`,
+		)
+		.bind(userId)
+		.first<{
+			stripeUserId: string;
+			stripePublishableKey: string | null;
+			scope: string | null;
+			connectedAt: string;
+		}>();
+
+	if (!row) {
+		return c.json({ connected: false });
+	}
+
+	return c.json({
+		connected: true,
+		stripeUserId: row.stripeUserId,
+		stripePublishableKey: row.stripePublishableKey,
+		scope: row.scope,
+		connectedAt: row.connectedAt,
+	});
 });
 
 export { app as stripeRoutes };

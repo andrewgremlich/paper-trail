@@ -98,3 +98,25 @@ export async function getAllInvoices(
 	const qs = params.toString();
 	return api.get(`/stripe/invoices${qs ? `?${qs}` : ""}`);
 }
+
+export type StripeConnectStatusResult =
+	| { connected: false }
+	| {
+			connected: true;
+			stripeUserId: string;
+			stripePublishableKey: string | null;
+			scope: string | null;
+			connectedAt: string;
+	  };
+
+export async function getStripeConnectStatus(): Promise<StripeConnectStatusResult> {
+	return api.get<StripeConnectStatusResult>("/stripe/connect/status");
+}
+
+export async function disconnectStripe(): Promise<{ disconnected: boolean }> {
+	return api.post<{ disconnected: boolean }>("/stripe/connect/disconnect");
+}
+
+export function getStripeConnectAuthorizeUrl(): string {
+	return "/api/v1/stripe/connect/authorize";
+}

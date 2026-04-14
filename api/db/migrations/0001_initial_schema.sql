@@ -141,3 +141,28 @@ FOR EACH ROW
 BEGIN
   UPDATE users SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;
+
+-- =====================
+-- Stripe Connect Connections
+-- =====================
+CREATE TABLE IF NOT EXISTS stripe_connections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  accessToken TEXT NOT NULL,
+  refreshToken TEXT,
+  stripeUserId TEXT NOT NULL,
+  stripePublishableKey TEXT,
+  scope TEXT,
+  connectedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_stripe_connections_userId ON stripe_connections(userId);
+
+CREATE TRIGGER IF NOT EXISTS trg_stripe_connections_set_updatedAt
+AFTER UPDATE ON stripe_connections
+FOR EACH ROW
+BEGIN
+  UPDATE stripe_connections SET updatedAt = datetime('now') WHERE id = OLD.id;
+END;

@@ -4,9 +4,25 @@ export interface Env {
 	CF_ACCESS_BYPASS?: string;
 	CF_ACCESS_DEV_EMAIL?: string;
 	ENCRYPTION_KEY: string;
+	STRIPE_CLIENT_ID: string;
+	STRIPE_CLIENT_SECRET: string;
+	STRIPE_CONNECT_REDIRECT_URI: string;
 }
 
 export type Nullable<T> = T | null | undefined;
+
+export type StripeConnection = {
+	id: number;
+	userId: number;
+	accessToken: string;
+	refreshToken: string | null;
+	stripeUserId: string;
+	stripePublishableKey: string | null;
+	scope: string | null;
+	connectedAt: string;
+	createdAt: string;
+	updatedAt: string;
+};
 
 export type Project = {
 	id: number;

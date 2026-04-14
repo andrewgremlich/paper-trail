@@ -20,7 +20,8 @@
     {
       "binding": "DB",
       "database_name": "paper-trail-db",
-      "database_id": "1efbb61f-4ec1-46d9-a99b-31bf65d67a29"
+      "database_id": "1efbb61f-4ec1-46d9-a99b-31bf65d67a29",
+      "migrations_dir": "api/db/migrations"
     }
   ],
   "r2_buckets": [
@@ -29,6 +30,10 @@
       "bucket_name": "paper-trail-files"
     }
   ],
+  "vars": {
+    "STRIPE_CLIENT_ID": "ca_REPLACE_WITH_YOUR_CLIENT_ID",
+    "STRIPE_CONNECT_REDIRECT_URI": "https://paper-trail.andrew-4ae.workers.dev/api/v1/stripe/connect/callback"
+  },
   // Dev environment (used by `wrangler dev --env dev`)
   "env": {
     "dev": {
@@ -36,7 +41,8 @@
         {
           "binding": "DB",
           "database_name": "paper-trail-db",
-          "database_id": "local"
+          "database_id": "local",
+          "migrations_dir": "api/db/migrations"
         }
       ],
       "r2_buckets": [
@@ -44,7 +50,11 @@
           "binding": "FILES_BUCKET",
           "bucket_name": "paper-trail-files"
         }
-      ]
+      ],
+      "vars": {
+        "STRIPE_CLIENT_ID": "ca_REPLACE_WITH_YOUR_CLIENT_ID",
+        "STRIPE_CONNECT_REDIRECT_URI": "http://localhost:5173/api/v1/stripe/connect/callback"
+      }
     }
   }
 }
