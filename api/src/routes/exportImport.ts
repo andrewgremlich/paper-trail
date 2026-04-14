@@ -501,8 +501,12 @@ app.post("/zip", async (c) => {
 		fileEntries.map(async ([path, bytes]) => {
 			const key = path.slice("files/".length);
 			if (!key) return;
-			const encrypted = await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
-			await c.env.FILES_BUCKET.put(key, encrypted);
+			// Encrypted backups store files already encrypted — upload as-is.
+			// Plaintext backups store raw file bytes — encrypt before storing.
+			const toStore = isDataEncrypted
+				? bytes.buffer as ArrayBuffer
+				: await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
+			await c.env.FILES_BUCKET.put(key, toStore);
 		}),
 	);
 
