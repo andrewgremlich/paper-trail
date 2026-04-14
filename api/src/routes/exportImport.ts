@@ -7,6 +7,34 @@ import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
+function contentTypeToExtension(contentType: string): string {
+	const type = contentType.split(";")[0].trim().toLowerCase();
+	const map: Record<string, string> = {
+		"image/jpeg": ".jpg",
+		"image/jpg": ".jpg",
+		"image/png": ".png",
+		"image/gif": ".gif",
+		"image/webp": ".webp",
+		"image/svg+xml": ".svg",
+		"application/pdf": ".pdf",
+		"text/plain": ".txt",
+		"text/csv": ".csv",
+		"application/msword": ".doc",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+		"application/vnd.ms-excel": ".xls",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+	};
+	return map[type] ?? "";
+}
+
+function sanitizeFilename(name: string): string {
+	return name
+		.replace(/[^a-zA-Z0-9_\-. ]/g, "")
+		.trim()
+		.replace(/\s+/g, "_")
+		.slice(0, 64) || "file";
+}
+
 async function decryptTransactionRow(
 	row: Record<string, unknown>,
 	env: Env,
@@ -642,14 +670,26 @@ app.get("/zip", async (c) => {
 		userProfile: userProfile as unknown as ExportData["userProfile"],
 	};
 
-	const zipEntries: Record<string, Uint8Array> = {
-		"data.json": new TextEncoder().encode(JSON.stringify(data, null, 2)),
-	};
+	// Build lookup: filePath (UUID) → { description, date } for naming exported files
+	const txByFilePath = new Map<string, { description: string; date: string }>();
+	for (const tx of transactionResults) {
+		if (tx.filePath && typeof tx.filePath === "string") {
+			txByFilePath.set(tx.filePath, {
+				description: (tx.description as string) ?? "",
+				date: (tx.date as string) ?? "",
+			});
+		}
+	}
+
+	const zipEntries: Record<string, Uint8Array> = {};
 
 	// Fetch and include all R2 files referenced by transactions
 	const filePaths = transactionResults
 		.map((tx) => tx.filePath as string | null | undefined)
 		.filter((p): p is string => !!p && !/^https?:\/\//i.test(p));
+
+	// Map old UUID key → new descriptive zip entry name (so data.json filePaths stay in sync)
+	const fileKeyRemap = new Map<string, string>();
 
 	await Promise.all(
 		filePaths.map(async (key) => {
@@ -658,9 +698,28 @@ app.get("/zip", async (c) => {
 
 			const encryptedBytes = await object.arrayBuffer();
 			const decrypted = await decryptBuffer(encryptedBytes, c.env);
-			zipEntries[`files/${key}`] = new Uint8Array(decrypted);
+
+			const contentType = object.httpMetadata?.contentType ?? "";
+			const ext = contentTypeToExtension(contentType);
+			const txMeta = txByFilePath.get(key);
+			const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
+			const date = txMeta?.date ?? "";
+			const newKey = `${sanitizedDesc}_${date}_${key}${ext}`;
+
+			fileKeyRemap.set(key, newKey);
+			zipEntries[`files/${newKey}`] = new Uint8Array(decrypted);
 		}),
 	);
+
+	// Update filePaths in the exported transactions to match the new zip entry names
+	data.transactions = data.transactions.map((tx) => {
+		if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
+			return { ...tx, filePath: fileKeyRemap.get(tx.filePath) as string };
+		}
+		return tx;
+	});
+
+	zipEntries["data.json"] = new TextEncoder().encode(JSON.stringify(data, null, 2));
 
 	const zipped = zipSync(zipEntries, { level: 6 });
 
