@@ -1,0 +1,35 @@
+.container {
+	border-top: 1px solid var(--destructive);
+	padding-top: 1rem;
+}
+
+.confirmLabel {
+	display: block;
+	font-size: 0.875rem;
+	margin-bottom: 0.5rem;
+}
+
+.hint {
+	font-size: 0.8rem;
+	color: var(--muted-foreground);
+	margin-top: 0.375rem;
+	margin-bottom: 0.75rem;
+}
+
+.successMessage {
+	margin-top: 0.75rem;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	background-color: var(--success-background);
+	color: var(--success-background-foreground);
+}
+
+.errorMessage {
+	margin-top: 0.75rem;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	background-color: var(--error-background);
+	color: var(--error-background-foreground);
+}

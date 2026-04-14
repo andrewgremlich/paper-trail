@@ -14,3 +14,7 @@ export const updateUserProfile = async (
 		return null;
 	}
 };
+
+export const deleteAllUserData = async (): Promise<void> => {
+	await api.delete("/user-profile");
+};

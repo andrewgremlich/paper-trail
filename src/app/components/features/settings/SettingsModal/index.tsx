@@ -2,6 +2,7 @@ import { useId } from "react";
 import { ModalHeader } from "@/components/shared/ModalHeader";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
+import { DeleteDataSection } from "../DeleteDataSection";
 import { ExportImportSection } from "../ExportImportSection";
 import { StripeSecretSection } from "../StripeSecretSection";
 import { ThemeSection } from "../ThemeSection";
@@ -27,6 +28,7 @@ export const SettingsModal = () => {
 			<ThemeSection />
 			<StripeSecretSection />
 			<ExportImportSection />
+			<DeleteDataSection />
 		</Dialog>
 	);
 };
