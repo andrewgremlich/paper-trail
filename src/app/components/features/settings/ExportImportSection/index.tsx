@@ -55,7 +55,7 @@ export const ExportImportSection = () => {
 
 			<P className={styles.encryptHint}>
 				{encrypted
-					? "Sensitive fields will remain encrypted. Can only be restored with the same encryption key. Exported as JSON."
+					? "Sensitive fields will remain encrypted. Can only be restored with the same encryption key. Exported as an encrypted ZIP, including uploaded files."
 					: "All data exported in plaintext as a ZIP archive, including uploaded files."}
 			</P>
 

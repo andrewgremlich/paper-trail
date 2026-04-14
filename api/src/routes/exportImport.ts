@@ -580,9 +580,11 @@ app.get("/transactions", async (c) => {
 });
 
 // GET /api/export/zip - export all data + R2 files as a ZIP archive
+// ?encrypted=true keeps DB fields and file bytes in their encrypted form
 app.get("/zip", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [projects, timesheets, timesheetEntries, transactions, userProfile] =
 		await Promise.all([
@@ -627,7 +629,7 @@ app.get("/zip", async (c) => {
 	let timesheetResults = timesheets.results as Record<string, unknown>[];
 	let entryResults = timesheetEntries.results as Record<string, unknown>[];
 
-	if (isEncryptionEnabled(c.env)) {
+	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
 			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
 		);
@@ -662,24 +664,13 @@ app.get("/zip", async (c) => {
 	const data: ExportData = {
 		version: "1.0.0",
 		exportDate: new Date().toISOString(),
-		encrypted: false,
+		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
 		projects: projectResults as unknown as ExportData["projects"],
 		timesheets: timesheetResults as unknown as ExportData["timesheets"],
 		timesheetEntries: entryResults as unknown as ExportData["timesheetEntries"],
 		transactions: transactionResults as unknown as ExportData["transactions"],
 		userProfile: userProfile as unknown as ExportData["userProfile"],
 	};
-
-	// Build lookup: filePath (UUID) → { description, date } for naming exported files
-	const txByFilePath = new Map<string, { description: string; date: string }>();
-	for (const tx of transactionResults) {
-		if (tx.filePath && typeof tx.filePath === "string") {
-			txByFilePath.set(tx.filePath, {
-				description: (tx.description as string) ?? "",
-				date: (tx.date as string) ?? "",
-			});
-		}
-	}
 
 	const zipEntries: Record<string, Uint8Array> = {};
 
@@ -688,46 +679,69 @@ app.get("/zip", async (c) => {
 		.map((tx) => tx.filePath as string | null | undefined)
 		.filter((p): p is string => !!p && !/^https?:\/\//i.test(p));
 
-	// Map old UUID key → new descriptive zip entry name (so data.json filePaths stay in sync)
-	const fileKeyRemap = new Map<string, string>();
-
-	await Promise.all(
-		filePaths.map(async (key) => {
-			const object = await c.env.FILES_BUCKET.get(key);
-			if (!object) return;
-
-			const encryptedBytes = await object.arrayBuffer();
-			const decrypted = await decryptBuffer(encryptedBytes, c.env);
-
-			const contentType = object.httpMetadata?.contentType ?? "";
-			const ext = contentTypeToExtension(contentType);
-			const txMeta = txByFilePath.get(key);
-			const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
-			const date = txMeta?.date ?? "";
-			const newKey = `${sanitizedDesc}_${date}_${key}${ext}`;
-
-			fileKeyRemap.set(key, newKey);
-			zipEntries[`files/${newKey}`] = new Uint8Array(decrypted);
-		}),
-	);
-
-	// Update filePaths in the exported transactions to match the new zip entry names
-	data.transactions = data.transactions.map((tx) => {
-		if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
-			return { ...tx, filePath: fileKeyRemap.get(tx.filePath) as string };
+	if (wantEncrypted) {
+		// Encrypted export: store R2 file bytes as-is (already encrypted), use UUID keys
+		await Promise.all(
+			filePaths.map(async (key) => {
+				const object = await c.env.FILES_BUCKET.get(key);
+				if (!object) return;
+				const bytes = await object.arrayBuffer();
+				zipEntries[`files/${key}`] = new Uint8Array(bytes);
+			}),
+		);
+	} else {
+		// Plaintext export: decrypt files and use descriptive names
+		const txByFilePath = new Map<string, { description: string; date: string }>();
+		for (const tx of transactionResults) {
+			if (tx.filePath && typeof tx.filePath === "string") {
+				txByFilePath.set(tx.filePath, {
+					description: (tx.description as string) ?? "",
+					date: (tx.date as string) ?? "",
+				});
+			}
 		}
-		return tx;
-	});
+
+		const fileKeyRemap = new Map<string, string>();
+
+		await Promise.all(
+			filePaths.map(async (key) => {
+				const object = await c.env.FILES_BUCKET.get(key);
+				if (!object) return;
+
+				const encryptedBytes = await object.arrayBuffer();
+				const decrypted = await decryptBuffer(encryptedBytes, c.env);
+
+				const contentType = object.httpMetadata?.contentType ?? "";
+				const ext = contentTypeToExtension(contentType);
+				const txMeta = txByFilePath.get(key);
+				const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
+				const date = txMeta?.date ?? "";
+				const newKey = `${sanitizedDesc}_${date}_${key}${ext}`;
+
+				fileKeyRemap.set(key, newKey);
+				zipEntries[`files/${newKey}`] = new Uint8Array(decrypted);
+			}),
+		);
+
+		// Update filePaths in the exported transactions to match the new zip entry names
+		data.transactions = data.transactions.map((tx) => {
+			if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
+				return { ...tx, filePath: fileKeyRemap.get(tx.filePath) as string };
+			}
+			return tx;
+		});
+	}
 
 	zipEntries["data.json"] = new TextEncoder().encode(JSON.stringify(data, null, 2));
 
 	const zipped = zipSync(zipEntries, { level: 6 });
 
 	const dateStr = new Date().toISOString().split("T")[0];
+	const filenameSuffix = wantEncrypted ? "encrypted" : "backup";
 	return new Response(zipped, {
 		headers: {
 			"Content-Type": "application/zip",
-			"Content-Disposition": `attachment; filename="paper-trail-backup-${dateStr}.zip"`,
+			"Content-Disposition": `attachment; filename="paper-trail-${filenameSuffix}-${dateStr}.zip"`,
 		},
 	});
 });

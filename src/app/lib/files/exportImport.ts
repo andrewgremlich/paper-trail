@@ -1,5 +1,4 @@
 import {
-	exportAllData,
 	exportZipData,
 	importAllData,
 	importZipData,
@@ -7,26 +6,11 @@ import {
 } from "../db/exportImport";
 
 export const handleExportData = async (encrypted = false) => {
-	if (encrypted) {
-		// Encrypted export stays as JSON (files not included — they're already encrypted in R2)
-		const data = await exportAllData(true);
-		const json = JSON.stringify(data, null, 2);
-		const blob = new Blob([json], { type: "application/json" });
-		const url = URL.createObjectURL(blob);
-		const fileName = `paper-trail-encrypted-${new Date().toISOString().split("T")[0]}.json`;
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = fileName;
-		a.click();
-		URL.revokeObjectURL(url);
-		return { filePath: fileName, fileName };
-	}
-
-	// Plaintext export: ZIP with data.json + all uploaded files
-	const zipBytes = await exportZipData();
+	const zipBytes = await exportZipData(encrypted);
 	const blob = new Blob([zipBytes], { type: "application/zip" });
 	const url = URL.createObjectURL(blob);
-	const fileName = `paper-trail-backup-${new Date().toISOString().split("T")[0]}.zip`;
+	const suffix = encrypted ? "encrypted" : "backup";
+	const fileName = `paper-trail-${suffix}-${new Date().toISOString().split("T")[0]}.zip`;
 
 	const a = document.createElement("a");
 	a.href = url;

@@ -7,10 +7,13 @@ export const exportAllData = async (encrypted = false): Promise<ExportData> => {
 	);
 };
 
-export const exportZipData = async (): Promise<ArrayBuffer> => {
-	const response = await fetch("/api/v1/export/zip", {
-		credentials: "include",
-	});
+export const exportZipData = async (
+	encrypted = false,
+): Promise<ArrayBuffer> => {
+	const response = await fetch(
+		`/api/v1/export/zip${encrypted ? "?encrypted=true" : ""}`,
+		{ credentials: "include" },
+	);
 	if (!response.ok) {
 		throw new Error(`Export failed: ${response.statusText}`);
 	}
