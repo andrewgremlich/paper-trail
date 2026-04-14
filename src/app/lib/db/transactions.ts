@@ -23,12 +23,14 @@ export const updateTransaction = async ({
 	date,
 	description,
 	amount,
+	filePath,
 }: UpdateTransaction): Promise<void> => {
 	await api.put(`/transactions/${id}`, {
 		projectId,
 		date,
 		description,
 		amount,
+		filePath,
 	});
 };
 

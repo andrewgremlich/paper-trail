@@ -90,6 +90,26 @@ export const Transactions = () => {
 			console.error("Failed to update transaction:", error);
 		},
 	});
+	const { mutateAsync: replaceFile } = useMutation({
+		mutationFn: async ({ id, newPath }: { id: number; newPath: string }) => {
+			const tx = transactions?.find((t) => t.id === id);
+			if (!tx) throw new Error("Transaction not found");
+			await updateTransaction({
+				id,
+				projectId: tx.projectId,
+				date: tx.date,
+				description: tx.description,
+				amount: tx.amount,
+				filePath: newPath,
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ["transactions", activeProjectId],
+			});
+		},
+		onError: (error) => {
+			console.error("Failed to replace file link:", error);
+		},
+	});
 	const { mutateAsync: removeTx } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			const id = Number(formData.get("id") || 0);
@@ -146,6 +166,7 @@ export const Transactions = () => {
 				onCancelEdit={() => setEditingId(null)}
 				onSave={saveEdit}
 				onDelete={removeTx}
+				onReplaceFile={async (id, newPath) => replaceFile({ id, newPath })}
 			/>
 		</Main>
 	);

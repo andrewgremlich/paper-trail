@@ -1,7 +1,17 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Transaction } from "@/lib/db";
 import { TransactionViewRow } from "./index";
+
+vi.mock("@/lib/files/fileStorage", () => ({
+	checkFileLink: vi.fn().mockResolvedValue(true),
+	openAttachment: vi.fn(),
+	saveAttachment: vi.fn(),
+}));
+
+const makeQueryClient = () =>
+	new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 describe("TransactionViewRow", () => {
 	const mockTransaction: Transaction = {
@@ -43,118 +53,50 @@ describe("TransactionViewRow", () => {
 
 	const mockOnEdit = vi.fn();
 	const mockOnDelete = vi.fn();
+	const mockOnReplaceFile = vi.fn();
+
+	const renderRow = (path: string, tx = mockTransaction) =>
+		renderToStaticMarkup(
+			<QueryClientProvider client={makeQueryClient()}>
+				<table>
+					<tbody>
+						<tr>
+							<TransactionViewRow
+								tx={tx}
+								projects={mockProjects}
+								path={path}
+								onEdit={mockOnEdit}
+								onDelete={mockOnDelete}
+								onReplaceFile={mockOnReplaceFile}
+							/>
+						</tr>
+					</tbody>
+				</table>
+			</QueryClientProvider>,
+		);
 
 	it("renders formatted transaction date", () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
-		expect(html).toContain("Jan 15, 2024");
+		expect(renderRow("")).toContain("Jan 15, 2024");
 	});
 
 	it("renders transaction description", () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
-		expect(html).toContain("Test transaction");
+		expect(renderRow("")).toContain("Test transaction");
 	});
 
 	it("renders project name", () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
-		expect(html).toContain("Project 1");
+		expect(renderRow("")).toContain("Project 1");
 	});
 
 	it("renders formatted amount", () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
-		expect(html).toContain("$100.50");
+		expect(renderRow("")).toContain("$100.50");
 	});
 
 	it('renders "No File" when path is empty', () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
-		expect(html).toContain("No File");
+		expect(renderRow("")).toContain("No File");
 	});
 
 	it("renders delete button with hidden input", () => {
-		const html = renderToStaticMarkup(
-			<table>
-				<tbody>
-					<tr>
-						<TransactionViewRow
-							tx={mockTransaction}
-							projects={mockProjects}
-							path=""
-							onEdit={mockOnEdit}
-							onDelete={mockOnDelete}
-						/>
-					</tr>
-				</tbody>
-			</table>,
-		);
+		const html = renderRow("");
 		expect(html).toContain('type="hidden"');
 		expect(html).toContain('value="1"');
 		expect(html).toContain('aria-label="Delete Transaction"');

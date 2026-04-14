@@ -25,6 +25,32 @@ app.post("/upload", async (c) => {
 	return c.json({ key }, 201);
 });
 
+// GET /api/files/check-link?path=:path - check if an R2 key or external URL is reachable
+app.get("/check-link", async (c) => {
+	const path = c.req.query("path");
+	if (!path) return c.json({ ok: false });
+
+	const isUrl = /^https?:\/\//i.test(path);
+
+	if (isUrl) {
+		try {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 5000);
+			const res = await fetch(path, {
+				method: "HEAD",
+				signal: controller.signal,
+			});
+			clearTimeout(timeoutId);
+			return c.json({ ok: res.ok });
+		} catch {
+			return c.json({ ok: false });
+		}
+	}
+
+	const object = await c.env.FILES_BUCKET.head(path);
+	return c.json({ ok: object !== null });
+});
+
 // GET /api/files/:key+ - download/serve file from R2
 app.get("/:key{.+}", async (c) => {
 	const key = c.req.param("key");

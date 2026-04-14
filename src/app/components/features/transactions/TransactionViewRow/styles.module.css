@@ -1,3 +1,19 @@
 .noFile {
 	color: var(--muted-foreground);
 }
+
+.deadLink {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	color: var(--destructive);
+}
+
+.deadLinkText {
+	font-size: 0.75rem;
+	white-space: nowrap;
+}
+
+.hiddenInput {
+	display: none;
+}

@@ -1,10 +1,90 @@
-import { Edit, FolderOpen, Globe, TrashIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+	AlertTriangle,
+	Edit,
+	FolderOpen,
+	Globe,
+	TrashIcon,
+} from "lucide-react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
-import { openAttachment } from "@/lib/files/fileStorage";
+import {
+	checkFileLink,
+	openAttachment,
+	saveAttachment,
+} from "@/lib/files/fileStorage";
 import { formatDate } from "@/lib/utils";
 import styles from "./styles.module.css";
+
+interface FileStatusCellProps {
+	path: string;
+	txId: number;
+	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+}
+
+const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const isUrl = /^https?:\/\//i.test(path);
+
+	const { data: isAlive } = useQuery({
+		queryKey: ["file-status", path],
+		queryFn: () => checkFileLink(path),
+		staleTime: 5 * 60 * 1000,
+		retry: false,
+	});
+
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		const newPath = await saveAttachment(file);
+		await onReplaceFile(txId, newPath);
+	};
+
+	if (isAlive === false) {
+		return (
+			<div className={styles.deadLink}>
+				<AlertTriangle size={14} aria-hidden="true" />
+				<span className={styles.deadLinkText}>Dead link</span>
+				<Button
+					type="button"
+					size="sm"
+					variant="ghost"
+					onClick={() => fileInputRef.current?.click()}
+					aria-label="Replace dead file link"
+				>
+					Replace
+				</Button>
+				<input
+					ref={fileInputRef}
+					type="file"
+					className={styles.hiddenInput}
+					onChange={handleFileChange}
+					aria-label="Upload replacement file"
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<Button
+			aria-label="Open Invoice Location"
+			type="button"
+			size="sm"
+			variant="ghost"
+			onClick={async () => {
+				await openAttachment(path);
+			}}
+		>
+			{isUrl ? (
+				<Globe size={16} aria-hidden="true" />
+			) : (
+				<FolderOpen size={16} aria-hidden="true" />
+			)}
+		</Button>
+	);
+};
 
 interface TransactionViewRowProps {
 	tx: Transaction;
@@ -12,6 +92,7 @@ interface TransactionViewRowProps {
 	path: string;
 	onEdit: () => void;
 	onDelete: (formData: FormData) => Promise<void>;
+	onReplaceFile: (id: number, newPath: string) => Promise<void>;
 }
 
 export const TransactionViewRow = ({
@@ -20,6 +101,7 @@ export const TransactionViewRow = ({
 	path,
 	onEdit,
 	onDelete,
+	onReplaceFile,
 }: TransactionViewRowProps) => (
 	<>
 		<TD>
@@ -38,21 +120,11 @@ export const TransactionViewRow = ({
 		</TD>
 		<TD>
 			{path.length > 0 ? (
-				<Button
-					aria-label="Open Invoice Location"
-					type="button"
-					size="sm"
-					variant="ghost"
-					onClick={async () => {
-						await openAttachment(path);
-					}}
-				>
-					{path.startsWith("http://") || path.startsWith("https://") ? (
-						<Globe />
-					) : (
-						<FolderOpen />
-					)}
-				</Button>
+				<FileStatusCell
+					path={path}
+					txId={tx.id}
+					onReplaceFile={onReplaceFile}
+				/>
 			) : (
 				<span className={styles.noFile}>No File</span>
 			)}

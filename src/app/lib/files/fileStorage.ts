@@ -26,3 +26,10 @@ export const openAttachment = async (relPath: string): Promise<void> => {
 export const removeAttachment = async (relPath: string): Promise<void> => {
 	await api.delete(`/api/v1/files/${relPath}`);
 };
+
+export const checkFileLink = async (path: string): Promise<boolean> => {
+	const result = await api.get<{ ok: boolean }>(
+		`/files/check-link?path=${encodeURIComponent(path)}`,
+	);
+	return result.ok;
+};

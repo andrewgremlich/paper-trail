@@ -12,6 +12,7 @@ interface TransactionListProps {
 	onCancelEdit: () => void;
 	onSave: (formData: FormData) => Promise<void>;
 	onDelete: (formData: FormData) => Promise<void>;
+	onReplaceFile: (id: number, newPath: string) => Promise<void>;
 }
 
 export const TransactionList = ({
@@ -22,6 +23,7 @@ export const TransactionList = ({
 	onCancelEdit,
 	onSave,
 	onDelete,
+	onReplaceFile,
 }: TransactionListProps) => {
 	if (!transactions || transactions.length === 0) {
 		return <p>No transactions found.</p>;
@@ -60,6 +62,7 @@ export const TransactionList = ({
 									path={path}
 									onEdit={() => onEdit(tx.id)}
 									onDelete={onDelete}
+									onReplaceFile={onReplaceFile}
 								/>
 							)}
 						</TR>

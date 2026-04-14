@@ -8,7 +8,8 @@ type ButtonVariant =
 	| "secondary"
 	| "outline"
 	| "ghost"
-	| "liquidGlass";
+	| "liquidGlass"
+	| "destructive";
 type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -43,6 +44,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			outline: styles.outline,
 			ghost: styles.ghost,
 			liquidGlass: styles.liquidGlass,
+			destructive: styles.destructive,
 		};
 
 		const sizeClassMap: Record<ButtonSize, string> = {
