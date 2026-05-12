@@ -15,7 +15,7 @@ export const getAllProjects = async (): Promise<Project[]> => {
 };
 
 export const getProjectById = async (
-	projectId: number,
+	projectId: string,
 ): Promise<ProjectWithTimesheets | null> => {
 	try {
 		return await api.get<ProjectWithTimesheets>(`/projects/${projectId}`);
@@ -40,7 +40,7 @@ export const generateProject = async (
 	}
 };
 
-export const deleteProject = async (id: number): Promise<void> => {
+export const deleteProject = async (id: string): Promise<void> => {
 	try {
 		await api.delete(`/projects/${id}`);
 	} catch (err) {

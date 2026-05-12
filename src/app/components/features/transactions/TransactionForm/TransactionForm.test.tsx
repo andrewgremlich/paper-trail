@@ -5,26 +5,26 @@ import { TransactionForm } from "./index";
 describe("TransactionForm", () => {
 	const mockProjects = [
 		{
-			id: 1,
+			id: "proj-1",
 			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,
 			rate_in_cents: 10000,
 			description: null,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 		{
-			id: 2,
+			id: "proj-2",
 			userId: 1,
 			name: "Project 2",
 			active: true,
 			customerId: null,
 			rate_in_cents: 15000,
 			description: null,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 	];
 
@@ -36,7 +36,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,
@@ -49,7 +49,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,
@@ -62,7 +62,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,
@@ -77,7 +77,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,
@@ -91,7 +91,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,
@@ -104,7 +104,7 @@ describe("TransactionForm", () => {
 		const html = renderToStaticMarkup(
 			<TransactionForm
 				projects={mockProjects}
-				activeProjectId={1}
+				activeProjectId="proj-1"
 				onProjectChange={mockOnProjectChange}
 				onSubmit={mockOnSubmit}
 			/>,

@@ -13,7 +13,7 @@ import { usePaperTrailStore } from "@/lib/store";
 import styles from "./styles.module.css";
 
 interface InvoiceDetailsProps {
-	invoiceId: number;
+	invoiceId: string;
 }
 
 const formatCents = (cents: number): string =>

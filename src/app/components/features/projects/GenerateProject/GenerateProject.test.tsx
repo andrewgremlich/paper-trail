@@ -21,7 +21,7 @@ describe("GenerateProject", () => {
 	const queryClient = new QueryClient();
 	const mockCustomers: Customer[] = [
 		{
-			id: 1,
+			id: "cust-1",
 			userId: 1,
 			name: "Test Customer",
 			email: "test@example.com",
@@ -33,7 +33,7 @@ describe("GenerateProject", () => {
 			updatedAt: "2026-01-01T00:00:00Z",
 		},
 		{
-			id: 2,
+			id: "cust-2",
 			userId: 1,
 			name: "Another Customer",
 			email: "another@example.com",

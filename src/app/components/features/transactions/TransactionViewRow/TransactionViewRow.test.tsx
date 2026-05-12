@@ -15,39 +15,39 @@ const makeQueryClient = () =>
 
 describe("TransactionViewRow", () => {
 	const mockTransaction: Transaction = {
-		id: 1,
+		id: "tx-1",
 		userId: 1,
 		date: "2024-01-15",
 		description: "Test transaction",
-		projectId: 1,
+		projectId: "proj-1",
 		amount: 100.5,
 		filePath: "",
-		createdAt: Date.now(),
-		updatedAt: Date.now(),
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
 	};
 
 	const mockProjects = [
 		{
-			id: 1,
+			id: "proj-1",
 			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,
 			rate_in_cents: 10000,
 			description: null,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 		{
-			id: 2,
+			id: "proj-2",
 			userId: 1,
 			name: "Project 2",
 			active: true,
 			customerId: null,
 			rate_in_cents: 15000,
 			description: null,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 	];
 

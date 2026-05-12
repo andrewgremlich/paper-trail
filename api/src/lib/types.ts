@@ -12,11 +12,11 @@ export interface Env {
 export type Nullable<T> = T | null | undefined;
 
 export type Project = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	active: boolean | number;
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	rate_in_cents: Nullable<number>;
 	description: Nullable<string>;
 	createdAt: string;
@@ -24,9 +24,9 @@ export type Project = {
 };
 
 export type Timesheet = {
-	id: number;
+	id: string;
 	userId: number;
-	projectId: number;
+	projectId: string;
 	name: string;
 	description: Nullable<string>;
 	active: boolean | number;
@@ -35,9 +35,9 @@ export type Timesheet = {
 };
 
 export type TimesheetEntry = {
-	id: number;
+	id: string;
 	userId: number;
-	timesheetId: number;
+	timesheetId: string;
 	date: string;
 	minutes: number;
 	description: string;
@@ -47,20 +47,20 @@ export type TimesheetEntry = {
 };
 
 export type TimesheetWithProject = Timesheet & {
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	projectRate: Nullable<number>;
 };
 
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	projectRate: Nullable<number>;
 };
 
 export type Transaction = {
-	id: number;
+	id: string;
 	userId: number;
-	projectId: number;
+	projectId: string;
 	date: string;
 	description: string;
 	amount: number;
@@ -83,7 +83,7 @@ export type UserProfile = {
 };
 
 export type Customer = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	email: string;
@@ -98,11 +98,10 @@ export type Customer = {
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 
 export type Invoice = {
-	id: number;
-	uuid: string;
+	id: string;
 	userId: number;
-	customerId: number;
-	timesheetId: Nullable<number>;
+	customerId: string;
+	timesheetId: Nullable<string>;
 	number: string;
 	status: InvoiceStatus;
 	amount_cents: number;
@@ -125,8 +124,8 @@ export type InvoiceEventType =
 	| "viewed";
 
 export type InvoiceEvent = {
-	id: number;
-	invoiceId: number;
+	id: string;
+	invoiceId: string;
 	userId: number;
 	type: InvoiceEventType;
 	payload: Nullable<string>;
@@ -140,8 +139,8 @@ export type CustomerEventType =
 	| "consent_revoked";
 
 export type CustomerEvent = {
-	id: number;
-	customerId: number;
+	id: string;
+	customerId: string;
 	userId: number;
 	type: CustomerEventType;
 	payload: Nullable<string>;
@@ -169,7 +168,7 @@ export type InvoiceSnapshot = {
 	};
 	invoice: {
 		number: string;
-		uuid: string;
+		id: string;
 		issuedAt: string;
 		dueDate: string;
 		description: Nullable<string>;

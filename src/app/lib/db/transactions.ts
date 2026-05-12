@@ -39,13 +39,13 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
 };
 
 export const getTransactionsByProject = async (
-	projectId: number,
+	projectId: string,
 ): Promise<Transaction[]> => {
 	return api.get<Transaction[]>(`/transactions?projectId=${projectId}`);
 };
 
 export const getTransactionById = async (
-	id: number,
+	id: string,
 ): Promise<Transaction | null> => {
 	try {
 		return await api.get<Transaction>(`/transactions/${id}`);
@@ -54,6 +54,6 @@ export const getTransactionById = async (
 	}
 };
 
-export const deleteTransaction = async (id: number): Promise<void> => {
+export const deleteTransaction = async (id: string): Promise<void> => {
 	await api.delete(`/transactions/${id}`);
 };

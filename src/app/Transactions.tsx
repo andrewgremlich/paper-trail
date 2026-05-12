@@ -15,8 +15,8 @@ import { saveAttachment } from "./lib/files/fileStorage";
 
 export const Transactions = () => {
 	const queryClient = useQueryClient();
-	const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-	const [editingId, setEditingId] = useState<number | null>(null);
+	const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
 		queryFn: getAllProjects,
@@ -27,7 +27,7 @@ export const Transactions = () => {
 		error: transactionsError,
 	} = useQuery({
 		queryKey: ["transactions", activeProjectId],
-		queryFn: () => getTransactionsByProject(activeProjectId as number),
+		queryFn: () => getTransactionsByProject(activeProjectId as string),
 		enabled: activeProjectId !== null,
 	});
 	const { mutate: submitTransaction } = useMutation({
@@ -46,7 +46,7 @@ export const Transactions = () => {
 
 			await upsertTransaction({
 				date,
-				projectId: Number.parseInt(projectId, 10),
+				projectId,
 				description,
 				amount: parseFloat(amount),
 				filePath,
@@ -65,8 +65,8 @@ export const Transactions = () => {
 	});
 	const { mutateAsync: saveEdit } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = Number(formData.get("id") || 0);
-			const projectId = Number(formData.get("projectId") || 0);
+			const id = String(formData.get("id") ?? "");
+			const projectId = String(formData.get("projectId") ?? "");
 			const rawDate = String(formData.get("date") || "");
 			const date = normalizeDateInput(rawDate);
 			const description = String(formData.get("description") || "").trim();
@@ -93,7 +93,7 @@ export const Transactions = () => {
 		},
 	});
 	const { mutateAsync: replaceFile } = useMutation({
-		mutationFn: async ({ id, newPath }: { id: number; newPath: string }) => {
+		mutationFn: async ({ id, newPath }: { id: string; newPath: string }) => {
 			const tx = transactions?.find((t) => t.id === id);
 			if (!tx) throw new Error("Transaction not found");
 			await updateTransaction({
@@ -114,7 +114,7 @@ export const Transactions = () => {
 	});
 	const { mutateAsync: removeTx } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = Number(formData.get("id") || 0);
+			const id = String(formData.get("id") ?? "");
 			await deleteTransaction(id);
 			await queryClient.invalidateQueries({
 				queryKey: ["transactions", activeProjectId],

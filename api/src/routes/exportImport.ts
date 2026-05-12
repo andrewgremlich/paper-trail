@@ -100,10 +100,10 @@ app.get("/data", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+				`SELECT id, userId, customerId, timesheetId, number, status,
 				        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
 				        voidedAt, archivedAt, createdAt, updatedAt
-				 FROM invoices WHERE userId = ? ORDER BY id ASC`,
+				 FROM invoices WHERE userId = ? ORDER BY createdAt ASC`,
 			)
 			.bind(userId)
 			.all(),
@@ -428,14 +428,13 @@ app.post("/data", async (c) => {
 			await db
 				.prepare(
 					`INSERT INTO invoices
-					   (id, uuid, userId, customerId, timesheetId, number, status,
+					   (id, userId, customerId, timesheetId, number, status,
 					    amount_cents, description, issuedAt, dueDate,
 					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				)
 				.bind(
 					inv.id,
-					inv.uuid,
 					userId,
 					inv.customerId,
 					inv.timesheetId,
@@ -700,14 +699,13 @@ app.post("/zip", async (c) => {
 			await db
 				.prepare(
 					`INSERT INTO invoices
-					   (id, uuid, userId, customerId, timesheetId, number, status,
+					   (id, userId, customerId, timesheetId, number, status,
 					    amount_cents, description, issuedAt, dueDate,
 					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				)
 				.bind(
 					inv.id,
-					inv.uuid,
 					userId,
 					inv.customerId,
 					inv.timesheetId,
@@ -915,10 +913,10 @@ app.get("/zip", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+				`SELECT id, userId, customerId, timesheetId, number, status,
 				        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
 				        voidedAt, archivedAt, createdAt, updatedAt
-				 FROM invoices WHERE userId = ? ORDER BY id ASC`,
+				 FROM invoices WHERE userId = ? ORDER BY createdAt ASC`,
 			)
 			.bind(userId)
 			.all(),

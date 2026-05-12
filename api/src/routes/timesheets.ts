@@ -38,26 +38,16 @@ app.get("/", async (c) => {
 });
 
 // GET /api/v1/timesheets/by-invoice/:invoiceId — look up the timesheet that an
-// invoice was generated from. `invoiceId` here is the invoices.id (or uuid).
+// invoice was generated from. invoiceId is the invoices.id (a UUID).
 app.get("/by-invoice/:invoiceId", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const invoiceParam = c.req.param("invoiceId");
-	const numericId = Number(invoiceParam);
+	const invoiceId = c.req.param("invoiceId");
 
-	const invoiceLookup = Number.isFinite(numericId)
-		? await db
-				.prepare(
-					"SELECT timesheetId FROM invoices WHERE id = ? AND userId = ?",
-				)
-				.bind(numericId, userId)
-				.first<{ timesheetId: number | null }>()
-		: await db
-				.prepare(
-					"SELECT timesheetId FROM invoices WHERE uuid = ? AND userId = ?",
-				)
-				.bind(invoiceParam, userId)
-				.first<{ timesheetId: number | null }>();
+	const invoiceLookup = await db
+		.prepare("SELECT timesheetId FROM invoices WHERE id = ? AND userId = ?")
+		.bind(invoiceId, userId)
+		.first<{ timesheetId: string | null }>();
 
 	if (!invoiceLookup?.timesheetId) {
 		return c.json(null);
@@ -82,7 +72,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 	);
 	const projectRate = isEncryptionEnabled(c.env)
 		? Number(await decrypt(decrypted.projectRate as string, c.env))
-		: (decrypted.projectRate as number);
+		: Number(decrypted.projectRate ?? 0);
 
 	return c.json({
 		...decrypted,
@@ -95,7 +85,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const timesheetId = Number(c.req.param("id"));
+	const timesheetId = c.req.param("id");
 
 	const header = await db
 		.prepare(
@@ -117,10 +107,10 @@ app.get("/:id", async (c) => {
 		c.env,
 	);
 
-	// customerId is now a plain INTEGER FK — no decrypt.
+	// customerId is a plain TEXT FK — no decrypt.
 	const projectRate = isEncryptionEnabled(c.env)
 		? Number(await decrypt(decryptedHeader.projectRate as string, c.env))
-		: (decryptedHeader.projectRate as number);
+		: Number(decryptedHeader.projectRate ?? 0);
 
 	const { results: entriesRows } = await db
 		.prepare(
@@ -136,7 +126,7 @@ app.get("/:id", async (c) => {
 			const description = await decrypt(e.description as string, c.env);
 			const amount = isEncryptionEnabled(c.env)
 				? Number(await decrypt(e.amount as string, c.env))
-				: (e.amount as number);
+				: Number(e.amount ?? 0);
 			return { ...e, description, amount: amount / 100 };
 		}),
 	);
@@ -152,7 +142,7 @@ app.get("/:id", async (c) => {
 // POST /api/v1/timesheets - create timesheet
 app.post("/", async (c) => {
 	const body = await c.req.json<{
-		projectId: number;
+		projectId: string;
 		name: string;
 		description?: string;
 	}>();
@@ -162,13 +152,14 @@ app.post("/", async (c) => {
 	const encDescription = body.description
 		? await encrypt(body.description, c.env)
 		: null;
+	const id = crypto.randomUUID();
 
-	const insertResult = await db
+	await db
 		.prepare(
-			`INSERT INTO timesheets (projectId, name, description, active, userId)
-			VALUES (?, ?, ?, ?, ?)`,
+			`INSERT INTO timesheets (id, projectId, name, description, active, userId)
+			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(body.projectId, body.name, encDescription, 1, userId)
+		.bind(id, body.projectId, body.name, encDescription, 1, userId)
 		.run();
 
 	const row = await db
@@ -176,19 +167,23 @@ app.post("/", async (c) => {
 			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
-		.bind(insertResult.meta.last_row_id, userId)
+		.bind(id, userId)
 		.first();
+
+	if (!row) {
+		return c.json({ error: "Failed to read back created timesheet" }, 500);
+	}
 
 	const decryptedRow = await decryptTimesheetRow(
 		row as Record<string, unknown>,
 		c.env,
 	);
-	return c.json({ ...decryptedRow, active: !!row!.active }, 201);
+	return c.json({ ...decryptedRow, active: !!row.active }, 201);
 });
 
 // PUT /api/v1/timesheets/:id - update timesheet
 app.put("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const body = await c.req.json<{
 		name: string;
 		description?: string;
@@ -231,7 +226,7 @@ app.put("/:id", async (c) => {
 
 // DELETE /api/v1/timesheets/:id
 app.delete("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 

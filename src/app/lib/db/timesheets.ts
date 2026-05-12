@@ -11,7 +11,7 @@ export const getAllTimesheets = async (): Promise<Timesheet[]> => {
 };
 
 export const getTimesheetById = async (
-	timesheetId: number,
+	timesheetId: string,
 ): Promise<TimesheetDetails | null> => {
 	try {
 		return await api.get<TimesheetDetails>(`/timesheets/${timesheetId}`);
@@ -32,12 +32,12 @@ export const generateTimesheet = async ({
 	});
 };
 
-export const deleteTimesheet = async (id: number): Promise<void> => {
+export const deleteTimesheet = async (id: string): Promise<void> => {
 	await api.delete(`/timesheets/${id}`);
 };
 
 export const getTimesheetByInvoiceId = async (
-	invoiceId: number,
+	invoiceId: string,
 ): Promise<TimesheetWithProject | null> => {
 	try {
 		return await api.get<TimesheetWithProject | null>(

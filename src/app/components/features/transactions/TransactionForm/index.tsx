@@ -8,8 +8,8 @@ import styles from "./styles.module.css";
 
 interface TransactionFormProps {
 	projects: Project[] | undefined;
-	activeProjectId: number | null;
-	onProjectChange: (projectId: number | null) => void;
+	activeProjectId: string | null;
+	onProjectChange: (projectId: string | null) => void;
 	onSubmit: (formData: FormData) => void;
 }
 
@@ -53,12 +53,10 @@ export const TransactionForm = ({
 					})) ?? []),
 				]}
 				onChange={(e) => {
-					const projectId = e.currentTarget.value
-						? Number.parseInt(e.currentTarget.value, 10)
-						: null;
+					const projectId = e.currentTarget.value || null;
 					onProjectChange(projectId);
 				}}
-				value={activeProjectId?.toString() ?? ""}
+				value={activeProjectId ?? ""}
 				required
 			/>
 			<Input label="Amount" name="amount" step="0.01" type="number" required />

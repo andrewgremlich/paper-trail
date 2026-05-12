@@ -1,15 +1,15 @@
 export type Nullable<T> = T | null | undefined;
 
 export type Project = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	active: boolean;
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	rate_in_cents: Nullable<number>;
 	description: Nullable<string>;
-	createdAt: number;
-	updatedAt: number;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GenerateProject = Pick<
@@ -18,14 +18,14 @@ export type GenerateProject = Pick<
 >;
 
 export type Timesheet = {
-	id: number;
+	id: string;
 	userId: number;
-	projectId: number;
+	projectId: string;
 	name: string;
 	description: Nullable<string>;
 	active: boolean;
-	createdAt: number;
-	updatedAt: number;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type CreateTimesheet = Pick<
@@ -39,20 +39,20 @@ export type MinimalTimesheet = Pick<
 >;
 
 export type TimesheetWithProject = Timesheet & {
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	projectRate: Nullable<number>;
 };
 
 export type TimesheetEntry = {
-	id: number;
+	id: string;
 	userId: number;
-	timesheetId: number;
+	timesheetId: string;
 	date: string;
 	minutes: number;
 	description: string;
 	amount: number;
-	createdAt: number;
-	updatedAt: number;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type CreateTimesheetEntry = Pick<
@@ -67,20 +67,20 @@ export type UpdateTimesheetEntry = Pick<
 
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];
-	customerId: Nullable<number>;
+	customerId: Nullable<string>;
 	projectRate: Nullable<number>;
 };
 
 export type Transaction = {
-	id: number;
+	id: string;
 	userId: number;
-	projectId: number;
+	projectId: string;
 	date: string;
 	description: string;
 	amount: number;
 	filePath?: string;
-	createdAt: number;
-	updatedAt: number;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type SubmitTransaction = Pick<
@@ -102,8 +102,8 @@ export type UserProfile = {
 	paypalHandle: Nullable<string>;
 	businessName: Nullable<string>;
 	businessAddress: Nullable<string>;
-	createdAt: number;
-	updatedAt: number;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type UpdateUserProfile = Pick<
@@ -117,7 +117,7 @@ export type UpdateUserProfile = Pick<
 >;
 
 export type Customer = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	email: string;
@@ -134,11 +134,10 @@ export type SubmitCustomer = Pick<Customer, "name" | "email" | "address">;
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 
 export type Invoice = {
-	id: number;
-	uuid: string;
+	id: string;
 	userId: number;
-	customerId: number;
-	timesheetId: Nullable<number>;
+	customerId: string;
+	timesheetId: Nullable<string>;
 	number: string;
 	status: InvoiceStatus;
 	amount_cents: number;
@@ -154,8 +153,8 @@ export type Invoice = {
 };
 
 export type CreateInvoice = {
-	customerId: number;
-	timesheetId?: number;
+	customerId: string;
+	timesheetId?: string;
 	amountCents?: number;
 	description?: string;
 	issuedAt?: string;
@@ -163,8 +162,8 @@ export type CreateInvoice = {
 };
 
 export type InvoiceEvent = {
-	id: number;
-	invoiceId: number;
+	id: string;
+	invoiceId: string;
 	userId: number;
 	type: "created" | "sent" | "paid" | "voided" | "viewed";
 	payload: Nullable<string>;

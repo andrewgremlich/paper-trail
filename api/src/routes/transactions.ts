@@ -33,7 +33,7 @@ app.get("/", async (c) => {
 				`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
 				FROM transactions WHERE projectId = ? AND userId = ? ORDER BY date ASC, createdAt ASC`,
 			)
-			.bind(Number(projectId), userId)
+			.bind(projectId, userId)
 			.all();
 		results = res.results;
 	} else {
@@ -101,9 +101,9 @@ app.get("/xlsx", async (c) => {
 	});
 });
 
-// GET /api/transactions/:id
+// GET /api/v1/transactions/:id
 app.get("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
@@ -126,10 +126,10 @@ app.get("/:id", async (c) => {
 	return c.json(decrypted);
 });
 
-// POST /api/transactions - create transaction
+// POST /api/v1/transactions - create transaction
 app.post("/", async (c) => {
 	const body = await c.req.json<{
-		projectId: number;
+		projectId: string;
 		date: string;
 		description: string;
 		amount: number;
@@ -138,16 +138,18 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const amountInCents = Math.round(body.amount * 100);
+	const id = crypto.randomUUID();
 
 	const encDescription = await encrypt(body.description, c.env);
 	const encAmount = await encrypt(String(amountInCents), c.env);
 
 	await db
 		.prepare(
-			`INSERT INTO transactions (projectId, date, description, amount, filePath, userId)
-			VALUES (?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO transactions (id, projectId, date, description, amount, filePath, userId)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
+			id,
 			body.projectId,
 			body.date,
 			encDescription,
@@ -157,14 +159,14 @@ app.post("/", async (c) => {
 		)
 		.run();
 
-	return c.json({ success: true }, 201);
+	return c.json({ success: true, id }, 201);
 });
 
-// PUT /api/transactions/:id - update transaction
+// PUT /api/v1/transactions/:id - update transaction
 app.put("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const body = await c.req.json<{
-		projectId: number;
+		projectId: string;
 		date: string;
 		description: string;
 		amount: number;
@@ -197,9 +199,9 @@ app.put("/:id", async (c) => {
 	return c.json({ success: true });
 });
 
-// DELETE /api/transactions/:id
+// DELETE /api/v1/transactions/:id
 app.delete("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 

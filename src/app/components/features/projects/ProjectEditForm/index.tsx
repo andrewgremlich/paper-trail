@@ -25,8 +25,7 @@ export const ProjectEditForm = ({ project, onSaved }: ProjectEditFormProps) => {
 			if (!project?.id) return null;
 
 			const customerIdRaw = String(formData.get("customerId") ?? "");
-			const customerId =
-				customerIdRaw.length > 0 ? Number(customerIdRaw) : null;
+			const customerId = customerIdRaw.length > 0 ? customerIdRaw : null;
 
 			const updatedProject: Project = {
 				...project,

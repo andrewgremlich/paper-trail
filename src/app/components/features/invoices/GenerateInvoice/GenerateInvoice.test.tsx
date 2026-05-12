@@ -7,32 +7,35 @@ import { GenerateInvoice } from ".";
 describe("GenerateInvoice", () => {
 	const queryClient = new QueryClient();
 	const mockTimesheet: TimesheetDetails = {
-		id: 1,
+		id: "ts-1",
 		userId: 1,
 		name: "Test Timesheet",
 		description: "Test Description",
-		projectId: 1,
-		customerId: 42,
+		projectId: "proj-1",
+		customerId: "cust-42",
 		projectRate: 5000,
 		active: true,
 		entries: [
 			{
-				id: 1,
+				id: "entry-1",
 				userId: 1,
-				timesheetId: 1,
+				timesheetId: "ts-1",
 				date: "2024-01-01",
 				minutes: 60,
 				description: "Test work",
 				amount: 5000,
-				createdAt: 1704067200000,
-				updatedAt: 1704067200000,
+				createdAt: "2024-01-01T00:00:00Z",
+				updatedAt: "2024-01-01T00:00:00Z",
 			},
 		],
-		createdAt: 1704067200000,
-		updatedAt: 1704067200000,
+		createdAt: "2024-01-01T00:00:00Z",
+		updatedAt: "2024-01-01T00:00:00Z",
 	};
 
-	const renderComponent = (timesheet = mockTimesheet, activeTimesheetId = 1) =>
+	const renderComponent = (
+		timesheet = mockTimesheet,
+		activeTimesheetId = "ts-1",
+	) =>
 		renderToStaticMarkup(
 			<QueryClientProvider client={queryClient}>
 				<GenerateInvoice

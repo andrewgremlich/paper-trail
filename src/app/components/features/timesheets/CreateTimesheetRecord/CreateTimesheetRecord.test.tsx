@@ -6,7 +6,7 @@ import { CreateTimesheetRecord } from ".";
 describe("CreateTimesheetRecord", () => {
 	const queryClient = new QueryClient();
 	const defaultProps = {
-		timesheetId: 1,
+		timesheetId: "ts-1",
 		projectRate: 5000,
 		active: true,
 	};

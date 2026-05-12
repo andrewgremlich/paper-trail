@@ -11,7 +11,7 @@ async function decryptProjectRow(
 	const description = await decrypt((row.description as string) ?? "", env);
 	const rate_in_cents = isEncryptionEnabled(env)
 		? Number(await decrypt(row.rate_in_cents as string, env))
-		: (row.rate_in_cents as number);
+		: Number(row.rate_in_cents ?? 0);
 
 	return { ...row, description, rate_in_cents };
 }
@@ -42,7 +42,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const projectId = Number(c.req.param("id"));
+	const projectId = c.req.param("id");
 
 	const project = await db
 		.prepare(
@@ -88,7 +88,7 @@ app.get("/:id", async (c) => {
 app.post("/", async (c) => {
 	const body = await c.req.json<{
 		name: string;
-		customerId: number | null;
+		customerId: string | null;
 		rate_in_cents: number;
 		description: string;
 	}>();
@@ -97,33 +97,40 @@ app.post("/", async (c) => {
 
 	const encRate = await encrypt(String(body.rate_in_cents), c.env);
 	const encDescription = await encrypt(body.description, c.env);
+	const projectId = crypto.randomUUID();
 
-	const insertResult = await db
+	await db
 		.prepare(
-			`INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
-			VALUES (?, ?, ?, ?, ?)`,
+			`INSERT INTO projects (id, name, customerId, rate_in_cents, description, userId)
+			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(body.name, body.customerId ?? null, encRate, encDescription, userId)
+		.bind(
+			projectId,
+			body.name,
+			body.customerId ?? null,
+			encRate,
+			encDescription,
+			userId,
+		)
 		.run();
-	const createdProjectId = insertResult.meta.last_row_id;
-
-	if (!createdProjectId) {
-		return c.json({ error: "Failed to create project" }, 500);
-	}
 
 	const project = await db
 		.prepare(
 			`SELECT id, userId, name, active, customerId, rate_in_cents, description, createdAt, updatedAt
 			FROM projects WHERE id = ? AND userId = ?`,
 		)
-		.bind(createdProjectId, userId)
+		.bind(projectId, userId)
 		.first();
+
+	if (!project) {
+		return c.json({ error: "Failed to read back created project" }, 500);
+	}
 
 	const decrypted = await decryptProjectRow(
 		project as Record<string, unknown>,
 		c.env,
 	);
-	const projectRow = { ...decrypted, active: !!project!.active };
+	const projectRow = { ...decrypted, active: !!project.active };
 
 	const createTimesheet = c.req.query("createTimesheet") === "true";
 
@@ -132,13 +139,15 @@ app.post("/", async (c) => {
 	}
 
 	const timesheetName = `${new Date().toLocaleDateString()} Timesheet`;
-	const tsResult = await db
+	const timesheetId = crypto.randomUUID();
+	await db
 		.prepare(
-			`INSERT INTO timesheets (projectId, name, description, active, userId)
-			VALUES (?, ?, ?, ?, ?)`,
+			`INSERT INTO timesheets (id, projectId, name, description, active, userId)
+			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
-			createdProjectId,
+			timesheetId,
+			projectId,
 			timesheetName,
 			await encrypt("Initial timesheet", c.env),
 			1,
@@ -146,27 +155,36 @@ app.post("/", async (c) => {
 		)
 		.run();
 
-	if (!tsResult.meta.last_row_id) {
-		return c.json({ project: projectRow, timesheet: null }, 201);
-	}
-
 	const tsRow = await db
 		.prepare(
 			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
-		.bind(tsResult.meta.last_row_id, userId)
+		.bind(timesheetId, userId)
 		.first();
 
+	if (!tsRow) {
+		return c.json({ project: projectRow, timesheet: null }, 201);
+	}
+
 	return c.json(
-		{ project: projectRow, timesheet: { ...tsRow, active: !!tsRow!.active } },
+		{
+			project: projectRow,
+			timesheet: {
+				...tsRow,
+				description: tsRow.description
+					? await decrypt(tsRow.description as string, c.env)
+					: tsRow.description,
+				active: !!tsRow.active,
+			},
+		},
 		201,
 	);
 });
 
 // PUT /api/v1/projects/:id - update project
 app.put("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const body = await c.req.json<Project>();
 	const db = getDb(c.env);
 	const userId = c.get("userId");
@@ -217,7 +235,7 @@ app.put("/:id", async (c) => {
 
 // DELETE /api/v1/projects/:id
 app.delete("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 

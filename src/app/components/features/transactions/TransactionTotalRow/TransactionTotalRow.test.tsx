@@ -6,26 +6,26 @@ import { TransactionTotalRow } from "./index";
 describe("TransactionTotalRow", () => {
 	const mockTransactions: Transaction[] = [
 		{
-			id: 1,
+			id: "tx-1",
 			userId: 1,
 			date: "2024-01-15",
 			description: "Test transaction 1",
-			projectId: 1,
+			projectId: "proj-1",
 			amount: 100.5,
 			filePath: "",
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 		{
-			id: 2,
+			id: "tx-2",
 			userId: 1,
 			date: "2024-01-16",
 			description: "Test transaction 2",
-			projectId: 1,
+			projectId: "proj-1",
 			amount: 200.0,
 			filePath: "",
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 	];
 
@@ -65,26 +65,26 @@ describe("TransactionTotalRow", () => {
 	it("handles negative amounts", () => {
 		const transactionsWithNegative: Transaction[] = [
 			{
-				id: 1,
+				id: "tx-3",
 				userId: 1,
 				date: "2024-01-15",
 				description: "Income",
-				projectId: 1,
+				projectId: "proj-1",
 				amount: 500.0,
 				filePath: "",
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
 			},
 			{
-				id: 2,
+				id: "tx-4",
 				userId: 1,
 				date: "2024-01-16",
 				description: "Expense",
-				projectId: 1,
+				projectId: "proj-1",
 				amount: -150.0,
 				filePath: "",
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
 			},
 		];
 		const html = renderToStaticMarkup(

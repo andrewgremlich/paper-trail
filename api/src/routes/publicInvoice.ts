@@ -12,26 +12,28 @@ import type { Env, InvoiceSnapshot } from "../lib/types";
  *
  * Renders the immutable snapshot if the invoice has been sent; otherwise
  * shows a draft preview built from current data with a warning banner.
+ *
+ * The URL parameter IS the invoice id (a UUID).
  */
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get("/:uuid", async (c) => {
-	const uuid = c.req.param("uuid");
+app.get("/:id", async (c) => {
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 
 	const row = await db
 		.prepare(
 			`SELECT id, userId, customerId, timesheetId, number, status,
 			        amount_cents, description, issuedAt, dueDate, snapshot
-			 FROM invoices WHERE uuid = ? AND archivedAt IS NULL`,
+			 FROM invoices WHERE id = ? AND archivedAt IS NULL`,
 		)
-		.bind(uuid)
+		.bind(id)
 		.first<{
-			id: number;
+			id: string;
 			userId: number;
-			customerId: number;
-			timesheetId: number | null;
+			customerId: string;
+			timesheetId: string | null;
 			number: string;
 			status: string;
 			amount_cents: string;
@@ -150,7 +152,7 @@ app.get("/:uuid", async (c) => {
 			},
 			invoice: {
 				number: row.number,
-				uuid,
+				id,
 				issuedAt: row.issuedAt,
 				dueDate: row.dueDate,
 				description: row.description
@@ -173,10 +175,11 @@ app.get("/:uuid", async (c) => {
 		const uaHash = ua ? await sha256Hex(ua, c.env) : null;
 		await db
 			.prepare(
-				`INSERT INTO invoice_events (invoiceId, userId, type, payload)
-				 VALUES (?, ?, 'viewed', ?)`,
+				`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
+				 VALUES (?, ?, ?, 'viewed', ?)`,
 			)
 			.bind(
+				crypto.randomUUID(),
 				row.id,
 				row.userId,
 				await encrypt(JSON.stringify({ ipHash, uaHash }), c.env),

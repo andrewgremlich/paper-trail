@@ -49,7 +49,7 @@ const page = (title: string, body: string): string =>
 </head><body><div class="card">${body}</div></body></html>`;
 
 type ConsentRow = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	email: string;
@@ -162,10 +162,11 @@ app.post("/:token", async (c) => {
 
 		await db
 			.prepare(
-				`INSERT INTO customer_events (customerId, userId, type, payload)
-				 VALUES (?, ?, 'consent_granted', ?)`,
+				`INSERT INTO customer_events (id, customerId, userId, type, payload)
+				 VALUES (?, ?, ?, 'consent_granted', ?)`,
 			)
 			.bind(
+				crypto.randomUUID(),
 				row.id,
 				row.userId,
 				await encrypt(
@@ -200,10 +201,11 @@ app.post("/:token", async (c) => {
 
 	await db
 		.prepare(
-			`INSERT INTO customer_events (customerId, userId, type, payload)
-			 VALUES (?, ?, 'consent_declined', ?)`,
+			`INSERT INTO customer_events (id, customerId, userId, type, payload)
+			 VALUES (?, ?, ?, 'consent_declined', ?)`,
 		)
 		.bind(
+			crypto.randomUUID(),
 			row.id,
 			row.userId,
 			await encrypt(

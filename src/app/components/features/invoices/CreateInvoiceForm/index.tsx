@@ -42,7 +42,7 @@ export const CreateInvoiceForm = () => {
 		e.preventDefault();
 		const amountCents = Math.round(parseFloat(amount) * 100);
 		createInvoice({
-			customerId: Number(customerId),
+			customerId,
 			amountCents,
 			description: description || undefined,
 			dueDate: dueDate || undefined,

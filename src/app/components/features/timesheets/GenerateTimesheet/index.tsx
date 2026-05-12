@@ -39,7 +39,7 @@ export const GenerateTimesheet = ({
 	const [form, dispatch] = useReducer(formReducer, initialForm);
 	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const projectId = Number(formData.get("projectId") || "");
+			const projectId = String(formData.get("projectId") ?? "");
 			const name = String(formData.get("name") || "").trim();
 			const description = (formData.get("description") ||
 				"") as Nullable<string>;

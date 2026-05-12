@@ -16,8 +16,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 			const name = String(formData.get("name") || "").trim();
 			const rate = Number(formData.get("rate") || 0);
 			const customerIdRaw = String(formData.get("customerId") || "");
-			const customerId =
-				customerIdRaw.length > 0 ? Number(customerIdRaw) : null;
+			const customerId = customerIdRaw.length > 0 ? customerIdRaw : null;
 			const description = String(formData.get("description") || "");
 
 			return generateProject({

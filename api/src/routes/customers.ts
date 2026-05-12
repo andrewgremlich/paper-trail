@@ -16,7 +16,7 @@ const customerSchema = z.object({
 });
 
 type DbCustomerRow = {
-	id: number;
+	id: string;
 	userId: number;
 	name: string;
 	email: string;
@@ -68,7 +68,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 
 	const row = await db
 		.prepare(
@@ -92,12 +92,15 @@ app.post("/", async (c) => {
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const id = crypto.randomUUID();
 
-	const result = await db
+	await db
 		.prepare(
-			`INSERT INTO customers (userId, name, email, address) VALUES (?, ?, ?, ?)`,
+			`INSERT INTO customers (id, userId, name, email, address)
+			 VALUES (?, ?, ?, ?, ?)`,
 		)
 		.bind(
+			id,
 			userId,
 			await encrypt(name, c.env),
 			await encrypt(email, c.env),
@@ -105,12 +108,12 @@ app.post("/", async (c) => {
 		)
 		.run();
 
-	return c.json({ success: true, id: result.meta.last_row_id }, 201);
+	return c.json({ success: true, id }, 201);
 });
 
 // PUT /api/v1/customers/:id
 app.put("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const parsed = customerSchema.safeParse(await c.req.json());
 	if (!parsed.success) {
 		return c.json({ error: "Invalid customer", issues: parsed.error.issues }, 400);
@@ -138,7 +141,7 @@ app.put("/:id", async (c) => {
 
 // DELETE /api/v1/customers/:id - block if referenced by invoices
 app.delete("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
@@ -177,7 +180,7 @@ app.delete("/:id", async (c) => {
 // receiving invoices electronically. Generates a single-use token; the
 // public /consent/:token routes flip the flag when the customer clicks.
 app.post("/:id/request-consent", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
@@ -286,10 +289,11 @@ app.post("/:id/request-consent", async (c) => {
 
 	await db
 		.prepare(
-			`INSERT INTO customer_events (customerId, userId, type, payload)
-			 VALUES (?, ?, 'consent_requested', ?)`,
+			`INSERT INTO customer_events (id, customerId, userId, type, payload)
+			 VALUES (?, ?, ?, 'consent_requested', ?)`,
 		)
 		.bind(
+			crypto.randomUUID(),
 			id,
 			userId,
 			await encrypt(

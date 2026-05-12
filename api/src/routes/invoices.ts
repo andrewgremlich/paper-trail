@@ -14,8 +14,8 @@ const DEFAULT_DAYS_UNTIL_DUE = 30;
 
 const createInvoiceSchema = z
 	.object({
-		customerId: z.number().int().positive(),
-		timesheetId: z.number().int().positive().optional(),
+		customerId: z.string().min(1),
+		timesheetId: z.string().min(1).optional(),
 		amountCents: z.number().int().positive().optional(),
 		description: z.string().trim().max(5000).optional(),
 		issuedAt: z
@@ -40,11 +40,10 @@ const createInvoiceSchema = z
 	);
 
 type DbInvoiceRow = {
-	id: number;
-	uuid: string;
+	id: string;
 	userId: number;
-	customerId: number;
-	timesheetId: number | null;
+	customerId: string;
+	timesheetId: string | null;
 	number: string;
 	status: InvoiceStatus;
 	amount_cents: string;
@@ -66,7 +65,6 @@ const decryptInvoice = async (row: DbInvoiceRow, env: Env): Promise<Invoice> => 
 	const description = row.description ? await decrypt(row.description, env) : null;
 	return {
 		id: row.id,
-		uuid: row.uuid,
 		userId: row.userId,
 		customerId: row.customerId,
 		timesheetId: row.timesheetId,
@@ -92,11 +90,13 @@ const nextInvoiceNumber = async (
 ): Promise<string> => {
 	const db = getDb(env);
 	const prefix = `INV-${year}-`;
+	// The highest existing seq for this user/year; lexicographic ordering of
+	// zero-padded suffixes matches numeric ordering.
 	const row = await db
 		.prepare(
 			`SELECT number FROM invoices
 			 WHERE userId = ? AND number LIKE ?
-			 ORDER BY id DESC LIMIT 1`,
+			 ORDER BY number DESC LIMIT 1`,
 		)
 		.bind(userId, `${prefix}%`)
 		.first<{ number: string }>();
@@ -116,7 +116,7 @@ const addDays = (iso: string, days: number): string => {
 };
 
 const logEvent = async (
-	invoiceId: number,
+	invoiceId: string,
 	userId: number,
 	type: "created" | "sent" | "paid" | "voided" | "viewed",
 	payload: Record<string, unknown> | null,
@@ -128,10 +128,10 @@ const logEvent = async (
 		: null;
 	await db
 		.prepare(
-			`INSERT INTO invoice_events (invoiceId, userId, type, payload)
-			 VALUES (?, ?, ?, ?)`,
+			`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
+			 VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(invoiceId, userId, type, encPayload)
+		.bind(crypto.randomUUID(), invoiceId, userId, type, encPayload)
 		.run();
 };
 
@@ -149,7 +149,7 @@ app.get("/", async (c) => {
 	const binds: unknown[] = [userId];
 	if (customerId) {
 		where.push("customerId = ?");
-		binds.push(Number(customerId));
+		binds.push(customerId);
 	}
 	if (status) {
 		where.push("status = ?");
@@ -162,11 +162,11 @@ app.get("/", async (c) => {
 
 	const { results } = await db
 		.prepare(
-			`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+			`SELECT id, userId, customerId, timesheetId, number, status,
 			        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
 			        voidedAt, archivedAt, createdAt, updatedAt
 			 FROM invoices WHERE ${where.join(" AND ")}
-			 ORDER BY issuedAt DESC, id DESC`,
+			 ORDER BY issuedAt DESC, createdAt DESC`,
 		)
 		.bind(...binds)
 		.all<DbInvoiceRow>();
@@ -181,12 +181,12 @@ app.get("/", async (c) => {
 // GET /api/v1/invoices/:id
 // ============================================================
 app.get("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const row = await db
 		.prepare(
-			`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+			`SELECT id, userId, customerId, timesheetId, number, status,
 			        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
 			        voidedAt, archivedAt, createdAt, updatedAt
 			 FROM invoices WHERE id = ? AND userId = ?`,
@@ -201,25 +201,25 @@ app.get("/:id", async (c) => {
 // GET /api/v1/invoices/:id/events
 // ============================================================
 app.get("/:id/events", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
 	const invoice = await db
 		.prepare("SELECT id FROM invoices WHERE id = ? AND userId = ?")
 		.bind(id, userId)
-		.first<{ id: number }>();
+		.first<{ id: string }>();
 	if (!invoice) return c.json({ error: "Invoice not found" }, 404);
 
 	const { results } = await db
 		.prepare(
 			`SELECT id, invoiceId, userId, type, payload, createdAt
-			 FROM invoice_events WHERE invoiceId = ? ORDER BY createdAt ASC, id ASC`,
+			 FROM invoice_events WHERE invoiceId = ? ORDER BY createdAt ASC`,
 		)
 		.bind(id)
 		.all<{
-			id: number;
-			invoiceId: number;
+			id: string;
+			invoiceId: string;
 			userId: number;
 			type: string;
 			payload: string | null;
@@ -254,7 +254,7 @@ app.post("/", async (c) => {
 	const cust = await db
 		.prepare("SELECT id FROM customers WHERE id = ? AND userId = ?")
 		.bind(body.customerId, userId)
-		.first<{ id: number }>();
+		.first<{ id: string }>();
 	if (!cust) return c.json({ error: "Customer not found" }, 404);
 
 	const today = new Date().toISOString().slice(0, 10);
@@ -275,8 +275,8 @@ app.post("/", async (c) => {
 			)
 			.bind(body.timesheetId, userId)
 			.first<{
-				id: number;
-				projectId: number;
+				id: string;
+				projectId: string;
 				name: string;
 				description: string | null;
 				active: number;
@@ -323,17 +323,17 @@ app.post("/", async (c) => {
 
 	const year = Number(issuedAt.slice(0, 4));
 	const number = await nextInvoiceNumber(userId, year, c.env);
-	const uuid = crypto.randomUUID();
+	const invoiceId = crypto.randomUUID();
 
-	const result = await db
+	await db
 		.prepare(
 			`INSERT INTO invoices
-			   (uuid, userId, customerId, timesheetId, number, status,
+			   (id, userId, customerId, timesheetId, number, status,
 			    amount_cents, description, issuedAt, dueDate)
 			 VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)`,
 		)
 		.bind(
-			uuid,
+			invoiceId,
 			userId,
 			body.customerId,
 			body.timesheetId ?? null,
@@ -345,7 +345,6 @@ app.post("/", async (c) => {
 		)
 		.run();
 
-	const invoiceId = Number(result.meta.last_row_id);
 	await logEvent(invoiceId, userId, "created", { number }, c.env);
 
 	if (body.timesheetId) {
@@ -359,7 +358,7 @@ app.post("/", async (c) => {
 			.run();
 	}
 
-	return c.json({ success: true, id: invoiceId, uuid, number }, 201);
+	return c.json({ success: true, id: invoiceId, number }, 201);
 });
 
 // ============================================================
@@ -462,7 +461,7 @@ const buildSnapshot = async (
 		},
 		invoice: {
 			number: row.number,
-			uuid: row.uuid,
+			id: row.id,
 			issuedAt: row.issuedAt,
 			dueDate: row.dueDate,
 			description,
@@ -476,13 +475,13 @@ const buildSnapshot = async (
 // POST /api/v1/invoices/:id/send — freeze snapshot, email via Resend
 // ============================================================
 app.post("/:id/send", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
 	const row = await db
 		.prepare(
-			`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+			`SELECT id, userId, customerId, timesheetId, number, status,
 			        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
 			        voidedAt, archivedAt, createdAt, updatedAt
 			 FROM invoices WHERE id = ? AND userId = ?`,
@@ -542,7 +541,6 @@ app.post("/:id/send", async (c) => {
 		);
 	}
 
-	// Rate limit before any external work.
 	try {
 		await assertWithinSendLimit(userId, c.env);
 	} catch (err) {
@@ -561,7 +559,7 @@ app.post("/:id/send", async (c) => {
 	}
 
 	const snapshot = await buildSnapshot(row, c.env);
-	const hostedUrl = `${c.env.APP_BASE_URL.replace(/\/$/, "")}/invoice/${row.uuid}`;
+	const hostedUrl = `${c.env.APP_BASE_URL.replace(/\/$/, "")}/invoice/${row.id}`;
 	const html = renderInvoiceHtml(snapshot, { hostedUrl });
 	const customerEmail = await decrypt(cust.email, c.env);
 
@@ -614,7 +612,7 @@ app.post("/:id/send", async (c) => {
 // POST /api/v1/invoices/:id/pay
 // ============================================================
 app.post("/:id/pay", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
@@ -625,12 +623,12 @@ app.post("/:id/pay", async (c) => {
 		)
 		.bind(id, userId)
 		.first<{
-			id: number;
-			customerId: number;
+			id: string;
+			customerId: string;
 			status: InvoiceStatus;
 			amount_cents: string;
 			number: string;
-			timesheetId: number | null;
+			timesheetId: string | null;
 		}>();
 	if (!row) return c.json({ error: "Invoice not found" }, 404);
 	if (row.status === "paid")
@@ -648,24 +646,22 @@ app.post("/:id/pay", async (c) => {
 		.run();
 	await logEvent(id, userId, "paid", null, c.env);
 
-	// Side-effect: create a transaction row, mirroring the previous Stripe-flow behaviour.
-	// Find a project for this customer to attach the transaction to. Prefer the
-	// invoice's timesheet's project; otherwise pick any project linked to the customer.
-	let projectId: number | null = null;
+	// Side-effect: create a transaction row attached to the project we can find.
+	let projectId: string | null = null;
 	if (row.timesheetId) {
 		const ts = await db
 			.prepare("SELECT projectId FROM timesheets WHERE id = ?")
 			.bind(row.timesheetId)
-			.first<{ projectId: number }>();
+			.first<{ projectId: string }>();
 		projectId = ts?.projectId ?? null;
 	}
 	if (!projectId) {
 		const proj = await db
 			.prepare(
-				"SELECT id FROM projects WHERE customerId = ? AND userId = ? ORDER BY id ASC LIMIT 1",
+				"SELECT id FROM projects WHERE customerId = ? AND userId = ? ORDER BY createdAt ASC LIMIT 1",
 			)
 			.bind(row.customerId, userId)
-			.first<{ id: number }>();
+			.first<{ id: string }>();
 		projectId = proj?.id ?? null;
 	}
 
@@ -676,10 +672,11 @@ app.post("/:id/pay", async (c) => {
 		await db
 			.prepare(
 				`INSERT INTO transactions
-				   (projectId, date, description, amount, filePath, userId)
-				 VALUES (?, ?, ?, ?, NULL, ?)`,
+				   (id, projectId, date, description, amount, filePath, userId)
+				 VALUES (?, ?, ?, ?, ?, NULL, ?)`,
 			)
 			.bind(
+				crypto.randomUUID(),
 				projectId,
 				now.slice(0, 10),
 				await encrypt(`Invoice ${row.number} marked as paid`, c.env),
@@ -696,7 +693,7 @@ app.post("/:id/pay", async (c) => {
 // POST /api/v1/invoices/:id/void
 // ============================================================
 app.post("/:id/void", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const row = await db

@@ -30,7 +30,7 @@ const consentBadge = (c: Customer): string => {
 
 export const Customers = () => {
 	const queryClient = useQueryClient();
-	const [editingId, setEditingId] = useState<number | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
 
 	const {
 		data: customers,
@@ -61,7 +61,7 @@ export const Customers = () => {
 
 	const { mutateAsync: save } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = Number(formData.get("id") ?? 0);
+			const id = String(formData.get("id") ?? "");
 			const name = String(formData.get("name") ?? "").trim();
 			const email = String(formData.get("email") ?? "").trim();
 			const address = String(formData.get("address") ?? "").trim();

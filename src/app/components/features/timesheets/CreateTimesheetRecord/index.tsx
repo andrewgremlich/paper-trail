@@ -13,14 +13,14 @@ export const CreateTimesheetRecord = ({
 	projectRate,
 	active,
 }: {
-	timesheetId: number;
+	timesheetId: string;
 	projectRate: number;
 	active: boolean;
 }) => {
 	const queryClient = useQueryClient();
 	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const timesheetId = Number(formData.get("timesheetId") || 0);
+			const timesheetId = String(formData.get("timesheetId") ?? "");
 			const projectRate = Number(formData.get("projectRate") || 0);
 			const dateRaw = String(formData.get("date") || "");
 			const date = normalizeDateInput(dateRaw);

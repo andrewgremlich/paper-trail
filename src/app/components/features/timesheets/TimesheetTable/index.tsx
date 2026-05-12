@@ -25,13 +25,13 @@ export const TimesheetTable = ({
 	active: boolean;
 	projectRate: number;
 }) => {
-	const [editingId, setEditingId] = useState<number | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
 	const { activeTimesheetId } = usePaperTrailStore();
 	const queryClient = useQueryClient();
 	const { mutate: deleteEntry } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = Number(formData.get("id") || 0);
+			const id = String(formData.get("id") ?? "");
 			await deleteTimesheetEntry(id);
 			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
@@ -40,7 +40,7 @@ export const TimesheetTable = ({
 	});
 	const { mutateAsync: saveEdit } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const id = Number(formData.get("id") || 0);
+			const id = String(formData.get("id") ?? "");
 			const projectRate = Number(formData.get("projectRate") || 0);
 			const dateRaw = String(formData.get("date") || "");
 			const date = normalizeDateInput(dateRaw);

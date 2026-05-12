@@ -9,7 +9,7 @@ export const GenerateInvoice = ({
 	activeTimesheetId,
 }: {
 	timesheet: TimesheetDetails;
-	activeTimesheetId: number;
+	activeTimesheetId: string;
 }) => {
 	const queryClient = useQueryClient();
 	const {

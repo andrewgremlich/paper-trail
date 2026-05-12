@@ -20,8 +20,8 @@ import styles from "./styles.module.css";
 
 interface FileStatusCellProps {
 	path: string;
-	txId: number;
-	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+	txId: string;
+	onReplaceFile: (id: string, newPath: string) => Promise<void>;
 }
 
 const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
@@ -87,15 +87,15 @@ interface TransactionViewRowProps {
 	path: string;
 	onEdit: () => void;
 	onDelete: (formData: FormData) => Promise<void>;
-	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+	onReplaceFile: (id: string, newPath: string) => Promise<void>;
 }
 
 const NoFileCell = ({
 	txId,
 	onReplaceFile,
 }: {
-	txId: number;
-	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+	txId: string;
+	onReplaceFile: (id: string, newPath: string) => Promise<void>;
 }) => {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -17,7 +17,7 @@ export const createTimesheetEntry = async ({
 	});
 };
 
-export const deleteTimesheetEntry = async (id: number): Promise<void> => {
+export const deleteTimesheetEntry = async (id: string): Promise<void> => {
 	await api.delete(`/timesheet-entries/${id}`);
 };
 

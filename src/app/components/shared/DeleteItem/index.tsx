@@ -9,7 +9,7 @@ export const DeleteItem = ({
 	actionFn,
 	successFn,
 }: {
-	deleteItemId: number;
+	deleteItemId: string;
 	actionFn: (formData: FormData) => Promise<void>;
 	successFn: () => void;
 }) => {

@@ -5,11 +5,10 @@ import type { Invoice } from "@/lib/db/types";
 import { PayVoidButtons } from ".";
 
 const mockInvoice: Invoice = {
-	id: 1,
-	uuid: "00000000-0000-0000-0000-000000000001",
+	id: "00000000-0000-0000-0000-000000000001",
 	userId: 1,
-	customerId: 42,
-	timesheetId: 7,
+	customerId: "cust-42",
+	timesheetId: "ts-7",
 	number: "INV-2026-0001",
 	status: "draft",
 	amount_cents: 5000,

@@ -8,12 +8,12 @@ import styles from "./styles.module.css";
 interface TransactionListProps {
 	transactions: Transaction[];
 	projects: Project[] | undefined;
-	editingId: number | null;
-	onEdit: (id: number) => void;
+	editingId: string | null;
+	onEdit: (id: string) => void;
 	onCancelEdit: () => void;
 	onSave: (formData: FormData) => Promise<void>;
 	onDelete: (formData: FormData) => Promise<void>;
-	onReplaceFile: (id: number, newPath: string) => Promise<void>;
+	onReplaceFile: (id: string, newPath: string) => Promise<void>;
 }
 
 export const TransactionList = ({

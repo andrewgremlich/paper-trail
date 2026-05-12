@@ -6,17 +6,17 @@ import { TimesheetEditForm } from ".";
 describe("TimesheetEditForm", () => {
 	const queryClient = new QueryClient();
 	const mockTimesheet = {
-		id: 1,
+		id: "ts-1",
 		userId: 1,
 		name: "Test Timesheet",
 		description: "Test Description",
 		active: true,
-		projectId: 1,
+		projectId: "proj-1",
 		projectRate: 5000,
-		customerId: 42,
+		customerId: "cust-42",
 		entries: [],
-		createdAt: 1704067200000,
-		updatedAt: 1704067200000,
+		createdAt: "2024-01-01T00:00:00Z",
+		updatedAt: "2024-01-01T00:00:00Z",
 	};
 
 	const renderComponent = (timesheet = mockTimesheet, onSaved = () => {}) =>

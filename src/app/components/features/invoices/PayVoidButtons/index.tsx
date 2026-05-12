@@ -64,7 +64,7 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 		onSuccess: invalidate,
 	});
 
-	const hostedUrl = `${window.location.origin}/invoice/${invoice.uuid}`;
+	const hostedUrl = `${window.location.origin}/invoice/${invoice.id}`;
 
 	const copyHostedUrl = async () => {
 		try {

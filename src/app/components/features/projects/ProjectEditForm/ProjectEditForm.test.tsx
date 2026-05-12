@@ -16,15 +16,15 @@ vi.mock("@/lib/db", async () => {
 describe("ProjectEditForm", () => {
 	const queryClient = new QueryClient();
 	const mockProject: Project = {
-		id: 1,
+		id: "proj-1",
 		userId: 1,
 		name: "Test Project",
 		description: "Test Description",
 		rate_in_cents: 5000,
-		customerId: 42,
+		customerId: "cust-42",
 		active: true,
-		createdAt: 1704067200000,
-		updatedAt: 1704067200000,
+		createdAt: "2024-01-01T00:00:00Z",
+		updatedAt: "2024-01-01T00:00:00Z",
 	};
 
 	beforeEach(() => {

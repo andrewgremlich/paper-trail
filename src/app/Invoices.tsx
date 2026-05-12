@@ -37,7 +37,7 @@ export const Invoices = () => {
 		});
 
 	const customerById = useMemo(() => {
-		const map = new Map<number, string>();
+		const map = new Map<string, string>();
 		for (const c of customers ?? []) map.set(c.id, c.name);
 		return map;
 	}, [customers]);
@@ -45,8 +45,7 @@ export const Invoices = () => {
 	const filtered = useMemo(() => {
 		let list = invoices ?? [];
 		if (selectedCustomerId) {
-			const id = Number(selectedCustomerId);
-			list = list.filter((i) => i.customerId === id);
+			list = list.filter((i) => i.customerId === selectedCustomerId);
 		}
 		if (selectedStatus) {
 			list = list.filter((i) => i.status === selectedStatus);

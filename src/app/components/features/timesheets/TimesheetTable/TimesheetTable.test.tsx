@@ -6,7 +6,7 @@ import { TimesheetTable } from ".";
 // Mock the store
 vi.mock("@/lib/store", () => ({
 	usePaperTrailStore: () => ({
-		activeTimesheetId: 1,
+		activeTimesheetId: "ts-1",
 	}),
 }));
 
@@ -24,26 +24,26 @@ describe("TimesheetTable", () => {
 	const queryClient = new QueryClient();
 	const mockEntries = [
 		{
-			id: 1,
+			id: "entry-1",
 			userId: 1,
 			date: "2024-01-15",
 			minutes: 120,
 			description: "Testing feature A",
 			amount: 10000,
-			timesheetId: 1,
-			createdAt: 1705276800000,
-			updatedAt: 1705276800000,
+			timesheetId: "ts-1",
+			createdAt: "2024-01-15T00:00:00Z",
+			updatedAt: "2024-01-15T00:00:00Z",
 		},
 		{
-			id: 2,
+			id: "entry-2",
 			userId: 1,
 			date: "2024-01-16",
 			minutes: 60,
 			description: "Testing feature B",
 			amount: 5000,
-			timesheetId: 1,
-			createdAt: 1705363200000,
-			updatedAt: 1705363200000,
+			timesheetId: "ts-1",
+			createdAt: "2024-01-16T00:00:00Z",
+			updatedAt: "2024-01-16T00:00:00Z",
 		},
 	];
 

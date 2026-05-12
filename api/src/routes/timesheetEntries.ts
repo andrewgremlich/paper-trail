@@ -6,10 +6,10 @@ import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// POST /api/timesheet-entries - create entry
+// POST /api/v1/timesheet-entries - create entry
 app.post("/", async (c) => {
 	const body = await c.req.json<{
-		timesheetId: number;
+		timesheetId: string;
 		date: string;
 		minutes: number;
 		description: string;
@@ -20,21 +20,30 @@ app.post("/", async (c) => {
 
 	const encDescription = await encrypt(body.description, c.env);
 	const encAmount = await encrypt(String(body.amount), c.env);
+	const id = crypto.randomUUID();
 
 	await db
 		.prepare(
-			`INSERT INTO timesheet_entries (timesheetId, date, minutes, description, amount, userId)
-			VALUES (?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, userId)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(body.timesheetId, body.date, body.minutes, encDescription, encAmount, userId)
+		.bind(
+			id,
+			body.timesheetId,
+			body.date,
+			body.minutes,
+			encDescription,
+			encAmount,
+			userId,
+		)
 		.run();
 
-	return c.json({ success: true }, 201);
+	return c.json({ success: true, id }, 201);
 });
 
-// PUT /api/timesheet-entries/:id - update entry
+// PUT /api/v1/timesheet-entries/:id - update entry
 app.put("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const body = await c.req.json<{
 		date: string;
 		minutes: number;
@@ -59,9 +68,9 @@ app.put("/:id", async (c) => {
 	return c.json({ success: true });
 });
 
-// DELETE /api/timesheet-entries/:id
+// DELETE /api/v1/timesheet-entries/:id
 app.delete("/:id", async (c) => {
-	const id = Number(c.req.param("id"));
+	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 

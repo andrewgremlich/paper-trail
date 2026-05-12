@@ -16,40 +16,40 @@ const makeQueryClient = () =>
 describe("TransactionList", () => {
 	const mockTransactions: Transaction[] = [
 		{
-			id: 1,
+			id: "tx-1",
 			userId: 1,
 			date: "2024-01-15",
 			description: "Test transaction 1",
-			projectId: 1,
+			projectId: "proj-1",
 			amount: 100.5,
 			filePath: "",
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 		{
-			id: 2,
+			id: "tx-2",
 			userId: 1,
 			date: "2024-01-16",
 			description: "Test transaction 2",
-			projectId: 1,
+			projectId: "proj-1",
 			amount: 200.0,
 			filePath: "/path/to/file.pdf",
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 	];
 
 	const mockProjects = [
 		{
-			id: 1,
+			id: "proj-1",
 			userId: 1,
 			name: "Project 1",
 			active: true,
 			customerId: null,
 			rate_in_cents: 10000,
 			description: null,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		},
 	];
 
@@ -61,7 +61,7 @@ describe("TransactionList", () => {
 
 	const renderList = (
 		transactions: Transaction[],
-		editingId: number | null = null,
+		editingId: string | null = null,
 	) =>
 		renderToStaticMarkup(
 			<QueryClientProvider client={makeQueryClient()}>
@@ -93,7 +93,7 @@ describe("TransactionList", () => {
 	});
 
 	it("renders edit row when editingId matches transaction", () => {
-		expect(renderList(mockTransactions, 1)).toContain("tx-edit-form-1");
+		expect(renderList(mockTransactions, "tx-1")).toContain("tx-edit-form-tx-1");
 	});
 
 	it("renders view row when not editing", () => {

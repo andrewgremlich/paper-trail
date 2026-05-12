@@ -9,6 +9,7 @@ import { EditToggleButton } from "@/components/shared/EditToggleButton";
 import { Dialog } from "@/components/ui/Dialog";
 import { Grid } from "@/components/ui/Grid";
 import { deleteTimesheet, getTimesheetById } from "@/lib/db";
+import { getCustomer } from "@/lib/db/customers";
 import { getInvoices } from "@/lib/db/invoices";
 import { usePaperTrailStore } from "@/lib/store";
 import { CreateTimesheetRecord } from "../CreateTimesheetRecord";
@@ -42,6 +43,17 @@ export const TimesheetModal = () => {
 		enabled: !!activeTimesheetId,
 	});
 
+	// Customer linked through the timesheet's project. The /timesheets/:id
+	// response carries the FK; resolve it to a name for display.
+	const { data: customer } = useQuery({
+		queryKey: ["customer", timesheet?.customerId],
+		queryFn: () => {
+			if (!timesheet?.customerId) return null;
+			return getCustomer(timesheet.customerId);
+		},
+		enabled: !!timesheet?.customerId,
+	});
+
 	return (
 		<Dialog
 			variant="liquidGlass"
@@ -67,7 +79,7 @@ export const TimesheetModal = () => {
 						<DeleteItem
 							deleteItemId={timesheet.id}
 							actionFn={async (formData: FormData) => {
-								const id = Number(formData.get("id") || 0);
+								const id = String(formData.get("id") ?? "");
 								await deleteTimesheet(id);
 							}}
 							successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
@@ -91,9 +103,12 @@ export const TimesheetModal = () => {
 							Project Rate: ${(timesheet.projectRate / 100).toFixed(2)}/hour
 						</P>
 					)}
-					<P>
-						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
-					</P>
+					{timesheet?.customerId && (
+						<P>
+							Customer:{" "}
+							{customer ? `${customer.name} (${customer.email})` : "…"}
+						</P>
+					)}
 					{timesheetInvoice && <P>Invoice: {timesheetInvoice.number}</P>}
 					{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 				</Grid>
