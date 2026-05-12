@@ -71,6 +71,7 @@ export const Transactions = () => {
 			const date = normalizeDateInput(rawDate);
 			const description = String(formData.get("description") || "").trim();
 			const amountDollars = Number(formData.get("amount") || 0);
+			const filePath = String(formData.get("filePath") ?? "");
 
 			await updateTransaction({
 				id,
@@ -78,6 +79,7 @@ export const Transactions = () => {
 				date,
 				description,
 				amount: amountDollars,
+				filePath,
 			});
 			await queryClient.invalidateQueries({
 				queryKey: ["transactions", activeProjectId],

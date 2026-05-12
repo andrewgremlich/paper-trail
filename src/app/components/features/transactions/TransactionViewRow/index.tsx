@@ -3,7 +3,6 @@ import {
 	AlertTriangle,
 	Edit,
 	FolderOpen,
-	Globe,
 	Paperclip,
 	TrashIcon,
 } from "lucide-react";
@@ -27,14 +26,12 @@ interface FileStatusCellProps {
 
 const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const isUrl = /^https?:\/\//i.test(path);
 
 	const { data: isAlive } = useQuery({
 		queryKey: ["file-status", path],
 		queryFn: () => checkFileLink(path),
 		staleTime: 5 * 60 * 1000,
 		retry: false,
-		enabled: !isUrl,
 	});
 
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,11 +76,7 @@ const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
 				await openAttachment(path);
 			}}
 		>
-			{isUrl ? (
-				<Globe size={16} aria-hidden="true" />
-			) : (
-				<FolderOpen size={16} aria-hidden="true" />
-			)}
+			<FolderOpen size={16} aria-hidden="true" />
 		</Button>
 	);
 };

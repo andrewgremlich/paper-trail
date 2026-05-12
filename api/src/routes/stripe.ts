@@ -375,7 +375,6 @@ app.post("/invoices/:id/pay", async (c) => {
 		if (timesheetRow) {
 			const projectId = timesheetRow.projectId as number;
 			const amountCents = invoice.amount_paid ?? 0;
-			const pdfUrl = invoice.invoice_pdf ?? null;
 
 			const encDescription = await encrypt(
 				`Invoice ${invoiceId} marked as paid`,
@@ -393,7 +392,7 @@ app.post("/invoices/:id/pay", async (c) => {
 					new Date().toISOString().split("T")[0],
 					encDescription,
 					encAmount,
-					pdfUrl,
+					null,
 					userId,
 				)
 				.run();
@@ -469,7 +468,7 @@ app.get("/connect/callback", async (c) => {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: new URLSearchParams({
-				client_secret: c.env.STRIPE_CLIENT_SECRET,
+				client_secret: c.env.STRIPE_CLIENT_SECRET ?? "",
 				code,
 				grant_type: "authorization_code",
 			}),

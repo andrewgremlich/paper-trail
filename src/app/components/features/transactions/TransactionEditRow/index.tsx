@@ -31,7 +31,6 @@ export const TransactionEditRow = ({
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [clearFile, setClearFile] = useState(false);
 
-	const isUrl = /^https?:\/\//i.test(path);
 	const effectivePath = clearFile ? "" : path;
 	const hasExistingFile = effectivePath.length > 0;
 
@@ -131,17 +130,15 @@ export const TransactionEditRow = ({
 							>
 								<Paperclip size={14} aria-hidden="true" />
 							</Button>
-							{!isUrl && (
-								<Button
-									type="button"
-									size="sm"
-									variant="ghost"
-									onClick={handleRemove}
-									aria-label="Remove file"
-								>
-									<X size={14} aria-hidden="true" />
-								</Button>
-							)}
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								onClick={handleRemove}
+								aria-label="Remove file"
+							>
+								<X size={14} aria-hidden="true" />
+							</Button>
 							<input
 								ref={fileInputRef}
 								type="file"
@@ -182,8 +179,7 @@ export const TransactionEditRow = ({
 						fd.set("id", String(tx.id));
 
 						if (pendingFile) {
-							// Only remove from R2 if the old path is a local file (not a URL)
-							if (path && !isUrl) await removeAttachment(path);
+							if (path) await removeAttachment(path);
 							const newKey = await saveAttachment(pendingFile);
 							fd.set("filePath", newKey);
 						} else if (clearFile && path) {
