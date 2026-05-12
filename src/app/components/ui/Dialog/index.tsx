@@ -103,7 +103,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				)}
 				data-variant={variant}
 			>
-				{children}
+				<div className={styles.scrollBody}>{children}</div>
 			</dialog>,
 			document.body,
 		);

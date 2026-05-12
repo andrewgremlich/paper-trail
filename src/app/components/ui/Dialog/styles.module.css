@@ -9,7 +9,38 @@
 	width: 100%;
 	max-width: 48rem;
 	max-height: 100dvh;
+	overflow: hidden;
+}
+
+.scrollBody {
 	overflow-y: auto;
+	max-height: 100dvh;
+	padding: 1rem;
+	scrollbar-width: thin;
+	scrollbar-color: var(--border) transparent;
+}
+
+.scrollBody::-webkit-scrollbar {
+	width: 6px;
+}
+
+.scrollBody::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.scrollBody::-webkit-scrollbar-thumb {
+	background-color: var(--border);
+	border-radius: 3px;
+}
+
+.scrollBody::-webkit-scrollbar-thumb:hover {
+	background-color: var(--border-hover);
+}
+
+@media (min-width: 640px) {
+	.scrollBody {
+		max-height: 85dvh;
+	}
 }
 
 @media (min-width: 640px) {
@@ -26,7 +57,6 @@
 /* Variant: Solid (default) */
 .solid {
 	border-radius: 1rem;
-	padding: 1rem;
 	border: 1px solid var(--border);
 	background-color: var(--card);
 	color: var(--card-foreground);
@@ -44,6 +74,8 @@
 	transition-duration: 150ms;
 	transition-behavior: allow-discrete;
 	will-change: transform, opacity;
+	opacity: 0;
+	translate: 0 100%;
 }
 
 .animate[open] {
@@ -61,6 +93,8 @@
 @media (min-width: 640px) {
 	.animate {
 		transition-property: opacity, scale, display;
+		scale: 0.95;
+		translate: 0 0;
 	}
 
 	.animate[open] {
