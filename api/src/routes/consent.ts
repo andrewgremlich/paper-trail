@@ -1,0 +1,227 @@
+import { Hono } from "hono";
+import { decrypt, encrypt } from "../lib/crypto";
+import { getDb } from "../lib/db";
+import { sha256Hex } from "../lib/hash";
+import type { Env } from "../lib/types";
+
+/**
+ * Public (unauthenticated) consent confirmation routes.
+ *
+ * The customer clicks a single-use token link in an email and is shown
+ * an Agree/Decline page. Tokens expire 30 days after they were issued
+ * and are cleared on first use.
+ *
+ * Mounted on the top-level `app`, NOT under /api/v1 — these are public
+ * so the customer (who is not a Cloudflare Access user) can reach them.
+ */
+
+const app = new Hono<{ Bindings: Env }>();
+
+const CONSENT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+const escape = (value: string | null | undefined): string => {
+	if (value == null) return "";
+	return String(value)
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
+};
+
+const page = (title: string, body: string): string =>
+	`<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>${escape(title)}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; background: #f5f5f5; margin: 0; padding: 48px 12px; }
+  .card { max-width: 520px; margin: 0 auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  h1 { margin-top: 0; font-size: 22px; }
+  p { line-height: 1.6; }
+  form { display: inline; }
+  button { font: inherit; padding: 12px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+  .agree { background: #1a1a1a; color: #fff; margin-right: 8px; }
+  .decline { background: #f1f1f1; color: #1a1a1a; }
+  .muted { color: #666; font-size: 13px; margin-top: 24px; }
+</style>
+</head><body><div class="card">${body}</div></body></html>`;
+
+type ConsentRow = {
+	id: number;
+	userId: number;
+	name: string;
+	email: string;
+	consentToken: string;
+	consentRequestedAt: string | null;
+};
+
+const lookupValidToken = async (
+	token: string,
+	env: Env,
+): Promise<ConsentRow | null> => {
+	const db = getDb(env);
+	const row = await db
+		.prepare(
+			`SELECT id, userId, name, email, consentToken, consentRequestedAt
+			 FROM customers WHERE consentToken = ?`,
+		)
+		.bind(token)
+		.first<ConsentRow>();
+	if (!row) return null;
+	const requestedMs = row.consentRequestedAt
+		? Date.parse(row.consentRequestedAt)
+		: 0;
+	if (!requestedMs || Date.now() - requestedMs > CONSENT_TTL_MS) return null;
+	return row;
+};
+
+// GET /consent/:token — show the Agree / Decline page
+app.get("/:token", async (c) => {
+	const token = c.req.param("token");
+	const row = await lookupValidToken(token, c.env);
+	if (!row) {
+		return c.html(
+			page(
+				"Link expired",
+				`<h1>This link is no longer valid</h1>
+				 <p>Consent links expire after 30 days or once they've been used. Please ask the sender for a new link.</p>`,
+			),
+			410,
+		);
+	}
+
+	const db = getDb(c.env);
+	const userRow = await db
+		.prepare("SELECT businessName FROM users WHERE id = ?")
+		.bind(row.userId)
+		.first<{ businessName: string | null }>();
+	const businessName = userRow?.businessName
+		? await decrypt(userRow.businessName, c.env)
+		: "The sender";
+
+	const customerEmail = await decrypt(row.email, c.env);
+
+	return c.html(
+		page(
+			"Consent to electronic invoicing",
+			`<h1>Consent to receive invoices by email</h1>
+			 <p><strong>${escape(businessName)}</strong> would like to send invoices to <strong>${escape(customerEmail)}</strong>.</p>
+			 <p>By agreeing, you confirm you're okay receiving invoices and payment links at this email address. You can revoke this at any time by replying to any invoice.</p>
+			 <form method="POST" action="/consent/${escape(token)}">
+			   <button class="agree" type="submit" name="decision" value="agree">I agree</button>
+			   <button class="decline" type="submit" name="decision" value="decline">No, thanks</button>
+			 </form>
+			 <p class="muted">If you weren't expecting this, you can safely close this page — no email will be sent without your consent.</p>`,
+		),
+		200,
+		{ "Cache-Control": "no-store" },
+	);
+});
+
+// POST /consent/:token — flip the flag (or decline)
+app.post("/:token", async (c) => {
+	const token = c.req.param("token");
+	const row = await lookupValidToken(token, c.env);
+	if (!row) {
+		return c.html(
+			page(
+				"Link expired",
+				`<h1>This link is no longer valid</h1>
+				 <p>Consent links expire after 30 days or once they've been used.</p>`,
+			),
+			410,
+		);
+	}
+
+	const form = await c.req.parseBody();
+	const decision = form.decision === "agree" ? "agree" : "decline";
+
+	const db = getDb(c.env);
+	const ip =
+		c.req.header("CF-Connecting-IP") ||
+		c.req.header("X-Forwarded-For") ||
+		"";
+	const ua = c.req.header("User-Agent") ?? "";
+	const ipHash = ip ? await sha256Hex(ip, c.env) : null;
+	const uaHash = ua ? await sha256Hex(ua, c.env) : null;
+	const now = new Date().toISOString();
+
+	if (decision === "agree") {
+		await db
+			.prepare(
+				`UPDATE customers
+				 SET consentToEmailInvoices = 1, consentedAt = ?,
+				     consentIpHash = ?, consentUaHash = ?,
+				     consentToken = NULL
+				 WHERE id = ?`,
+			)
+			.bind(now, ipHash, uaHash, row.id)
+			.run();
+
+		await db
+			.prepare(
+				`INSERT INTO customer_events (customerId, userId, type, payload)
+				 VALUES (?, ?, 'consent_granted', ?)`,
+			)
+			.bind(
+				row.id,
+				row.userId,
+				await encrypt(
+					JSON.stringify({
+						ipHash,
+						uaHash,
+						tokenLast4: token.slice(-4),
+					}),
+					c.env,
+				),
+			)
+			.run();
+
+		return c.html(
+			page(
+				"Consent recorded",
+				`<h1>Thanks — consent recorded</h1>
+				 <p>You'll receive invoices at this email address. You can revoke consent at any time by replying to any invoice.</p>`,
+			),
+			200,
+			{ "Cache-Control": "no-store" },
+		);
+	}
+
+	// decline
+	await db
+		.prepare(
+			"UPDATE customers SET consentToken = NULL WHERE id = ?",
+		)
+		.bind(row.id)
+		.run();
+
+	await db
+		.prepare(
+			`INSERT INTO customer_events (customerId, userId, type, payload)
+			 VALUES (?, ?, 'consent_declined', ?)`,
+		)
+		.bind(
+			row.id,
+			row.userId,
+			await encrypt(
+				JSON.stringify({ ipHash, uaHash, tokenLast4: token.slice(-4) }),
+				c.env,
+			),
+		)
+		.run();
+
+	return c.html(
+		page(
+			"Declined",
+			`<h1>Noted</h1>
+			 <p>You won't receive invoices at this email address. The sender has been notified.</p>`,
+		),
+		200,
+		{ "Cache-Control": "no-store" },
+	);
+});
+
+export { app as consentRoutes };

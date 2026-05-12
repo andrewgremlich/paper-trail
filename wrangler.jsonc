@@ -11,7 +11,7 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/invoice/*", "/consent/*"]
   },
   "dev": {
     "port": 8787
@@ -31,7 +31,7 @@
     }
   ],
   "vars": {
-    "STRIPE_CONNECT_REDIRECT_URI": "https://paper-trail.andrew-4ae.workers.dev/api/v1/stripe/connect/callback"
+    "APP_BASE_URL": "https://paper-trail.andrew-4ae.workers.dev"
   },
   // Dev environment (used by `wrangler dev --env dev`)
   "env": {
@@ -51,8 +51,7 @@
         }
       ],
       "vars": {
-        "STRIPE_CLIENT_ID": "ca_REPLACE_WITH_YOUR_CLIENT_ID",
-        "STRIPE_CONNECT_REDIRECT_URI": "http://localhost:5173/api/v1/stripe/connect/callback"
+        "APP_BASE_URL": "http://localhost:5173"
       }
     }
   }

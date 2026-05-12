@@ -4,33 +4,19 @@ export interface Env {
 	CF_ACCESS_BYPASS?: string;
 	CF_ACCESS_DEV_EMAIL?: string;
 	ENCRYPTION_KEY: string;
-	STRIPE_SECRET_KEY?: string;
-	STRIPE_CLIENT_ID?: string;
-	STRIPE_CLIENT_SECRET?: string;
-	STRIPE_CONNECT_REDIRECT_URI?: string;
+	RESEND_API_KEY?: string;
+	RESEND_FROM_ADDRESS?: string;
+	APP_BASE_URL?: string;
 }
 
 export type Nullable<T> = T | null | undefined;
-
-export type StripeConnection = {
-	id: number;
-	userId: number;
-	accessToken: string;
-	refreshToken: string | null;
-	stripeUserId: string;
-	stripePublishableKey: string | null;
-	scope: string | null;
-	connectedAt: string;
-	createdAt: string;
-	updatedAt: string;
-};
 
 export type Project = {
 	id: number;
 	userId: number;
 	name: string;
 	active: boolean | number;
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	rate_in_cents: Nullable<number>;
 	description: Nullable<string>;
 	createdAt: string;
@@ -41,7 +27,6 @@ export type Timesheet = {
 	id: number;
 	userId: number;
 	projectId: number;
-	invoiceId: Nullable<string>;
 	name: string;
 	description: Nullable<string>;
 	active: boolean | number;
@@ -62,13 +47,13 @@ export type TimesheetEntry = {
 };
 
 export type TimesheetWithProject = Timesheet & {
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	projectRate: Nullable<number>;
 };
 
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	projectRate: Nullable<number>;
 };
 
@@ -89,8 +74,113 @@ export type UserProfile = {
 	uuid: string;
 	displayName: string;
 	email: string;
+	venmoHandle: Nullable<string>;
+	paypalHandle: Nullable<string>;
+	businessName: Nullable<string>;
+	businessAddress: Nullable<string>;
 	createdAt: string;
 	updatedAt: string;
+};
+
+export type Customer = {
+	id: number;
+	userId: number;
+	name: string;
+	email: string;
+	address: Nullable<string>;
+	consentToEmailInvoices: boolean | number;
+	consentedAt: Nullable<string>;
+	consentRequestedAt: Nullable<string>;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export type Invoice = {
+	id: number;
+	uuid: string;
+	userId: number;
+	customerId: number;
+	timesheetId: Nullable<number>;
+	number: string;
+	status: InvoiceStatus;
+	amount_cents: number;
+	description: Nullable<string>;
+	issuedAt: string;
+	dueDate: string;
+	sentAt: Nullable<string>;
+	paidAt: Nullable<string>;
+	voidedAt: Nullable<string>;
+	archivedAt: Nullable<string>;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type InvoiceEventType =
+	| "created"
+	| "sent"
+	| "paid"
+	| "voided"
+	| "viewed";
+
+export type InvoiceEvent = {
+	id: number;
+	invoiceId: number;
+	userId: number;
+	type: InvoiceEventType;
+	payload: Nullable<string>;
+	createdAt: string;
+};
+
+export type CustomerEventType =
+	| "consent_requested"
+	| "consent_granted"
+	| "consent_declined"
+	| "consent_revoked";
+
+export type CustomerEvent = {
+	id: number;
+	customerId: number;
+	userId: number;
+	type: CustomerEventType;
+	payload: Nullable<string>;
+	createdAt: string;
+};
+
+/**
+ * Snapshot of all invoice-relevant data, frozen at send time.
+ * Stored encrypted on `invoices.snapshot` so later edits to projects/customers/users
+ * never mutate a sent invoice. The hosted invoice page and the email body both
+ * render from this snapshot.
+ */
+export type InvoiceSnapshot = {
+	seller: {
+		businessName: string;
+		businessAddress: string;
+		email: string;
+		venmoHandle: Nullable<string>;
+		paypalHandle: Nullable<string>;
+	};
+	buyer: {
+		name: string;
+		email: string;
+		address: Nullable<string>;
+	};
+	invoice: {
+		number: string;
+		uuid: string;
+		issuedAt: string;
+		dueDate: string;
+		description: Nullable<string>;
+		amountCents: number;
+	};
+	lineItems: Array<{
+		date: Nullable<string>;
+		description: string;
+		minutes: Nullable<number>;
+		amountCents: number;
+	}>;
 };
 
 export type ExportData = {
@@ -101,5 +191,7 @@ export type ExportData = {
 	timesheets: Timesheet[];
 	timesheetEntries: TimesheetEntry[];
 	transactions: Transaction[];
+	customers?: Customer[];
+	invoices?: Invoice[];
 	userProfile?: UserProfile;
 };
