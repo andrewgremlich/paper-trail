@@ -34,6 +34,7 @@ const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
 		queryFn: () => checkFileLink(path),
 		staleTime: 5 * 60 * 1000,
 		retry: false,
+		enabled: !isUrl,
 	});
 
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

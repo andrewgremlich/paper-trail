@@ -66,11 +66,10 @@
 
 /* Animation states */
 .animate {
-	opacity: 0;
-	translate: 0 100%;
-	transition-property: opacity, translate;
+	transition-property: opacity, translate, display;
 	transition-timing-function: ease-out;
 	transition-duration: 150ms;
+	transition-behavior: allow-discrete;
 	will-change: transform, opacity;
 }
 
@@ -79,14 +78,27 @@
 	translate: 0 0;
 }
 
+@starting-style {
+	.animate[open] {
+		opacity: 0;
+		translate: 0 100%;
+	}
+}
+
 @media (min-width: 640px) {
 	.animate {
-		translate: 0;
-		scale: 0.95;
-		transition-property: opacity, scale;
+		transition-property: opacity, scale, display;
 	}
 
 	.animate[open] {
 		scale: 1;
+	}
+
+	@starting-style {
+		.animate[open] {
+			opacity: 0;
+			scale: 0.95;
+			translate: 0 0;
+		}
 	}
 }
