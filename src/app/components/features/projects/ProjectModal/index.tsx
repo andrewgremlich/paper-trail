@@ -45,7 +45,6 @@ export const ProjectModal = () => {
 
 	return (
 		<Dialog
-			variant="liquidGlass"
 			isOpen={projectModalActive}
 			onClose={() => toggleProjectModal({ projectId: undefined })}
 			titleId={headingId}

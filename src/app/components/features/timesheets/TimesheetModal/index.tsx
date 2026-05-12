@@ -56,7 +56,6 @@ export const TimesheetModal = () => {
 
 	return (
 		<Dialog
-			variant="liquidGlass"
 			isOpen={timesheetModalActive}
 			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
 			titleId={headingId}

@@ -16,7 +16,7 @@ interface DialogProps {
 	titleId?: string;
 	ariaLabel?: string;
 	className?: string;
-	variant?: "solid" | "liquidGlass";
+	variant?: "solid";
 }
 
 export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(

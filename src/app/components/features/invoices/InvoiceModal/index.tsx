@@ -15,7 +15,6 @@ export const InvoiceModal = () => {
 	return (
 		<Dialog
 			isOpen={invoiceModalActive}
-			variant="liquidGlass"
 			onClose={() => toggleInvoiceModal()}
 			titleId={headingId}
 		>

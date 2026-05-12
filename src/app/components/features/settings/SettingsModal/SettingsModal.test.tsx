@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsModal } from "./index";
 
@@ -12,27 +13,34 @@ vi.mock("@/lib/store", () => ({
 
 describe("SettingsModal", () => {
 	const queryClient = new QueryClient({
-		defaultOptions: {
-			queries: { retry: false },
-		},
+		defaultOptions: { queries: { retry: false } },
 	});
 
-	const wrapper = (component: React.ReactElement) => (
-		<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>
-	);
+	const renderComponent = () => {
+		const container = document.createElement("div");
+		document.body.appendChild(container);
+		act(() => {
+			createRoot(container).render(
+				<QueryClientProvider client={queryClient}>
+					<SettingsModal />
+				</QueryClientProvider>,
+			);
+		});
+		return document.body.innerHTML;
+	};
 
 	it("renders settings heading", () => {
-		const html = renderToStaticMarkup(wrapper(<SettingsModal />));
+		const html = renderComponent();
 		expect(html).toContain("Settings");
 	});
 
 	it("renders description", () => {
-		const html = renderToStaticMarkup(wrapper(<SettingsModal />));
+		const html = renderComponent();
 		expect(html).toContain("Modify settings for the application here.");
 	});
 
 	it("renders close button", () => {
-		const html = renderToStaticMarkup(wrapper(<SettingsModal />));
+		const html = renderComponent();
 		expect(html).toContain("Close");
 	});
 });

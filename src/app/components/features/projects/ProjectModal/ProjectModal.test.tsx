@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectModal } from ".";
 
-// Mock the store
 vi.mock("@/lib/store", () => ({
 	usePaperTrailStore: () => ({
 		projectModalActive: true,
@@ -13,7 +13,6 @@ vi.mock("@/lib/store", () => ({
 	}),
 }));
 
-// Mock the database functions
 vi.mock("@/lib/db", async () => {
 	const actual = await vi.importActual("@/lib/db");
 	return {
@@ -23,7 +22,6 @@ vi.mock("@/lib/db", async () => {
 	};
 });
 
-// Mock child components that have complex dependencies
 vi.mock("@/components/features/timesheets/GenerateTimesheet", () => ({
 	GenerateTimesheet: () => <div data-testid="generate-timesheet" />,
 }));
@@ -34,23 +32,25 @@ vi.mock("../ProjectEditForm", () => ({
 
 describe("ProjectModal", () => {
 	const queryClient = new QueryClient({
-		defaultOptions: {
-			queries: {
-				retry: false,
-			},
-		},
+		defaultOptions: { queries: { retry: false } },
 	});
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	const renderComponent = () =>
-		renderToStaticMarkup(
-			<QueryClientProvider client={queryClient}>
-				<ProjectModal />
-			</QueryClientProvider>,
-		);
+	const renderComponent = () => {
+		const container = document.createElement("div");
+		document.body.appendChild(container);
+		act(() => {
+			createRoot(container).render(
+				<QueryClientProvider client={queryClient}>
+					<ProjectModal />
+				</QueryClientProvider>,
+			);
+		});
+		return document.body.innerHTML;
+	};
 
 	it("renders Dialog component", () => {
 		const html = renderComponent();
@@ -58,9 +58,9 @@ describe("ProjectModal", () => {
 		expect(html).toContain("</dialog>");
 	});
 
-	it("renders with liquidGlass variant", () => {
+	it("renders with solid variant", () => {
 		const html = renderComponent();
-		expect(html).toContain('data-variant="liquidGlass"');
+		expect(html).toContain('data-variant="solid"');
 	});
 
 	it("renders dialog with proper structure", () => {

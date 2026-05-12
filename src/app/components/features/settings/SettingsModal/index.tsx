@@ -14,7 +14,6 @@ export const SettingsModal = () => {
 	return (
 		<Dialog
 			isOpen={settingsModalActive}
-			variant="liquidGlass"
 			onClose={toggleSettingsModal}
 			titleId={headingId}
 		>

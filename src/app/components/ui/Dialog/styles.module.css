@@ -25,7 +25,7 @@
 
 /* Variant: Solid (default) */
 .solid {
-	border-radius: 0.75rem 0.75rem 0 0;
+	border-radius: 1rem;
 	padding: 1rem;
 	border: 1px solid var(--border);
 	background-color: var(--card);
@@ -35,26 +35,6 @@
 .solid::backdrop {
 	backdrop-filter: blur(4px);
 	background-color: rgba(0, 0, 0, 0.5);
-}
-
-/* Variant: Liquid Glass */
-.liquidGlass {
-	border-radius: 0.75rem 0.75rem 0 0;
-	padding: 1.5rem 1rem;
-	border: 1px solid var(--glass-border);
-	background-color: var(--glass-background);
-	color: var(--foreground);
-}
-
-@media (min-width: 640px) {
-	.liquidGlass {
-		border-radius: 0.75rem;
-		padding: 2rem 2.5rem;
-	}
-}
-
-.liquidGlass::backdrop {
-	backdrop-filter: blur(12px);
 }
 
 /* Animation states */
