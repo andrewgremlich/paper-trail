@@ -21,7 +21,7 @@ const statusLabel = (status: InvoiceStatus): string =>
 	status[0].toUpperCase() + status.slice(1);
 
 export const Invoices = () => {
-	const { toggleInvoiceModal } = usePaperTrailStore();
+	const { openModal } = usePaperTrailStore();
 	const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 	const [selectedStatus, setSelectedStatus] = useState<string>("");
 
@@ -60,7 +60,7 @@ export const Invoices = () => {
 				<Button
 					type="button"
 					variant="ghost"
-					onClick={() => toggleInvoiceModal()}
+					onClick={() => openModal({ type: "invoice" })}
 					leftIcon={<NotebookPen size={16} />}
 				>
 					Generate Invoice
@@ -121,7 +121,7 @@ export const Invoices = () => {
 						<TR
 							key={i.id}
 							style={{ cursor: "pointer" }}
-							onClick={() => toggleInvoiceModal({ invoiceId: i.id })}
+							onClick={() => openModal({ type: "invoice", invoiceId: i.id })}
 						>
 							<TD>{i.number}</TD>
 							<TD>{customerById.get(i.customerId) ?? "—"}</TD>

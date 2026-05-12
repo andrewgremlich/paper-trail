@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils";
 import styles from "./styles.module.css";
 
 export const Nav = () => {
-	const { toggleSettingsModal, changeActiveTab, activeTab } =
-		usePaperTrailStore();
+	const { openModal, changeActiveTab, activeTab } = usePaperTrailStore();
 
 	return (
 		<div className={styles.navWrapper}>
@@ -74,7 +73,7 @@ export const Nav = () => {
 					<Button
 						variant="ghost"
 						size="icon"
-						onClick={toggleSettingsModal}
+						onClick={() => openModal({ type: "settings" })}
 						type="button"
 						aria-label="Open settings"
 					>

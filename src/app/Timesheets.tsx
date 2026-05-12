@@ -15,7 +15,7 @@ import { getCustomers } from "@/lib/db/customers";
 import { usePaperTrailStore } from "@/lib/store";
 
 export const Timesheets = () => {
-	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
+	const { openModal } = usePaperTrailStore();
 	const [creatingProject, setCreatingProject] = useState(false);
 
 	const [{ data: projects }, { data: timesheets }, { data: customers }] =
@@ -51,7 +51,7 @@ export const Timesheets = () => {
 										: "No description provided"
 								}
 								action={() => {
-									toggleTimesheetModal({ timesheetId: timesheet.id });
+									openModal({ type: "timesheet", timesheetId: timesheet.id });
 								}}
 								ariaLabel={`Open timesheet ${timesheet.name}`}
 							/>
@@ -84,7 +84,7 @@ export const Timesheets = () => {
 							name={project.name}
 							description={project.description ?? "No description provided"}
 							action={() => {
-								toggleProjectModal({ projectId: project.id });
+								openModal({ type: "project", projectId: project.id });
 							}}
 							ariaLabel={`Open project ${project.name}`}
 						/>

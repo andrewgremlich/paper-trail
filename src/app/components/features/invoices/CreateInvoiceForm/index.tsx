@@ -13,7 +13,7 @@ import { usePaperTrailStore } from "@/lib/store";
 import styles from "./styles.module.css";
 
 export const CreateInvoiceForm = () => {
-	const { toggleInvoiceModal } = usePaperTrailStore();
+	const { closeModal } = usePaperTrailStore();
 	const queryClient = useQueryClient();
 	const [customerId, setCustomerId] = useState("");
 	const [amount, setAmount] = useState("");
@@ -34,7 +34,7 @@ export const CreateInvoiceForm = () => {
 		mutationFn: createInvoiceApi,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
-			toggleInvoiceModal();
+			closeModal();
 		},
 	});
 
@@ -115,7 +115,7 @@ export const CreateInvoiceForm = () => {
 					<Button
 						type="button"
 						variant="secondary"
-						onClick={() => toggleInvoiceModal()}
+						onClick={() => closeModal()}
 						disabled={isPending}
 					>
 						Cancel

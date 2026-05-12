@@ -27,7 +27,9 @@ export const TimesheetTable = ({
 }) => {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const totalAmount = entries.reduce((total, entry) => total + entry.amount, 0);
-	const { activeTimesheetId } = usePaperTrailStore();
+	const { activeModal } = usePaperTrailStore();
+	const activeTimesheetId =
+		activeModal?.type === "timesheet" ? activeModal.timesheetId : undefined;
 	const queryClient = useQueryClient();
 	const { mutate: deleteEntry } = useMutation({
 		mutationFn: async (formData: FormData) => {

@@ -36,7 +36,7 @@ const statusLabel = (status: Invoice["status"]): string => {
 };
 
 export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
-	const { toggleInvoiceModal, toggleTimesheetModal } = usePaperTrailStore();
+	const { openModal, closeModal } = usePaperTrailStore();
 
 	const { data: invoice, isLoading: invoiceLoading } = useQuery({
 		queryKey: ["invoice-detail", invoiceId],
@@ -60,8 +60,8 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 
 	const handleViewTimesheet = () => {
 		if (timesheet) {
-			toggleInvoiceModal();
-			toggleTimesheetModal({ timesheetId: timesheet.id });
+			closeModal();
+			openModal({ type: "timesheet", timesheetId: timesheet.id });
 		}
 	};
 

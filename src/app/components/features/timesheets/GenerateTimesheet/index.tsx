@@ -35,7 +35,9 @@ export const GenerateTimesheet = ({
 	project: ProjectWithTimesheets;
 }) => {
 	const queryClient = useQueryClient();
-	const { activeProjectId } = usePaperTrailStore();
+	const { activeModal } = usePaperTrailStore();
+	const activeProjectId =
+		activeModal?.type === "project" ? activeModal.projectId : undefined;
 	const [form, dispatch] = useReducer(formReducer, initialForm);
 	const { mutateAsync } = useMutation({
 		mutationFn: async (formData: FormData) => {

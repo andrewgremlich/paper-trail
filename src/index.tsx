@@ -1,13 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { InvoiceModal } from "@/components/features/invoices/InvoiceModal";
-import { ProjectModal } from "@/components/features/projects/ProjectModal";
-import { SettingsModal } from "@/components/features/settings/SettingsModal";
-import { TimesheetModal } from "@/components/features/timesheets/TimesheetModal";
 import { Nav } from "@/components/layout/Nav";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+import { ModalRenderer } from "@/components/shared/ModalRenderer";
 import { App } from "@/index";
 import { useTheme } from "@/lib/useTheme";
 
@@ -39,10 +36,7 @@ createRoot(rootElement).render(
 						</div>
 					)}
 				>
-					<TimesheetModal />
-					<ProjectModal />
-					<SettingsModal />
-					<InvoiceModal />
+					<ModalRenderer />
 					<PageWrapper>
 						<Nav />
 						<App />
