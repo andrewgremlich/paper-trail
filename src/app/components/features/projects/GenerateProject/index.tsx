@@ -8,7 +8,12 @@ import type { Customer } from "@/lib/db/types";
 import { usePaperTrailStore } from "@/lib/store";
 import styles from "./styles.module.css";
 
-export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
+type Props = {
+	customers?: Customer[];
+	onSuccess?: () => void;
+};
+
+export const GenerateProject = ({ customers, onSuccess }: Props) => {
 	const queryClient = useQueryClient();
 	const { addProject, addTimesheet } = usePaperTrailStore();
 	const { mutate: mutateProject } = useMutation({
@@ -36,6 +41,7 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 			}
 			await queryClient.invalidateQueries({ queryKey: ["projects"] });
 			await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
+			onSuccess?.();
 		},
 	});
 

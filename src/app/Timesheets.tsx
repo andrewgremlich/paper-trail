@@ -1,16 +1,23 @@
 import "./globals.css";
 
 import { useQueries } from "@tanstack/react-query";
+import { FolderPlus } from "lucide-react";
+import { useState } from "react";
 
 import { GenerateProject } from "@/components/features/projects/GenerateProject";
+import { GenerateProjectDialog } from "@/components/features/projects/GenerateProjectDialog";
+import { Flex } from "@/components/layout/Flex";
 import { H1, H2, Main, Section } from "@/components/layout/HtmlElements";
 import { CardPreview } from "@/components/shared/CardPreview";
+import { Button } from "@/components/ui/Button";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
 import { getCustomers } from "@/lib/db/customers";
 import { usePaperTrailStore } from "@/lib/store";
 
 export const Timesheets = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
+	const [creatingProject, setCreatingProject] = useState(false);
+
 	const [{ data: projects }, { data: timesheets }, { data: customers }] =
 		useQueries({
 			queries: [
@@ -20,12 +27,13 @@ export const Timesheets = () => {
 			],
 		});
 
+	const hasData = (projects?.length ?? 0) > 0 || (timesheets?.length ?? 0) > 0;
+
 	return (
 		<Main>
 			{timesheets && timesheets.length > 0 && (
 				<>
 					<H1>Timesheets</H1>
-
 					{projects &&
 						timesheets.map((timesheet) => (
 							<CardPreview
@@ -51,10 +59,26 @@ export const Timesheets = () => {
 				</>
 			)}
 
-			{projects && projects.length > 0 && (
+			{hasData ? (
 				<Section aria-labelledby="projects-heading">
-					<H2 id="projects-heading">Projects</H2>
-					{projects.map((project) => (
+					<Flex
+						justify="between"
+						items="center"
+						style={{ marginBottom: "1.5rem" }}
+					>
+						<H2 id="projects-heading" style={{ margin: 0 }}>
+							Projects
+						</H2>
+						<Button
+							type="button"
+							variant="default"
+							leftIcon={<FolderPlus size={16} />}
+							onClick={() => setCreatingProject(true)}
+						>
+							New Project
+						</Button>
+					</Flex>
+					{projects?.map((project) => (
 						<CardPreview
 							key={project.id}
 							name={project.name}
@@ -65,13 +89,19 @@ export const Timesheets = () => {
 							ariaLabel={`Open project ${project.name}`}
 						/>
 					))}
+					<GenerateProjectDialog
+						isOpen={creatingProject}
+						customers={customers}
+						onClose={() => setCreatingProject(false)}
+						onSuccess={() => setCreatingProject(false)}
+					/>
+				</Section>
+			) : (
+				<Section aria-labelledby="projects-heading">
+					<H2 id="projects-heading">New Project</H2>
+					<GenerateProject customers={customers} />
 				</Section>
 			)}
-
-			<Section aria-labelledby="new-project-heading">
-				<H2 id="new-project-heading">New Project</H2>
-				<GenerateProject customers={customers} />
-			</Section>
 		</Main>
 	);
 };
