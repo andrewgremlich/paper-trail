@@ -31,7 +31,8 @@
     }
   ],
   "vars": {
-    "APP_BASE_URL": "https://paper-trail.andrew-4ae.workers.dev"
+    "APP_BASE_URL": "https://paper-trail.andrew-4ae.workers.dev",
+    "RESEND_FROM_ADDRESS": "Andrew Gremlich <invoices@gremlich.me>"
   },
   // Dev environment (used by `wrangler dev --env dev`)
   "env": {
