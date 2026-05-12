@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { UserPlus } from "lucide-react";
 import { useState } from "react";
-import { AddCustomerForm } from "./components/features/customers/AddCustomerForm";
-import { CustomerEditRow } from "./components/features/customers/CustomerEditRow";
+import { CustomerDialog } from "./components/features/customers/CustomerDialog";
 import { CustomerViewRow } from "./components/features/customers/CustomerViewRow";
+import { Flex } from "./components/layout/Flex";
 import { H1, Main, P } from "./components/layout/HtmlElements";
+import { Button } from "./components/ui/Button";
 import { Table, TBody, TH, THead, TR } from "./components/ui/Table";
 import {
 	createCustomer,
@@ -15,7 +17,7 @@ import {
 
 export const Customers = () => {
 	const queryClient = useQueryClient();
-	const [editingId, setEditingId] = useState<string | null>(null);
+	const [creating, setCreating] = useState(false);
 
 	const {
 		data: customers,
@@ -29,7 +31,7 @@ export const Customers = () => {
 	const invalidate = () =>
 		queryClient.invalidateQueries({ queryKey: ["customers"] });
 
-	const { mutate: submitNew } = useMutation({
+	const { mutateAsync: create } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			const name = String(formData.get("name") ?? "").trim();
 			const email = String(formData.get("email") ?? "").trim();
@@ -40,7 +42,10 @@ export const Customers = () => {
 				address: address.length > 0 ? address : null,
 			});
 		},
-		onSuccess: invalidate,
+		onSuccess: async () => {
+			await invalidate();
+			setCreating(false);
+		},
 		onError: (e) => console.error("Create customer failed:", e),
 	});
 
@@ -56,10 +61,7 @@ export const Customers = () => {
 				address: address.length > 0 ? address : null,
 			});
 		},
-		onSuccess: async () => {
-			setEditingId(null);
-			await invalidate();
-		},
+		onSuccess: invalidate,
 	});
 
 	const { mutate: remove } = useMutation({
@@ -107,9 +109,23 @@ export const Customers = () => {
 
 	return (
 		<Main>
-			<H1 style={{ marginBottom: "1.5rem" }}>Customers</H1>
+			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
+				<H1 style={{ margin: 0 }}>Customers</H1>
+				<Button
+					type="button"
+					variant="default"
+					leftIcon={<UserPlus size={16} />}
+					onClick={() => setCreating(true)}
+				>
+					New Customer
+				</Button>
+			</Flex>
 
-			<AddCustomerForm onSubmit={submitNew} />
+			<CustomerDialog
+				isOpen={creating}
+				onSubmit={create}
+				onClose={() => setCreating(false)}
+			/>
 
 			{customers && customers.length > 0 ? (
 				<Table>
@@ -118,43 +134,32 @@ export const Customers = () => {
 							<TH>Name</TH>
 							<TH>Email</TH>
 							<TH>Address</TH>
-							<TH>Consent</TH>
-							<TH>Edit</TH>
-							<TH>Delete</TH>
+							<TH>Actions</TH>
 						</TR>
 					</THead>
 					<TBody>
-						{customers.map((c) =>
-							editingId === c.id ? (
-								<CustomerEditRow
-									key={c.id}
-									customer={c}
-									onSave={save}
-									onCancel={() => setEditingId(null)}
-								/>
-							) : (
-								<CustomerViewRow
-									key={c.id}
-									customer={c}
-									isRequestingConsent={isRequestingConsent}
-									onEdit={() => setEditingId(c.id)}
-									onDelete={() => {
-										if (
-											window.confirm(
-												`Delete customer ${c.name}? This is blocked if they have any invoices.`,
-											)
-										) {
-											remove(c.id);
-										}
-									}}
-									onRequestConsent={requestConsentMutation}
-								/>
-							),
-						)}
+						{customers.map((c) => (
+							<CustomerViewRow
+								key={c.id}
+								customer={c}
+								isRequestingConsent={isRequestingConsent}
+								onSave={save}
+								onDelete={() => {
+									if (
+										window.confirm(
+											`Delete customer ${c.name}? This is blocked if they have any invoices.`,
+										)
+									) {
+										remove(c.id);
+									}
+								}}
+								onRequestConsent={requestConsentMutation}
+							/>
+						))}
 					</TBody>
 				</Table>
 			) : (
-				<P>No customers yet. Add one above.</P>
+				<P>No customers yet. Click "New Customer" to add one.</P>
 			)}
 		</Main>
 	);
