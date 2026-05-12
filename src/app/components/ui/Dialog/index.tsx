@@ -6,6 +6,7 @@ import {
 	useEffect,
 	useRef,
 } from "react";
+import { createPortal } from "react-dom";
 import styles from "./styles.module.css";
 
 interface DialogProps {
@@ -86,7 +87,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 			};
 		}, [isOpen]);
 
-		return (
+		return createPortal(
 			<dialog
 				ref={dialogRef}
 				onCancel={handleCancel}
@@ -103,7 +104,8 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
 				data-variant={variant}
 			>
 				{children}
-			</dialog>
+			</dialog>,
+			document.body,
 		);
 	},
 );

@@ -26,17 +26,10 @@
 /* Variant: Solid (default) */
 .solid {
 	border-radius: 0.75rem 0.75rem 0 0;
-	padding: 1.5rem 1rem;
+	padding: 1rem;
 	border: 1px solid var(--border);
 	background-color: var(--card);
 	color: var(--card-foreground);
-}
-
-@media (min-width: 640px) {
-	.solid {
-		border-radius: 0.375rem;
-		padding: 2rem 2.5rem;
-	}
 }
 
 .solid::backdrop {

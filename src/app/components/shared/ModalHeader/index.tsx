@@ -18,7 +18,7 @@ export const ModalHeader = ({
 	closeAriaLabel,
 }: ModalHeaderProps) => {
 	return (
-		<header style={{ marginBottom: "1rem" }}>
+		<header>
 			<Flex justify="between" items="center">
 				<H2 id={headingId} style={{ marginBottom: 0 }}>
 					{title}
