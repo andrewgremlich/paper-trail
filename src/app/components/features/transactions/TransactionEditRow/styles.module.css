@@ -10,3 +10,22 @@
 .amountInput {
 	width: 8rem;
 }
+
+.fileCell {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.fileName {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+	max-width: 8rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hiddenInput {
+	display: none;
+}
