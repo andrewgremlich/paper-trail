@@ -72,10 +72,15 @@ app.get("/:id", async (c) => {
 	return c.json({
 		...decryptedProject,
 		active: !!project.active,
-		timesheets: timesheets.map((t: Record<string, unknown>) => ({
-			...t,
-			active: !!t.active,
-		})),
+		timesheets: await Promise.all(
+			timesheets.map(async (t: Record<string, unknown>) => ({
+				...t,
+				description: t.description
+					? await decrypt(t.description as string, c.env)
+					: t.description,
+				active: !!t.active,
+			})),
+		),
 	});
 });
 
