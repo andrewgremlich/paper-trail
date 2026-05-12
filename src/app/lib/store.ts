@@ -5,22 +5,21 @@ import { ProjectPageTab } from "./types";
 
 export type Theme = "light" | "dark" | "system";
 
+export type ActiveModal =
+	| { type: "project"; projectId: string }
+	| { type: "timesheet"; timesheetId: string }
+	| { type: "settings" }
+	| { type: "invoice"; invoiceId?: string }
+	| null;
+
 type PaperTrailState = {
-	projectModalActive: boolean;
-	timesheetModalActive: boolean;
-	settingsModalActive: boolean;
-	invoiceModalActive: boolean;
-	activeProjectId: string | undefined;
-	activeTimesheetId: string | undefined;
-	activeInvoiceId: string | undefined;
+	activeModal: ActiveModal;
 	projects: Project[];
 	timesheets: Timesheet[];
 	activeTab: ProjectPageTab;
 	theme: Theme;
-	toggleProjectModal: (args?: { projectId?: string }) => void;
-	toggleTimesheetModal: (args?: { timesheetId?: string }) => void;
-	toggleSettingsModal: () => void;
-	toggleInvoiceModal: (args?: { invoiceId?: string }) => void;
+	openModal: (modal: ActiveModal) => void;
+	closeModal: () => void;
 	changeActiveTab: (tab: ProjectPageTab) => void;
 	addProject: (project: Project) => void;
 	addTimesheet: (timesheet: Timesheet) => void;
@@ -30,43 +29,13 @@ type PaperTrailState = {
 export const usePaperTrailStore = create<PaperTrailState>()(
 	persist(
 		(set) => ({
-			projectModalActive: false,
-			timesheetModalActive: false,
-			settingsModalActive: false,
-			invoiceModalActive: false,
-			activeProjectId: undefined,
-			activeTimesheetId: undefined,
-			activeInvoiceId: undefined,
+			activeModal: null,
 			projects: [],
 			timesheets: [],
 			activeTab: ProjectPageTab.Timesheets,
 			theme: "system",
-			toggleProjectModal: (args) =>
-				set((state) => ({
-					projectModalActive:
-						args && "projectId" in args
-							? !!args.projectId
-							: !state.projectModalActive,
-					activeProjectId: args?.projectId,
-				})),
-			toggleTimesheetModal: (args) =>
-				set((state) => ({
-					timesheetModalActive:
-						args && "timesheetId" in args
-							? !!args.timesheetId
-							: !state.timesheetModalActive,
-					activeTimesheetId: args?.timesheetId,
-				})),
-			toggleSettingsModal: () =>
-				set((state) => ({ settingsModalActive: !state.settingsModalActive })),
-			toggleInvoiceModal: (args) =>
-				set((state) => ({
-					invoiceModalActive:
-						args && "invoiceId" in args
-							? !!args.invoiceId
-							: !state.invoiceModalActive,
-					activeInvoiceId: args?.invoiceId,
-				})),
+			openModal: (modal) => set(() => ({ activeModal: modal })),
+			closeModal: () => set(() => ({ activeModal: null })),
 			changeActiveTab: (tab) => set(() => ({ activeTab: tab })),
 			addProject: (project) =>
 				set((state) => ({ projects: [project, ...state.projects] })),
@@ -77,6 +46,10 @@ export const usePaperTrailStore = create<PaperTrailState>()(
 		{
 			name: "paper-trail-storage",
 			storage: createJSONStorage(() => localStorage),
+			partialize: (state) => ({
+				activeTab: state.activeTab,
+				theme: state.theme,
+			}),
 		},
 	),
 );
