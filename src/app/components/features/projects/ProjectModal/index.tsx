@@ -9,6 +9,7 @@ import { EditToggleButton } from "@/components/shared/EditToggleButton";
 import { Dialog } from "@/components/ui/Dialog";
 import { Grid } from "@/components/ui/Grid";
 import { deleteProject, getProjectById } from "@/lib/db";
+import { getCustomer } from "@/lib/db/customers";
 import { usePaperTrailStore } from "@/lib/store";
 import { ProjectEditForm } from "../ProjectEditForm";
 import styles from "./styles.module.css";
@@ -31,6 +32,14 @@ export const ProjectModal = () => {
 			return null;
 		},
 		enabled: !!activeProjectId,
+	});
+	const { data: customer } = useQuery({
+		queryKey: ["customer", project?.customerId],
+		queryFn: () => {
+			if (project?.customerId == null) return null;
+			return getCustomer(project.customerId);
+		},
+		enabled: project?.customerId != null,
 	});
 	// editing logic moved to ProjectEditForm
 
@@ -79,7 +88,14 @@ export const ProjectModal = () => {
 							? `$${(project.rate_in_cents / 100).toFixed(2)}/hr`
 							: "N/A"}
 					</P>
-					{project?.customerId && <P>Customer: {project?.customerId}</P>}
+					<P>
+						Customer:{" "}
+						{project?.customerId == null
+							? "— none —"
+							: customer
+								? `${customer.name} (${customer.email})`
+								: "…"}
+					</P>
 					<P>Active: {project?.active ? "Yes" : "No"}</P>
 				</Grid>
 			)}
