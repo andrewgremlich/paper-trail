@@ -1,8 +1,8 @@
 import { UserPlus } from "lucide-react";
-import { AddressFields } from "../AddressFields";
-import { composeAddress } from "../addressHelpers";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { AddressFields } from "../AddressFields";
+import { composeAddress } from "../addressHelpers";
 import styles from "./styles.module.css";
 
 type Props = {
@@ -20,8 +20,20 @@ export const CreateCustomer = ({ onSubmit }: Props) => (
 			e.currentTarget.reset();
 		}}
 	>
-		<Input label="Name" name="name" type="text" required className={styles.fullWidth} />
-		<Input label="Email" name="email" type="email" required className={styles.fullWidth} />
+		<Input
+			label="Name"
+			name="name"
+			type="text"
+			required
+			className={styles.fullWidth}
+		/>
+		<Input
+			label="Email"
+			name="email"
+			type="email"
+			required
+			className={styles.fullWidth}
+		/>
 		<AddressFields />
 		<Button type="submit" variant="default" leftIcon={<UserPlus size={16} />}>
 			Add Customer

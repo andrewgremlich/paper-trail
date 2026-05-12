@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
+import { CreateCustomer } from "./components/features/customers/CreateCustomer";
 import { CustomerDialog } from "./components/features/customers/CustomerDialog";
 import { CustomerViewRow } from "./components/features/customers/CustomerViewRow";
 import { Flex } from "./components/layout/Flex";
@@ -107,59 +108,64 @@ export const Customers = () => {
 		);
 	}
 
+	const hasCustomers = customers && customers.length > 0;
+
 	return (
 		<Main>
 			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
 				<H1 style={{ margin: 0 }}>Customers</H1>
-				<Button
-					type="button"
-					variant="default"
-					leftIcon={<UserPlus size={16} />}
-					onClick={() => setCreating(true)}
-				>
-					New Customer
-				</Button>
+				{hasCustomers && (
+					<Button
+						type="button"
+						variant="default"
+						leftIcon={<UserPlus size={16} />}
+						onClick={() => setCreating(true)}
+					>
+						New Customer
+					</Button>
+				)}
 			</Flex>
 
-			<CustomerDialog
-				isOpen={creating}
-				onSubmit={create}
-				onClose={() => setCreating(false)}
-			/>
-
-			{customers && customers.length > 0 ? (
-				<Table>
-					<THead>
-						<TR>
-							<TH>Name</TH>
-							<TH>Email</TH>
-							<TH>Address</TH>
-							<TH>Actions</TH>
-						</TR>
-					</THead>
-					<TBody>
-						{customers.map((c) => (
-							<CustomerViewRow
-								key={c.id}
-								customer={c}
-								isRequestingConsent={isRequestingConsent}
-								onSave={save}
-								onDelete={() => {
-									if (
-										window.confirm(
-											`Delete customer ${c.name}? This is blocked if they have any invoices.`,
-										)
-									) {
-										remove(c.id);
-									}
-								}}
-								onRequestConsent={requestConsentMutation}
-							/>
-						))}
-					</TBody>
-				</Table>
+			{hasCustomers ? (
+				<>
+					<CustomerDialog
+						isOpen={creating}
+						onSubmit={create}
+						onClose={() => setCreating(false)}
+					/>
+					<Table>
+						<THead>
+							<TR>
+								<TH>Name</TH>
+								<TH>Email</TH>
+								<TH>Address</TH>
+								<TH>Actions</TH>
+							</TR>
+						</THead>
+						<TBody>
+							{customers.map((c) => (
+								<CustomerViewRow
+									key={c.id}
+									customer={c}
+									isRequestingConsent={isRequestingConsent}
+									onSave={save}
+									onDelete={() => {
+										if (
+											window.confirm(
+												`Delete customer ${c.name}? This is blocked if they have any invoices.`,
+											)
+										) {
+											remove(c.id);
+										}
+									}}
+									onRequestConsent={requestConsentMutation}
+								/>
+							))}
+						</TBody>
+					</Table>
+				</>
 			) : (
-				<P>No customers yet. Click "New Customer" to add one.</P>
+				<CreateCustomer onSubmit={create} />
 			)}
 		</Main>
 	);
