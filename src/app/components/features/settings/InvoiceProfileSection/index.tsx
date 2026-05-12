@@ -20,13 +20,11 @@ export const InvoiceProfileSection = () => {
 			return updateUserProfile({
 				displayName: String(formData.get("displayName") ?? "").trim(),
 				email: String(formData.get("email") ?? "").trim(),
-				businessName:
-					String(formData.get("businessName") ?? "").trim() || null,
+				businessName: String(formData.get("businessName") ?? "").trim() || null,
 				businessAddress:
 					String(formData.get("businessAddress") ?? "").trim() || null,
 				venmoHandle: String(formData.get("venmoHandle") ?? "").trim() || null,
-				paypalHandle:
-					String(formData.get("paypalHandle") ?? "").trim() || null,
+				paypalHandle: String(formData.get("paypalHandle") ?? "").trim() || null,
 			});
 		},
 		onSuccess: () => {
@@ -47,9 +45,9 @@ export const InvoiceProfileSection = () => {
 		<section className={styles.container}>
 			<H3>Invoice profile</H3>
 			<P className={styles.description}>
-				Required to send invoices. Customers see your business name and
-				address on every invoice; Venmo and PayPal handles produce
-				payment links pre-filled with the amount.
+				Required to send invoices. Customers see your business name and address
+				on every invoice; Venmo and PayPal handles produce payment links
+				pre-filled with the amount.
 			</P>
 
 			<form

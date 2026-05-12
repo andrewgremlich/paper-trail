@@ -71,9 +71,7 @@ export const GenerateInvoice = ({
 					</div>
 				)}
 				{isError && (
-					<div className={styles.errorMessage}>
-						Could not generate invoice.
-					</div>
+					<div className={styles.errorMessage}>Could not generate invoice.</div>
 				)}
 			</div>
 		</form>

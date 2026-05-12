@@ -83,9 +83,7 @@ export const Customers = () => {
 		onError: (e) => {
 			console.error("Delete customer failed:", e);
 			window.alert(
-				e instanceof Error
-					? e.message
-					: "Could not delete customer.",
+				e instanceof Error ? e.message : "Could not delete customer.",
 			);
 		},
 	});
@@ -100,9 +98,7 @@ export const Customers = () => {
 			onError: (e) => {
 				console.error("Consent request failed:", e);
 				window.alert(
-					e instanceof Error
-						? e.message
-						: "Could not send consent request.",
+					e instanceof Error ? e.message : "Could not send consent request.",
 				);
 			},
 		});
@@ -234,9 +230,7 @@ export const Customers = () => {
 								<TR key={c.id}>
 									<TD>{c.name}</TD>
 									<TD>{c.email}</TD>
-									<TD style={{ whiteSpace: "pre-wrap" }}>
-										{c.address ?? ""}
-									</TD>
+									<TD style={{ whiteSpace: "pre-wrap" }}>{c.address ?? ""}</TD>
 									<TD>
 										{consentBadge(c)}
 										{!c.consentToEmailInvoices && (

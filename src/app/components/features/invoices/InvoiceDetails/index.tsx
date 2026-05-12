@@ -99,12 +99,8 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 				<P>Status: {statusLabel(invoice.status)}</P>
 				<P>Issued: {invoice.issuedAt}</P>
 				<P>Due: {invoice.dueDate}</P>
-				{invoice.sentAt && (
-					<P>Sent: {invoice.sentAt.slice(0, 10)}</P>
-				)}
-				{invoice.paidAt && (
-					<P>Paid: {invoice.paidAt.slice(0, 10)}</P>
-				)}
+				{invoice.sentAt && <P>Sent: {invoice.sentAt.slice(0, 10)}</P>}
+				{invoice.paidAt && <P>Paid: {invoice.paidAt.slice(0, 10)}</P>}
 			</Grid>
 
 			<Flex gap={12} className={styles.actions} items="center">

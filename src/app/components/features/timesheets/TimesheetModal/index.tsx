@@ -94,9 +94,7 @@ export const TimesheetModal = () => {
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
-					{timesheetInvoice && (
-						<P>Invoice: {timesheetInvoice.number}</P>
-					)}
+					{timesheetInvoice && <P>Invoice: {timesheetInvoice.number}</P>}
 					{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 				</Grid>
 			)}

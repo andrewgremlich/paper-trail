@@ -16,7 +16,7 @@ export const ProjectEditForm = ({ project, onSaved }: ProjectEditFormProps) => {
 
 	const updateProjectMutation = useMutation({
 		mutationFn: async (formData: FormData) => {
-			if (!project || !project.id) return null;
+			if (!project?.id) return null;
 
 			const updatedProject: Project = {
 				...project,
