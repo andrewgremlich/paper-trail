@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { getCustomers } from "@/lib/db/customers";
+import { createInvoice as createInvoiceApi } from "@/lib/db/invoices";
 import { usePaperTrailStore } from "@/lib/store";
-import { createOneOffInvoice, getAllCustomers } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
 
 export const CreateInvoiceForm = () => {
@@ -17,10 +18,11 @@ export const CreateInvoiceForm = () => {
 	const [customerId, setCustomerId] = useState("");
 	const [amount, setAmount] = useState("");
 	const [description, setDescription] = useState("");
+	const [dueDate, setDueDate] = useState("");
 
 	const { data: customers, isLoading: customersLoading } = useQuery({
-		queryKey: ["stripe-customers"],
-		queryFn: () => getAllCustomers(),
+		queryKey: ["customers"],
+		queryFn: getCustomers,
 	});
 
 	const {
@@ -29,7 +31,7 @@ export const CreateInvoiceForm = () => {
 		isError,
 		error,
 	} = useMutation({
-		mutationFn: createOneOffInvoice,
+		mutationFn: createInvoiceApi,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			toggleInvoiceModal();
@@ -40,16 +42,17 @@ export const CreateInvoiceForm = () => {
 		e.preventDefault();
 		const amountCents = Math.round(parseFloat(amount) * 100);
 		createInvoice({
-			customerId,
+			customerId: Number(customerId),
 			amountCents,
 			description: description || undefined,
+			dueDate: dueDate || undefined,
 		});
 	};
 
 	const customerOptions =
 		customers?.map((c) => ({
-			value: c.id,
-			label: c.name || c.email || c.id,
+			value: String(c.id),
+			label: `${c.name} (${c.email})`,
 		})) ?? [];
 
 	return (
@@ -80,6 +83,15 @@ export const CreateInvoiceForm = () => {
 					placeholder="0.00"
 					value={amount}
 					onChange={(e) => setAmount(e.target.value)}
+					disabled={isPending}
+				/>
+
+				<Input
+					label="Due date (optional)"
+					name="dueDate"
+					type="date"
+					value={dueDate}
+					onChange={(e) => setDueDate(e.target.value)}
 					disabled={isPending}
 				/>
 

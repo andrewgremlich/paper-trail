@@ -4,7 +4,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { DeleteDataSection } from "../DeleteDataSection";
 import { ExportImportSection } from "../ExportImportSection";
-import { StripeSecretSection } from "../StripeSecretSection";
+import { InvoiceProfileSection } from "../InvoiceProfileSection";
 import { ThemeSection } from "../ThemeSection";
 
 export const SettingsModal = () => {
@@ -26,7 +26,7 @@ export const SettingsModal = () => {
 				closeAriaLabel="Close settings"
 			/>
 			<ThemeSection />
-			<StripeSecretSection />
+			<InvoiceProfileSection />
 			<ExportImportSection />
 			<DeleteDataSection />
 		</Dialog>

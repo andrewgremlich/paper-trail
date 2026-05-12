@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { generateProject } from "@/lib/db";
+import type { Customer } from "@/lib/db/types";
 import { usePaperTrailStore } from "@/lib/store";
-import type { Customer } from "@/lib/types";
 import styles from "./styles.module.css";
 
 export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
@@ -13,10 +13,12 @@ export const GenerateProject = ({ customers }: { customers?: Customer[] }) => {
 	const { addProject, addTimesheet } = usePaperTrailStore();
 	const { mutate: mutateProject } = useMutation({
 		mutationFn: async (formData: FormData) => {
-			const name = String(formData.get("name") || "").trim() as string;
+			const name = String(formData.get("name") || "").trim();
 			const rate = Number(formData.get("rate") || 0);
-			const customerId = (formData.get("customerId") || "") as string;
-			const description = (formData.get("description") || "") as string;
+			const customerIdRaw = String(formData.get("customerId") || "");
+			const customerId =
+				customerIdRaw.length > 0 ? Number(customerIdRaw) : null;
+			const description = String(formData.get("description") || "");
 
 			return generateProject({
 				name,

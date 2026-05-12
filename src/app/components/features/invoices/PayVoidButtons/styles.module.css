@@ -1,10 +1,8 @@
-.pdfLink {
-	color: var(--primary);
-	text-decoration: underline;
-	text-underline-offset: 4px;
-	text-decoration-style: dashed;
-}
-
 .buttonContainer {
 	margin-bottom: 16px;
+}
+
+.error {
+	color: var(--destructive, #b91c1c);
+	font-size: 0.875rem;
 }

@@ -1,5 +1,26 @@
 const API_BASE = "/api/v1";
 
+export class ApiError extends Error {
+	readonly status: number;
+	readonly code: string | undefined;
+	readonly body: unknown;
+	constructor(status: number, body: unknown) {
+		const code =
+			body && typeof body === "object" && "code" in body
+				? String((body as { code: unknown }).code)
+				: undefined;
+		const errorMsg =
+			body && typeof body === "object" && "error" in body
+				? String((body as { error: unknown }).error)
+				: `HTTP ${status}`;
+		super(errorMsg);
+		this.name = "ApiError";
+		this.status = status;
+		this.code = code;
+		this.body = body;
+	}
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 	const res = await fetch(`${API_BASE}${path}`, {
 		credentials: "include",
@@ -11,8 +32,14 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 	});
 
 	if (!res.ok) {
-		const body = await res.text();
-		throw new Error(`API error ${res.status}: ${body}`);
+		let body: unknown;
+		const text = await res.text();
+		try {
+			body = JSON.parse(text);
+		} catch {
+			body = text;
+		}
+		throw new ApiError(res.status, body);
 	}
 
 	return res.json();
@@ -38,8 +65,14 @@ export const api = {
 			body: formData,
 		});
 		if (!res.ok) {
-			const body = await res.text();
-			throw new Error(`API error ${res.status}: ${body}`);
+			let body: unknown;
+			const text = await res.text();
+			try {
+				body = JSON.parse(text);
+			} catch {
+				body = text;
+			}
+			throw new ApiError(res.status, body);
 		}
 		return res.json();
 	},

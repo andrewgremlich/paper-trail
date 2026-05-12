@@ -5,7 +5,7 @@ export type Project = {
 	userId: number;
 	name: string;
 	active: boolean;
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	rate_in_cents: Nullable<number>;
 	description: Nullable<string>;
 	createdAt: number;
@@ -21,7 +21,6 @@ export type Timesheet = {
 	id: number;
 	userId: number;
 	projectId: number;
-	invoiceId: Nullable<string>;
 	name: string;
 	description: Nullable<string>;
 	active: boolean;
@@ -40,7 +39,7 @@ export type MinimalTimesheet = Pick<
 >;
 
 export type TimesheetWithProject = Timesheet & {
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	projectRate: Nullable<number>;
 };
 
@@ -68,7 +67,7 @@ export type UpdateTimesheetEntry = Pick<
 
 export type TimesheetDetails = Timesheet & {
 	entries: TimesheetEntry[];
-	customerId: Nullable<string>;
+	customerId: Nullable<number>;
 	projectRate: Nullable<number>;
 };
 
@@ -99,11 +98,78 @@ export type UserProfile = {
 	uuid: string;
 	displayName: string;
 	email: string;
+	venmoHandle: Nullable<string>;
+	paypalHandle: Nullable<string>;
+	businessName: Nullable<string>;
+	businessAddress: Nullable<string>;
 	createdAt: number;
 	updatedAt: number;
 };
 
-export type UpdateUserProfile = Pick<UserProfile, "displayName" | "email">;
+export type UpdateUserProfile = Pick<
+	UserProfile,
+	| "displayName"
+	| "email"
+	| "venmoHandle"
+	| "paypalHandle"
+	| "businessName"
+	| "businessAddress"
+>;
+
+export type Customer = {
+	id: number;
+	userId: number;
+	name: string;
+	email: string;
+	address: Nullable<string>;
+	consentToEmailInvoices: boolean;
+	consentedAt: Nullable<string>;
+	consentRequestedAt: Nullable<string>;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SubmitCustomer = Pick<Customer, "name" | "email" | "address">;
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export type Invoice = {
+	id: number;
+	uuid: string;
+	userId: number;
+	customerId: number;
+	timesheetId: Nullable<number>;
+	number: string;
+	status: InvoiceStatus;
+	amount_cents: number;
+	description: Nullable<string>;
+	issuedAt: string;
+	dueDate: string;
+	sentAt: Nullable<string>;
+	paidAt: Nullable<string>;
+	voidedAt: Nullable<string>;
+	archivedAt: Nullable<string>;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type CreateInvoice = {
+	customerId: number;
+	timesheetId?: number;
+	amountCents?: number;
+	description?: string;
+	issuedAt?: string;
+	dueDate?: string;
+};
+
+export type InvoiceEvent = {
+	id: number;
+	invoiceId: number;
+	userId: number;
+	type: "created" | "sent" | "paid" | "voided" | "viewed";
+	payload: Nullable<string>;
+	createdAt: string;
+};
 
 export type ExportData = {
 	version: string;
@@ -113,5 +179,7 @@ export type ExportData = {
 	timesheets: Timesheet[];
 	timesheetEntries: TimesheetEntry[];
 	transactions: Transaction[];
+	customers?: Customer[];
+	invoices?: Invoice[];
 	userProfile?: UserProfile;
 };

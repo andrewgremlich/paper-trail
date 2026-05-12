@@ -12,7 +12,7 @@ type PaperTrailState = {
 	invoiceModalActive: boolean;
 	activeProjectId: number | undefined;
 	activeTimesheetId: number | undefined;
-	activeInvoiceId: string | undefined;
+	activeInvoiceId: number | undefined;
 	projects: Project[];
 	timesheets: Timesheet[];
 	activeTab: ProjectPageTab;
@@ -20,7 +20,7 @@ type PaperTrailState = {
 	toggleProjectModal: (args?: { projectId?: number }) => void;
 	toggleTimesheetModal: (args?: { timesheetId?: number }) => void;
 	toggleSettingsModal: () => void;
-	toggleInvoiceModal: (args?: { invoiceId?: string }) => void;
+	toggleInvoiceModal: (args?: { invoiceId?: number }) => void;
 	changeActiveTab: (tab: ProjectPageTab) => void;
 	addProject: (project: Project) => void;
 	addTimesheet: (timesheet: Timesheet) => void;

@@ -1,4 +1,4 @@
-import { HandCoins, Settings, Table, Timer } from "lucide-react";
+import { HandCoins, Settings, Table, Timer, Users } from "lucide-react";
 import { Flex } from "@/components/layout/Flex";
 import { Button } from "@/components/ui/Button";
 import { usePaperTrailStore } from "@/lib/store";
@@ -53,6 +53,20 @@ export const Nav = () => {
 						aria-pressed={activeTab === ProjectPageTab.Invoices}
 					>
 						<HandCoins size={40} />
+					</Button>
+					<Button
+						type="button"
+						variant="secondary"
+						size="icon"
+						onClick={() => changeActiveTab(ProjectPageTab.Customers)}
+						className={cn(
+							styles.navButtonSpacing,
+							activeTab === ProjectPageTab.Customers && styles.navButtonActive,
+						)}
+						aria-pressed={activeTab === ProjectPageTab.Customers}
+						aria-label="Customers"
+					>
+						<Users size={40} />
 					</Button>
 				</div>
 

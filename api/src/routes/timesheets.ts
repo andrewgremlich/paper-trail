@@ -11,22 +11,19 @@ async function decryptTimesheetRow(
 	const description = row.description
 		? await decrypt(row.description as string, env)
 		: row.description;
-	const invoiceId = row.invoiceId
-		? await decrypt(row.invoiceId as string, env)
-		: row.invoiceId;
 
-	return { ...row, description, invoiceId };
+	return { ...row, description };
 }
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// GET /api/timesheets - list all timesheets
+// GET /api/v1/timesheets - list all timesheets
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const { results } = await db
 		.prepare(
-			`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE userId = ? ORDER BY createdAt DESC`,
 		)
 		.bind(userId)
@@ -40,7 +37,61 @@ app.get("/", async (c) => {
 	return c.json(rows);
 });
 
-// GET /api/timesheets/:id - get timesheet with entries
+// GET /api/v1/timesheets/by-invoice/:invoiceId — look up the timesheet that an
+// invoice was generated from. `invoiceId` here is the invoices.id (or uuid).
+app.get("/by-invoice/:invoiceId", async (c) => {
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	const invoiceParam = c.req.param("invoiceId");
+	const numericId = Number(invoiceParam);
+
+	const invoiceLookup = Number.isFinite(numericId)
+		? await db
+				.prepare(
+					"SELECT timesheetId FROM invoices WHERE id = ? AND userId = ?",
+				)
+				.bind(numericId, userId)
+				.first<{ timesheetId: number | null }>()
+		: await db
+				.prepare(
+					"SELECT timesheetId FROM invoices WHERE uuid = ? AND userId = ?",
+				)
+				.bind(invoiceParam, userId)
+				.first<{ timesheetId: number | null }>();
+
+	if (!invoiceLookup?.timesheetId) {
+		return c.json(null);
+	}
+
+	const row = await db
+		.prepare(
+			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
+			        p.customerId AS customerId, p.rate_in_cents AS projectRate
+			 FROM timesheets t
+			 JOIN projects p ON p.id = t.projectId
+			 WHERE t.id = ? AND t.userId = ?`,
+		)
+		.bind(invoiceLookup.timesheetId, userId)
+		.first();
+
+	if (!row) return c.json(null);
+
+	const decrypted = await decryptTimesheetRow(
+		row as Record<string, unknown>,
+		c.env,
+	);
+	const projectRate = isEncryptionEnabled(c.env)
+		? Number(await decrypt(decrypted.projectRate as string, c.env))
+		: (decrypted.projectRate as number);
+
+	return c.json({
+		...decrypted,
+		projectRate,
+		active: !!(row as Record<string, unknown>).active,
+	});
+});
+
+// GET /api/v1/timesheets/:id - get timesheet with entries
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
@@ -48,7 +99,7 @@ app.get("/:id", async (c) => {
 
 	const header = await db
 		.prepare(
-			`SELECT t.id, t.userId, t.projectId, t.invoiceId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
+			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
 			p.customerId as customerId, p.rate_in_cents as projectRate
 			FROM timesheets t
 			JOIN projects p ON p.id = t.projectId
@@ -66,10 +117,7 @@ app.get("/:id", async (c) => {
 		c.env,
 	);
 
-	// Decrypt joined project fields
-	const customerId = decryptedHeader.customerId
-		? await decrypt(decryptedHeader.customerId as string, c.env)
-		: decryptedHeader.customerId;
+	// customerId is now a plain INTEGER FK — no decrypt.
 	const projectRate = isEncryptionEnabled(c.env)
 		? Number(await decrypt(decryptedHeader.projectRate as string, c.env))
 		: (decryptedHeader.projectRate as number);
@@ -95,66 +143,13 @@ app.get("/:id", async (c) => {
 
 	return c.json({
 		...decryptedHeader,
-		customerId,
 		projectRate,
 		active: !!header.active,
 		entries,
 	});
 });
 
-// GET /api/timesheets/by-invoice/:invoiceId
-app.get("/by-invoice/:invoiceId", async (c) => {
-	const db = getDb(c.env);
-	const userId = c.get("userId");
-	const invoiceId = c.req.param("invoiceId");
-
-	// invoiceId is encrypted with random IV, so we must scan and decrypt to match
-	const { results } = await db
-		.prepare(
-			`SELECT t.id, t.userId, t.projectId, t.invoiceId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
-			p.customerId as customerId, p.rate_in_cents as projectRate
-			FROM timesheets t
-			JOIN projects p ON p.id = t.projectId
-			WHERE t.invoiceId IS NOT NULL AND t.userId = ?`,
-		)
-		.bind(userId)
-		.all();
-
-	let matched: Record<string, unknown> | null = null;
-	for (const row of results) {
-		const decryptedInvoiceId = await decrypt(
-			(row as Record<string, unknown>).invoiceId as string,
-			c.env,
-		);
-		if (decryptedInvoiceId === invoiceId) {
-			matched = row as Record<string, unknown>;
-			break;
-		}
-	}
-
-	if (!matched) {
-		return c.json(null);
-	}
-
-	const decryptedResult = await decryptTimesheetRow(matched, c.env);
-
-	// Decrypt joined project fields
-	const customerId = decryptedResult.customerId
-		? await decrypt(decryptedResult.customerId as string, c.env)
-		: decryptedResult.customerId;
-	const projectRate = isEncryptionEnabled(c.env)
-		? Number(await decrypt(decryptedResult.projectRate as string, c.env))
-		: (decryptedResult.projectRate as number);
-
-	return c.json({
-		...decryptedResult,
-		customerId,
-		projectRate,
-		active: !!matched.active,
-	});
-});
-
-// POST /api/timesheets - create timesheet
+// POST /api/v1/timesheets - create timesheet
 app.post("/", async (c) => {
 	const body = await c.req.json<{
 		projectId: number;
@@ -178,7 +173,7 @@ app.post("/", async (c) => {
 
 	const row = await db
 		.prepare(
-			`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(insertResult.meta.last_row_id, userId)
@@ -191,7 +186,7 @@ app.post("/", async (c) => {
 	return c.json({ ...decryptedRow, active: !!row!.active }, 201);
 });
 
-// PUT /api/timesheets/:id - update timesheet
+// PUT /api/v1/timesheets/:id - update timesheet
 app.put("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<{
@@ -217,7 +212,7 @@ app.put("/:id", async (c) => {
 
 	const updated = await db
 		.prepare(
-			`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(id, userId)
@@ -234,7 +229,7 @@ app.put("/:id", async (c) => {
 	return c.json({ ...decryptedUpdated, active: !!updated.active });
 });
 
-// DELETE /api/timesheets/:id
+// DELETE /api/v1/timesheets/:id
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);

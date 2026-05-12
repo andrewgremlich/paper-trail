@@ -8,18 +8,17 @@ async function decryptProjectRow(
 	row: Record<string, unknown>,
 	env: Env,
 ): Promise<Record<string, unknown>> {
-	const customerId = await decrypt((row.customerId as string) ?? "", env);
 	const description = await decrypt((row.description as string) ?? "", env);
 	const rate_in_cents = isEncryptionEnabled(env)
 		? Number(await decrypt(row.rate_in_cents as string, env))
 		: (row.rate_in_cents as number);
 
-	return { ...row, customerId, description, rate_in_cents };
+	return { ...row, description, rate_in_cents };
 }
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// GET /api/projects - list all projects
+// GET /api/v1/projects - list all projects
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
@@ -39,7 +38,7 @@ app.get("/", async (c) => {
 	return c.json(rows);
 });
 
-// GET /api/projects/:id - get project with timesheets
+// GET /api/v1/projects/:id - get project with timesheets
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
@@ -80,19 +79,17 @@ app.get("/:id", async (c) => {
 	});
 });
 
-// POST /api/projects - create project, optionally with initial timesheet
-// Query params: ?createTimesheet=true (default: false)
+// POST /api/v1/projects - create project, optionally with initial timesheet
 app.post("/", async (c) => {
 	const body = await c.req.json<{
 		name: string;
-		customerId: string;
+		customerId: number | null;
 		rate_in_cents: number;
 		description: string;
 	}>();
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	const encCustomerId = await encrypt(body.customerId, c.env);
 	const encRate = await encrypt(String(body.rate_in_cents), c.env);
 	const encDescription = await encrypt(body.description, c.env);
 
@@ -101,7 +98,7 @@ app.post("/", async (c) => {
 			`INSERT INTO projects (name, customerId, rate_in_cents, description, userId)
 			VALUES (?, ?, ?, ?, ?)`,
 		)
-		.bind(body.name, encCustomerId, encRate, encDescription, userId)
+		.bind(body.name, body.customerId ?? null, encRate, encDescription, userId)
 		.run();
 	const createdProjectId = insertResult.meta.last_row_id;
 
@@ -150,7 +147,7 @@ app.post("/", async (c) => {
 
 	const tsRow = await db
 		.prepare(
-			`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(tsResult.meta.last_row_id, userId)
@@ -162,7 +159,7 @@ app.post("/", async (c) => {
 	);
 });
 
-// PUT /api/projects/:id - update project
+// PUT /api/v1/projects/:id - update project
 app.put("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<Project>();
@@ -170,12 +167,11 @@ app.put("/:id", async (c) => {
 	const userId = c.get("userId");
 	const rate = body.rate_in_cents ?? 0;
 
-	if (!body.name || !body.customerId || rate < 0) {
+	if (!body.name || rate < 0) {
 		return c.json({ error: "Invalid project data" }, 400);
 	}
 
-	const encCustomerId = await encrypt(body.customerId, c.env);
-	const encRate = await encrypt(String(rate * 100), c.env);
+	const encRate = await encrypt(String(rate), c.env);
 	const encDescription = await encrypt(body.description ?? "", c.env);
 
 	await db
@@ -186,7 +182,7 @@ app.put("/:id", async (c) => {
 		)
 		.bind(
 			body.name,
-			encCustomerId,
+			body.customerId ?? null,
 			encRate,
 			encDescription,
 			body.active ? 1 : 0,
@@ -214,7 +210,7 @@ app.put("/:id", async (c) => {
 	return c.json({ ...decryptedUpdated, active: !!updated.active });
 });
 
-// DELETE /api/projects/:id
+// DELETE /api/v1/projects/:id
 app.delete("/:id", async (c) => {
 	const id = Number(c.req.param("id"));
 	const db = getDb(c.env);

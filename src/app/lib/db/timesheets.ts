@@ -37,7 +37,7 @@ export const deleteTimesheet = async (id: number): Promise<void> => {
 };
 
 export const getTimesheetByInvoiceId = async (
-	invoiceId: string,
+	invoiceId: number,
 ): Promise<TimesheetWithProject | null> => {
 	try {
 		return await api.get<TimesheetWithProject | null>(

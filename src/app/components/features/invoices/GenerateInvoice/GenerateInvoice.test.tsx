@@ -12,10 +12,9 @@ describe("GenerateInvoice", () => {
 		name: "Test Timesheet",
 		description: "Test Description",
 		projectId: 1,
-		customerId: "cus_123",
+		customerId: 42,
 		projectRate: 5000,
 		active: true,
-		invoiceId: null,
 		entries: [
 			{
 				id: 1,
@@ -47,27 +46,6 @@ describe("GenerateInvoice", () => {
 		const html = renderComponent();
 		expect(html).toContain("<form");
 		expect(html).toContain("</form>");
-	});
-
-	it("renders hidden input for timesheetId", () => {
-		const html = renderComponent();
-		expect(html).toContain('name="timesheetId"');
-		expect(html).toContain('value="1"');
-	});
-
-	it("renders hidden input for customerId when present", () => {
-		const html = renderComponent();
-		expect(html).toContain('name="customerId"');
-		expect(html).toContain('value="cus_123"');
-	});
-
-	it("does not render customerId input when not present", () => {
-		const timesheetWithoutCustomer = {
-			...mockTimesheet,
-			customerId: null,
-		};
-		const html = renderComponent(timesheetWithoutCustomer);
-		expect(html).not.toContain('name="customerId"');
 	});
 
 	it("renders submit button with Generate Invoice text when active", () => {
@@ -103,7 +81,17 @@ describe("GenerateInvoice", () => {
 		expect(html).toContain("disabled");
 	});
 
-	it("enables button when timesheet is active and has entries", () => {
+	it("disables button when the project has no customer linked", () => {
+		const noCustomer = {
+			...mockTimesheet,
+			customerId: null,
+		};
+		const html = renderComponent(noCustomer);
+		expect(html).toContain("disabled");
+		expect(html).toContain("Attach a customer");
+	});
+
+	it("enables button when timesheet is active and has entries and customer", () => {
 		const html = renderComponent();
 		expect(html).not.toContain("disabled");
 	});

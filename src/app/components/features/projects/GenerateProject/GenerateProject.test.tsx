@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Customer } from "@/lib/types";
+import type { Customer } from "@/lib/db/types";
 import { GenerateProject } from ".";
 
 // Mock the store
@@ -21,14 +21,28 @@ describe("GenerateProject", () => {
 	const queryClient = new QueryClient();
 	const mockCustomers: Customer[] = [
 		{
-			id: "cus_123",
+			id: 1,
+			userId: 1,
 			name: "Test Customer",
 			email: "test@example.com",
+			address: null,
+			consentToEmailInvoices: false,
+			consentedAt: null,
+			consentRequestedAt: null,
+			createdAt: "2026-01-01T00:00:00Z",
+			updatedAt: "2026-01-01T00:00:00Z",
 		},
 		{
-			id: "cus_456",
+			id: 2,
+			userId: 1,
 			name: "Another Customer",
 			email: "another@example.com",
+			address: null,
+			consentToEmailInvoices: false,
+			consentedAt: null,
+			consentRequestedAt: null,
+			createdAt: "2026-01-01T00:00:00Z",
+			updatedAt: "2026-01-01T00:00:00Z",
 		},
 	];
 

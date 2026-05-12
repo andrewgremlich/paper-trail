@@ -1,63 +1,62 @@
 import { useQuery } from "@tanstack/react-query";
-
 import { FileText, Mail } from "lucide-react";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { Grid } from "@/components/ui/Grid";
-import { getTimesheetByInvoiceId } from "@/lib/db";
+import { getCustomer } from "@/lib/db/customers";
+import { getInvoice } from "@/lib/db/invoices";
+import { getTimesheetByInvoiceId } from "@/lib/db/timesheets";
+import type { Invoice } from "@/lib/db/types";
 import { usePaperTrailStore } from "@/lib/store";
-import { getInvoice } from "@/lib/stripeApi";
 import styles from "./styles.module.css";
 
 interface InvoiceDetailsProps {
-	invoiceId: string;
+	invoiceId: number;
 }
 
-function formatCurrency(cents: number, currency: string): string {
-	const amount = cents / 100;
-	return new Intl.NumberFormat("en-US", {
+const formatCents = (cents: number): string =>
+	(cents / 100).toLocaleString("en-US", {
 		style: "currency",
-		currency: currency.toUpperCase(),
-	}).format(amount);
-}
-
-function formatDate(timestamp: number): string {
-	return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
+		currency: "USD",
 	});
-}
 
-function getStatusLabel(status: string | null): string {
+const statusLabel = (status: Invoice["status"]): string => {
 	switch (status) {
 		case "paid":
 			return "Paid";
 		case "void":
 			return "Void";
-		case "open":
-			return "Open";
+		case "sent":
+			return "Sent";
 		case "draft":
 			return "Draft";
-		default:
-			return "Unknown";
 	}
-}
+};
 
 export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 	const { toggleInvoiceModal, toggleTimesheetModal } = usePaperTrailStore();
+
 	const { data: invoice, isLoading: invoiceLoading } = useQuery({
 		queryKey: ["invoice-detail", invoiceId],
 		queryFn: () => getInvoice(invoiceId),
 	});
-	const { data: timesheet, isLoading: timesheetLoading } = useQuery({
-		queryKey: ["timesheet-by-invoice", invoiceId],
-		queryFn: () => getTimesheetByInvoiceId(invoiceId),
+
+	const { data: customer } = useQuery({
+		queryKey: ["customer", invoice?.customerId],
+		queryFn: () => {
+			if (!invoice) throw new Error("invoice not loaded");
+			return getCustomer(invoice.customerId);
+		},
+		enabled: !!invoice?.customerId,
 	});
 
-	const isLoading = invoiceLoading || timesheetLoading;
+	const { data: timesheet } = useQuery({
+		queryKey: ["timesheet-by-invoice", invoiceId],
+		queryFn: () => getTimesheetByInvoiceId(invoiceId),
+		enabled: !!invoice?.timesheetId,
+	});
 
 	const handleViewTimesheet = () => {
 		if (timesheet) {
@@ -66,10 +65,9 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 		}
 	};
 
-	if (isLoading) {
+	if (invoiceLoading) {
 		return <P>Loading invoice details...</P>;
 	}
-
 	if (!invoice) {
 		return <P>Invoice not found.</P>;
 	}
@@ -81,53 +79,53 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 			)}
 
 			<Grid rows={4} flow="col" columnGap={24}>
-				<P>Invoice ID: {invoice.id}</P>
-				{invoice.number && <P>Invoice Number: {invoice.number}</P>}
+				<P>Invoice Number: {invoice.number}</P>
 				<P>
 					Customer:{" "}
-					<button
-						type="button"
-						className={styles.linkButton}
-						onClick={() => {
-							if (invoice.customer_email) {
-								window.open(`mailto:${invoice.customer_email}`, "_blank");
-							}
-						}}
-					>
-						<Mail size={14} />
-						{invoice.customer_name}
-					</button>
+					{customer ? (
+						<button
+							type="button"
+							className={styles.linkButton}
+							onClick={() => window.open(`mailto:${customer.email}`, "_blank")}
+						>
+							<Mail size={14} />
+							{customer.name}
+						</button>
+					) : (
+						"…"
+					)}
 				</P>
-				<P>
-					Amount:{" "}
-					{invoice.amount_due !== undefined
-						? formatCurrency(invoice.amount_due, invoice.currency || "usd")
-						: "N/A"}
-				</P>
-				<P>Status: {getStatusLabel(invoice.status)}</P>
-				{invoice.created && <P>Created: {formatDate(invoice.created)}</P>}
+				<P>Amount: {formatCents(invoice.amount_cents)}</P>
+				<P>Status: {statusLabel(invoice.status)}</P>
+				<P>Issued: {invoice.issuedAt}</P>
+				<P>Due: {invoice.dueDate}</P>
+				{invoice.sentAt && (
+					<P>Sent: {invoice.sentAt.slice(0, 10)}</P>
+				)}
+				{invoice.paidAt && (
+					<P>Paid: {invoice.paidAt.slice(0, 10)}</P>
+				)}
 			</Grid>
 
-			{invoice.footer && <P className={styles.preLine}>{invoice.footer}</P>}
-
 			<Flex gap={12} className={styles.actions} items="center">
-				{timesheet ? (
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={handleViewTimesheet}
-						leftIcon={<FileText size={16} />}
-					>
-						View Timesheet: {timesheet.name}
-					</Button>
-				) : (
-					<span>
-						<em>No linked timesheet found</em>
-					</span>
-				)}
+				{invoice.timesheetId &&
+					(timesheet ? (
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={handleViewTimesheet}
+							leftIcon={<FileText size={16} />}
+						>
+							View Timesheet: {timesheet.name}
+						</Button>
+					) : (
+						<span>
+							<em>Loading timesheet…</em>
+						</span>
+					))}
 			</Flex>
 
-			{timesheet && <PayVoidButtons timesheet={timesheet} />}
+			<PayVoidButtons invoice={invoice} />
 		</>
 	);
 };

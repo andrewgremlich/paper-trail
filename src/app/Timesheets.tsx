@@ -6,8 +6,8 @@ import { GenerateProject } from "@/components/features/projects/GenerateProject"
 import { H1, H2, Main, Section } from "@/components/layout/HtmlElements";
 import { CardPreview } from "@/components/shared/CardPreview";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
+import { getCustomers } from "@/lib/db/customers";
 import { usePaperTrailStore } from "@/lib/store";
-import { getAllCustomers } from "@/lib/stripeApi";
 
 export const Timesheets = () => {
 	const { toggleProjectModal, toggleTimesheetModal } = usePaperTrailStore();
@@ -16,7 +16,7 @@ export const Timesheets = () => {
 			queries: [
 				{ queryKey: ["projects"], queryFn: getAllProjects },
 				{ queryKey: ["timesheets"], queryFn: getAllTimesheets },
-				{ queryKey: ["customers"], queryFn: () => getAllCustomers(50) },
+				{ queryKey: ["customers"], queryFn: getCustomers },
 			],
 		});
 

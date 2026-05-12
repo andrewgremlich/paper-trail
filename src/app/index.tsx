@@ -1,3 +1,4 @@
+import { Customers } from "./Customers";
 import { Invoices } from "./Invoices";
 import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
@@ -14,6 +15,8 @@ export const App = () => {
 			return <Transactions />;
 		case ProjectPageTab.Invoices:
 			return <Invoices />;
+		case ProjectPageTab.Customers:
+			return <Customers />;
 		default:
 			return <Timesheets />;
 	}

@@ -11,7 +11,7 @@ describe("GenerateTimesheet", () => {
 		name: "Test Project",
 		description: "Test Description",
 		rate_in_cents: 5000,
-		customerId: "cus_123",
+		customerId: 42,
 		active: true,
 		timesheets: [],
 		createdAt: 1704067200000,

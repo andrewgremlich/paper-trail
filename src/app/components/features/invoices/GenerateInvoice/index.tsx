@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import type { TimesheetDetails } from "@/lib/db";
-import { generateInvoice } from "@/lib/stripeApi";
+import { createInvoice } from "@/lib/db/invoices";
 import styles from "./styles.module.css";
 
 export const GenerateInvoice = ({
@@ -18,51 +17,64 @@ export const GenerateInvoice = ({
 		isPending,
 		isSuccess,
 		isError,
+		data,
 	} = useMutation({
-		mutationFn: async (formData: FormData) => {
-			await generateInvoice(formData);
+		mutationFn: async () => {
+			if (timesheet.customerId == null) {
+				throw new Error(
+					"This project has no customer linked. Open Customers and attach one to the project first.",
+				);
+			}
+			return createInvoice({
+				timesheetId: timesheet.id,
+				customerId: timesheet.customerId,
+			});
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
+			await queryClient.invalidateQueries({ queryKey: ["invoices"] });
 		},
 	});
 
+	const canGenerate =
+		timesheet?.active &&
+		timesheet?.entries.length > 0 &&
+		timesheet?.customerId != null;
+
 	return (
 		<form
-			onSubmit={async (e) => {
+			onSubmit={(e) => {
 				e.preventDefault();
-				const formData = new FormData(e.currentTarget);
-				await mutateInvoice(formData);
+				mutateInvoice();
 			}}
 		>
-			<Input type="hidden" name="timesheetId" defaultValue={timesheet?.id} />
-			{timesheet?.customerId && (
-				<Input
-					type="hidden"
-					name="customerId"
-					defaultValue={timesheet?.customerId}
-				/>
-			)}
 			<Button
 				type="submit"
 				variant="default"
 				className={styles.button}
-				disabled={!timesheet?.active || timesheet?.entries.length === 0}
+				disabled={!canGenerate}
 				isLoading={isPending}
 			>
 				{timesheet?.active ? "Generate Invoice" : "Invoice Generated"}
 			</Button>
+			{timesheet?.customerId == null && (
+				<div className={styles.errorMessage}>
+					Attach a customer to this project before generating an invoice.
+				</div>
+			)}
 			<div aria-live="polite" aria-atomic="true">
-				{isSuccess && (
+				{isSuccess && data && (
 					<div className={styles.successMessage}>
-						{timesheet?.invoiceId
-							? `Invoice ${timesheet.invoiceId} generated successfully!`
-							: "Action completed successfully!"}
+						Invoice {data.number} created as a draft.
 					</div>
 				)}
-				{isError && <div className={styles.errorMessage}>Error: {isError}</div>}
+				{isError && (
+					<div className={styles.errorMessage}>
+						Could not generate invoice.
+					</div>
+				)}
 			</div>
 		</form>
 	);

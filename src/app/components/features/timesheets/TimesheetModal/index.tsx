@@ -9,6 +9,7 @@ import { EditToggleButton } from "@/components/shared/EditToggleButton";
 import { Dialog } from "@/components/ui/Dialog";
 import { Grid } from "@/components/ui/Grid";
 import { deleteTimesheet, getTimesheetById } from "@/lib/db";
+import { getInvoices } from "@/lib/db/invoices";
 import { usePaperTrailStore } from "@/lib/store";
 import { CreateTimesheetRecord } from "../CreateTimesheetRecord";
 import { TimesheetEditForm } from "../TimesheetEditForm";
@@ -26,6 +27,17 @@ export const TimesheetModal = () => {
 			if (activeTimesheetId) {
 				return await getTimesheetById(activeTimesheetId);
 			}
+		},
+		enabled: !!activeTimesheetId,
+	});
+
+	// Find an invoice already linked to this timesheet, if any. The relationship
+	// is invoice → timesheet now, so we filter the user's invoice list.
+	const { data: timesheetInvoice } = useQuery({
+		queryKey: ["invoice-by-timesheet", activeTimesheetId],
+		queryFn: async () => {
+			const all = await getInvoices();
+			return all.find((i) => i.timesheetId === activeTimesheetId) ?? null;
 		},
 		enabled: !!activeTimesheetId,
 	});
@@ -82,8 +94,10 @@ export const TimesheetModal = () => {
 					<P>
 						{timesheet?.customerId && `Customer ID: ${timesheet.customerId}`}
 					</P>
-					{timesheet?.invoiceId && <P>Invoice ID: {timesheet?.invoiceId}</P>}
-					{timesheet?.invoiceId && <PayVoidButtons timesheet={timesheet} />}
+					{timesheetInvoice && (
+						<P>Invoice: {timesheetInvoice.number}</P>
+					)}
+					{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 				</Grid>
 			)}
 			{timesheet && (

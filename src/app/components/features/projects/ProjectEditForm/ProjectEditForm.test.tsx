@@ -21,7 +21,7 @@ describe("ProjectEditForm", () => {
 		name: "Test Project",
 		description: "Test Description",
 		rate_in_cents: 5000,
-		customerId: "cus_123",
+		customerId: 42,
 		active: true,
 		createdAt: 1704067200000,
 		updatedAt: 1704067200000,
