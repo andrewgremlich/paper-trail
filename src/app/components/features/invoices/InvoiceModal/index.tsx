@@ -6,22 +6,23 @@ import { CreateInvoiceForm } from "../CreateInvoiceForm";
 import { InvoiceDetails } from "../InvoiceDetails";
 
 export const InvoiceModal = () => {
-	const { invoiceModalActive, toggleInvoiceModal, activeInvoiceId } =
-		usePaperTrailStore();
+	const { activeModal, closeModal } = usePaperTrailStore();
 	const headingId = useId();
 
+	const activeInvoiceId =
+		activeModal?.type === "invoice" ? activeModal.invoiceId : undefined;
 	const isViewMode = !!activeInvoiceId;
 
 	return (
 		<Dialog
-			isOpen={invoiceModalActive}
-			onClose={() => toggleInvoiceModal()}
+			isOpen={activeModal?.type === "invoice"}
+			onClose={closeModal}
 			titleId={headingId}
 		>
 			<ModalHeader
 				title={isViewMode ? "Invoice Details" : "Create Invoice"}
 				headingId={headingId}
-				onClose={() => toggleInvoiceModal()}
+				onClose={closeModal}
 				closeAriaLabel="Close Invoice Modal"
 			/>
 

@@ -20,8 +20,9 @@ import styles from "./styles.module.css";
 export const TimesheetModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
 	const headingId = useId();
-	const { timesheetModalActive, toggleTimesheetModal, activeTimesheetId } =
-		usePaperTrailStore();
+	const { activeModal, closeModal: closeTimesheetModal } = usePaperTrailStore();
+	const activeTimesheetId =
+		activeModal?.type === "timesheet" ? activeModal.timesheetId : undefined;
 	const { data: timesheet } = useQuery({
 		queryKey: ["timesheet", activeTimesheetId],
 		queryFn: async () => {
@@ -56,8 +57,8 @@ export const TimesheetModal = () => {
 
 	return (
 		<Dialog
-			isOpen={timesheetModalActive}
-			onClose={() => toggleTimesheetModal({ timesheetId: undefined })}
+			isOpen={activeModal?.type === "timesheet"}
+			onClose={closeTimesheetModal}
 			titleId={headingId}
 		>
 			<Flex justify="between" className={styles.header}>
@@ -81,7 +82,7 @@ export const TimesheetModal = () => {
 								const id = String(formData.get("id") ?? "");
 								await deleteTimesheet(id);
 							}}
-							successFn={() => toggleTimesheetModal({ timesheetId: undefined })}
+							successFn={closeTimesheetModal}
 						/>
 					)}
 				</Flex>

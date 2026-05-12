@@ -17,12 +17,9 @@ import styles from "./styles.module.css";
 export const ProjectModal = () => {
 	const [isEditing, setIsEditing] = useState(false);
 	const headingId = useId();
-	const {
-		projectModalActive,
-		toggleProjectModal,
-		toggleTimesheetModal,
-		activeProjectId,
-	} = usePaperTrailStore();
+	const { activeModal, openModal, closeModal } = usePaperTrailStore();
+	const activeProjectId =
+		activeModal?.type === "project" ? activeModal.projectId : undefined;
 	const { data: project } = useQuery({
 		queryKey: ["project", activeProjectId],
 		queryFn: () => {
@@ -45,8 +42,8 @@ export const ProjectModal = () => {
 
 	return (
 		<Dialog
-			isOpen={projectModalActive}
-			onClose={() => toggleProjectModal({ projectId: undefined })}
+			isOpen={activeModal?.type === "project"}
+			onClose={closeModal}
 			titleId={headingId}
 		>
 			<Flex className={styles.header} justify="between" items="start">
@@ -67,7 +64,7 @@ export const ProjectModal = () => {
 								const id = String(formData.get("id") ?? "");
 								await deleteProject(id);
 							}}
-							successFn={() => toggleProjectModal({ projectId: undefined })}
+							successFn={closeModal}
 						/>
 					)}
 				</Flex>
@@ -107,9 +104,9 @@ export const ProjectModal = () => {
 							name={timesheet.name}
 							description={timesheet.description ?? "No description provided"}
 							action={() => {
-								toggleProjectModal({ projectId: undefined });
+								closeModal();
 								setTimeout(() => {
-									toggleTimesheetModal({ timesheetId: timesheet.id });
+									openModal({ type: "timesheet", timesheetId: timesheet.id });
 								}, 160);
 							}}
 						/>

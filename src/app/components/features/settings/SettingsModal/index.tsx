@@ -8,20 +8,20 @@ import { InvoiceProfileSection } from "../InvoiceProfileSection";
 import { ThemeSection } from "../ThemeSection";
 
 export const SettingsModal = () => {
-	const { settingsModalActive, toggleSettingsModal } = usePaperTrailStore();
+	const { activeModal, closeModal } = usePaperTrailStore();
 	const headingId = useId();
 
 	return (
 		<Dialog
-			isOpen={settingsModalActive}
-			onClose={toggleSettingsModal}
+			isOpen={activeModal?.type === "settings"}
+			onClose={closeModal}
 			titleId={headingId}
 		>
 			<ModalHeader
 				title="Settings"
 				description="Modify settings for the application here."
 				headingId={headingId}
-				onClose={toggleSettingsModal}
+				onClose={closeModal}
 				closeAriaLabel="Close settings"
 			/>
 			<ThemeSection />
