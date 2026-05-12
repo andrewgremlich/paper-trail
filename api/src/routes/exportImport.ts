@@ -53,48 +53,77 @@ app.get("/data", async (c) => {
 	const userId = c.get("userId");
 	const wantEncrypted = c.req.query("encrypted") === "true";
 
-	const [projects, timesheets, timesheetEntries, transactions, userProfile] =
-		await Promise.all([
-			db
-				.prepare(
-					`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
-					FROM projects WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
-					FROM timesheets WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
-					FROM timesheet_entries WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
-					FROM transactions WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?",
-				)
-				.bind(userId)
-				.first(),
-		]);
+	const [
+		projects,
+		timesheets,
+		timesheetEntries,
+		transactions,
+		customers,
+		invoices,
+		userProfile,
+	] = await Promise.all([
+		db
+			.prepare(
+				`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
+				FROM projects WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+				FROM timesheets WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
+				FROM timesheet_entries WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+				FROM transactions WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, name, email, address, consentToEmailInvoices,
+				        consentedAt, consentRequestedAt, createdAt, updatedAt
+				 FROM customers WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+				        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
+				        voidedAt, archivedAt, createdAt, updatedAt
+				 FROM invoices WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, uuid, displayName, email, venmoHandle, paypalHandle,
+				        businessName, businessAddress, createdAt, updatedAt
+				 FROM users WHERE id = ?`,
+			)
+			.bind(userId)
+			.first(),
+	]);
 
 	let transactionResults = transactions.results as Record<string, unknown>[];
 	let projectResults = projects.results as Record<string, unknown>[];
 	let timesheetResults = timesheets.results as Record<string, unknown>[];
 	let entryResults = timesheetEntries.results as Record<string, unknown>[];
+	let customerResults = customers.results as Record<string, unknown>[];
+	let invoiceResults = invoices.results as Record<string, unknown>[];
+	let profileResult = userProfile as Record<string, unknown> | null;
 
 	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
@@ -103,7 +132,6 @@ app.get("/data", async (c) => {
 		projectResults = await Promise.all(
 			projectResults.map(async (r) => ({
 				...r,
-				customerId: await decrypt(r.customerId as string, c.env),
 				description: await decrypt((r.description as string) ?? "", c.env),
 				rate_in_cents: Number(
 					await decrypt(r.rate_in_cents as string, c.env),
@@ -116,9 +144,6 @@ app.get("/data", async (c) => {
 				description: r.description
 					? await decrypt(r.description as string, c.env)
 					: r.description,
-				invoiceId: r.invoiceId
-					? await decrypt(r.invoiceId as string, c.env)
-					: r.invoiceId,
 			})),
 		);
 		entryResults = await Promise.all(
@@ -128,10 +153,44 @@ app.get("/data", async (c) => {
 				amount: Number(await decrypt(r.amount as string, c.env)),
 			})),
 		);
+		customerResults = await Promise.all(
+			customerResults.map(async (r) => ({
+				...r,
+				name: await decrypt(r.name as string, c.env),
+				email: await decrypt(r.email as string, c.env),
+				address: r.address ? await decrypt(r.address as string, c.env) : null,
+			})),
+		);
+		invoiceResults = await Promise.all(
+			invoiceResults.map(async (r) => ({
+				...r,
+				amount_cents: Number(await decrypt(r.amount_cents as string, c.env)),
+				description: r.description
+					? await decrypt(r.description as string, c.env)
+					: null,
+			})),
+		);
+		if (profileResult) {
+			profileResult = {
+				...profileResult,
+				venmoHandle: profileResult.venmoHandle
+					? await decrypt(profileResult.venmoHandle as string, c.env)
+					: null,
+				paypalHandle: profileResult.paypalHandle
+					? await decrypt(profileResult.paypalHandle as string, c.env)
+					: null,
+				businessName: profileResult.businessName
+					? await decrypt(profileResult.businessName as string, c.env)
+					: null,
+				businessAddress: profileResult.businessAddress
+					? await decrypt(profileResult.businessAddress as string, c.env)
+					: null,
+			};
+		}
 	}
 
 	const data: ExportData = {
-		version: "1.0.0",
+		version: "2.0.0",
 		exportDate: new Date().toISOString(),
 		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
 		projects: projectResults as unknown as ExportData["projects"],
@@ -139,7 +198,9 @@ app.get("/data", async (c) => {
 		timesheetEntries:
 			entryResults as unknown as ExportData["timesheetEntries"],
 		transactions: transactionResults as unknown as ExportData["transactions"],
-		userProfile: userProfile as unknown as ExportData["userProfile"],
+		customers: customerResults as unknown as ExportData["customers"],
+		invoices: invoiceResults as unknown as ExportData["invoices"],
+		userProfile: profileResult as unknown as ExportData["userProfile"],
 	};
 
 	return c.json(data);
@@ -166,6 +227,22 @@ app.post("/data", async (c) => {
 
 	// Delete existing data in reverse dependency order
 	await db
+		.prepare("DELETE FROM invoice_events WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
+		.prepare("DELETE FROM invoices WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
+		.prepare("DELETE FROM customer_events WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
+		.prepare("DELETE FROM customers WHERE userId = ?")
+		.bind(userId)
+		.run();
+	await db
 		.prepare("DELETE FROM timesheet_entries WHERE userId = ?")
 		.bind(userId)
 		.run();
@@ -182,11 +259,46 @@ app.post("/data", async (c) => {
 	// Determine if imported data is already encrypted
 	const isDataEncrypted = data.encrypted === true;
 
-	// Insert projects — encrypt if data is plaintext, store as-is if already encrypted
+	// Insert customers first so projects can FK-link to them.
+	if (data.customers) {
+		for (const customer of data.customers) {
+			const name = isDataEncrypted
+				? customer.name
+				: await encrypt(customer.name, c.env);
+			const email = isDataEncrypted
+				? customer.email
+				: await encrypt(customer.email, c.env);
+			const address = customer.address
+				? isDataEncrypted
+					? customer.address
+					: await encrypt(customer.address, c.env)
+				: null;
+
+			await db
+				.prepare(
+					`INSERT INTO customers (id, userId, name, email, address,
+					        consentToEmailInvoices, consentedAt, consentRequestedAt,
+					        createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					customer.id,
+					userId,
+					name,
+					email,
+					address,
+					customer.consentToEmailInvoices ? 1 : 0,
+					customer.consentedAt,
+					customer.consentRequestedAt,
+					customer.createdAt,
+					customer.updatedAt,
+				)
+				.run();
+		}
+	}
+
+	// Insert projects — customerId is now a plain INTEGER FK (no encryption)
 	for (const project of data.projects) {
-		const customerId = isDataEncrypted
-			? project.customerId
-			: await encrypt(project.customerId ?? "", c.env);
 		const rate_in_cents = isDataEncrypted
 			? project.rate_in_cents
 			: await encrypt(String(project.rate_in_cents), c.env);
@@ -203,7 +315,7 @@ app.post("/data", async (c) => {
 				project.id,
 				project.name,
 				project.active ? 1 : 0,
-				customerId,
+				project.customerId ?? null,
 				rate_in_cents,
 				description,
 				project.createdAt,
@@ -213,28 +325,22 @@ app.post("/data", async (c) => {
 			.run();
 	}
 
-	// Insert timesheets — encrypt if data is plaintext
+	// Insert timesheets — invoiceId column is gone
 	for (const ts of data.timesheets) {
 		const description = isDataEncrypted
 			? ts.description
 			: ts.description
 				? await encrypt(ts.description, c.env)
 				: null;
-		const invoiceId = isDataEncrypted
-			? ts.invoiceId
-			: ts.invoiceId
-				? await encrypt(ts.invoiceId, c.env)
-				: null;
 
 		await db
 			.prepare(
-				`INSERT INTO timesheets (id, projectId, invoiceId, name, description, active, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			)
 			.bind(
 				ts.id,
 				ts.projectId,
-				invoiceId,
 				ts.name,
 				description,
 				ts.active ? 1 : 0,
@@ -307,11 +413,75 @@ app.post("/data", async (c) => {
 			.run();
 	}
 
-	// Update user profile if present
+	// Insert invoices (after customers + timesheets exist)
+	if (data.invoices) {
+		for (const inv of data.invoices) {
+			const amount_cents = isDataEncrypted
+				? inv.amount_cents
+				: await encrypt(String(inv.amount_cents), c.env);
+			const description = inv.description
+				? isDataEncrypted
+					? inv.description
+					: await encrypt(inv.description, c.env)
+				: null;
+
+			await db
+				.prepare(
+					`INSERT INTO invoices
+					   (id, uuid, userId, customerId, timesheetId, number, status,
+					    amount_cents, description, issuedAt, dueDate,
+					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					inv.id,
+					inv.uuid,
+					userId,
+					inv.customerId,
+					inv.timesheetId,
+					inv.number,
+					inv.status,
+					amount_cents,
+					description,
+					inv.issuedAt,
+					inv.dueDate,
+					inv.sentAt,
+					inv.paidAt,
+					inv.voidedAt,
+					inv.archivedAt,
+					inv.createdAt,
+					inv.updatedAt,
+				)
+				.run();
+		}
+	}
+
+	// Update user profile if present (now includes business/payment fields)
 	if (data.userProfile) {
+		const p = data.userProfile;
+		const encOrNull = async (v: string | null | undefined) =>
+			v == null
+				? null
+				: isDataEncrypted
+					? v
+					: await encrypt(v, c.env);
 		await db
-			.prepare("UPDATE users SET displayName = ?, email = ? WHERE id = ?")
-			.bind(data.userProfile.displayName, data.userProfile.email, userId)
+			.prepare(
+				`UPDATE users
+				 SET displayName = ?, email = ?,
+				     venmoHandle = ?, paypalHandle = ?,
+				     businessName = ?, businessAddress = ?
+				 WHERE id = ?`,
+			)
+			.bind(
+				p.displayName,
+				p.email,
+				await encOrNull(p.venmoHandle),
+				await encOrNull(p.paypalHandle),
+				await encOrNull(p.businessName),
+				await encOrNull(p.businessAddress),
+				userId,
+			)
 			.run();
 	}
 
@@ -320,6 +490,8 @@ app.post("/data", async (c) => {
 		timesheetsCount: data.timesheets.length,
 		entriesCount: data.timesheetEntries.length,
 		transactionsCount: data.transactions.length,
+		customersCount: data.customers?.length ?? 0,
+		invoicesCount: data.invoices?.length ?? 0,
 	});
 });
 
@@ -364,6 +536,10 @@ app.post("/zip", async (c) => {
 	const userId = c.get("userId");
 
 	// Delete existing data in reverse dependency order
+	await db.prepare("DELETE FROM invoice_events WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM invoices WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM customer_events WHERE userId = ?").bind(userId).run();
+	await db.prepare("DELETE FROM customers WHERE userId = ?").bind(userId).run();
 	await db.prepare("DELETE FROM timesheet_entries WHERE userId = ?").bind(userId).run();
 	await db.prepare("DELETE FROM transactions WHERE userId = ?").bind(userId).run();
 	await db.prepare("DELETE FROM timesheets WHERE userId = ?").bind(userId).run();
@@ -371,10 +547,40 @@ app.post("/zip", async (c) => {
 
 	const isDataEncrypted = data.encrypted === true;
 
+	if (data.customers) {
+		for (const customer of data.customers) {
+			const name = isDataEncrypted ? customer.name : await encrypt(customer.name, c.env);
+			const email = isDataEncrypted ? customer.email : await encrypt(customer.email, c.env);
+			const address = customer.address
+				? isDataEncrypted
+					? customer.address
+					: await encrypt(customer.address, c.env)
+				: null;
+
+			await db
+				.prepare(
+					`INSERT INTO customers (id, userId, name, email, address,
+					        consentToEmailInvoices, consentedAt, consentRequestedAt,
+					        createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					customer.id,
+					userId,
+					name,
+					email,
+					address,
+					customer.consentToEmailInvoices ? 1 : 0,
+					customer.consentedAt,
+					customer.consentRequestedAt,
+					customer.createdAt,
+					customer.updatedAt,
+				)
+				.run();
+		}
+	}
+
 	for (const project of data.projects) {
-		const customerId = isDataEncrypted
-			? project.customerId
-			: await encrypt(project.customerId ?? "", c.env);
 		const rate_in_cents = isDataEncrypted
 			? project.rate_in_cents
 			: await encrypt(String(project.rate_in_cents), c.env);
@@ -391,7 +597,7 @@ app.post("/zip", async (c) => {
 				project.id,
 				project.name,
 				project.active ? 1 : 0,
-				customerId,
+				project.customerId ?? null,
 				rate_in_cents,
 				description,
 				project.createdAt,
@@ -407,21 +613,15 @@ app.post("/zip", async (c) => {
 			: ts.description
 				? await encrypt(ts.description, c.env)
 				: null;
-		const invoiceId = isDataEncrypted
-			? ts.invoiceId
-			: ts.invoiceId
-				? await encrypt(ts.invoiceId, c.env)
-				: null;
 
 		await db
 			.prepare(
-				`INSERT INTO timesheets (id, projectId, invoiceId, name, description, active, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			)
 			.bind(
 				ts.id,
 				ts.projectId,
-				invoiceId,
 				ts.name,
 				description,
 				ts.active ? 1 : 0,
@@ -486,10 +686,69 @@ app.post("/zip", async (c) => {
 			.run();
 	}
 
+	if (data.invoices) {
+		for (const inv of data.invoices) {
+			const amount_cents = isDataEncrypted
+				? inv.amount_cents
+				: await encrypt(String(inv.amount_cents), c.env);
+			const description = inv.description
+				? isDataEncrypted
+					? inv.description
+					: await encrypt(inv.description, c.env)
+				: null;
+
+			await db
+				.prepare(
+					`INSERT INTO invoices
+					   (id, uuid, userId, customerId, timesheetId, number, status,
+					    amount_cents, description, issuedAt, dueDate,
+					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					inv.id,
+					inv.uuid,
+					userId,
+					inv.customerId,
+					inv.timesheetId,
+					inv.number,
+					inv.status,
+					amount_cents,
+					description,
+					inv.issuedAt,
+					inv.dueDate,
+					inv.sentAt,
+					inv.paidAt,
+					inv.voidedAt,
+					inv.archivedAt,
+					inv.createdAt,
+					inv.updatedAt,
+				)
+				.run();
+		}
+	}
+
 	if (data.userProfile) {
+		const p = data.userProfile;
+		const encOrNull = async (v: string | null | undefined) =>
+			v == null ? null : isDataEncrypted ? v : await encrypt(v, c.env);
 		await db
-			.prepare("UPDATE users SET displayName = ?, email = ? WHERE id = ?")
-			.bind(data.userProfile.displayName, data.userProfile.email, userId)
+			.prepare(
+				`UPDATE users
+				 SET displayName = ?, email = ?,
+				     venmoHandle = ?, paypalHandle = ?,
+				     businessName = ?, businessAddress = ?
+				 WHERE id = ?`,
+			)
+			.bind(
+				p.displayName,
+				p.email,
+				await encOrNull(p.venmoHandle),
+				await encOrNull(p.paypalHandle),
+				await encOrNull(p.businessName),
+				await encOrNull(p.businessAddress),
+				userId,
+			)
 			.run();
 	}
 
@@ -609,48 +868,77 @@ app.get("/zip", async (c) => {
 	const userId = c.get("userId");
 	const wantEncrypted = c.req.query("encrypted") === "true";
 
-	const [projects, timesheets, timesheetEntries, transactions, userProfile] =
-		await Promise.all([
-			db
-				.prepare(
-					`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
-					FROM projects WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, projectId, invoiceId, name, description, active, createdAt, updatedAt
-					FROM timesheets WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
-					FROM timesheet_entries WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
-					FROM transactions WHERE userId = ? ORDER BY id ASC`,
-				)
-				.bind(userId)
-				.all(),
-			db
-				.prepare(
-					"SELECT id, uuid, displayName, email, createdAt, updatedAt FROM users WHERE id = ?",
-				)
-				.bind(userId)
-				.first(),
-		]);
+	const [
+		projects,
+		timesheets,
+		timesheetEntries,
+		transactions,
+		customers,
+		invoices,
+		userProfile,
+	] = await Promise.all([
+		db
+			.prepare(
+				`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
+				FROM projects WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+				FROM timesheets WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, timesheetId, date, minutes, description, amount, createdAt, updatedAt
+				FROM timesheet_entries WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
+				FROM transactions WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, userId, name, email, address, consentToEmailInvoices,
+				        consentedAt, consentRequestedAt, createdAt, updatedAt
+				 FROM customers WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, uuid, userId, customerId, timesheetId, number, status,
+				        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
+				        voidedAt, archivedAt, createdAt, updatedAt
+				 FROM invoices WHERE userId = ? ORDER BY id ASC`,
+			)
+			.bind(userId)
+			.all(),
+		db
+			.prepare(
+				`SELECT id, uuid, displayName, email, venmoHandle, paypalHandle,
+				        businessName, businessAddress, createdAt, updatedAt
+				 FROM users WHERE id = ?`,
+			)
+			.bind(userId)
+			.first(),
+	]);
 
 	let transactionResults = transactions.results as Record<string, unknown>[];
 	let projectResults = projects.results as Record<string, unknown>[];
 	let timesheetResults = timesheets.results as Record<string, unknown>[];
 	let entryResults = timesheetEntries.results as Record<string, unknown>[];
+	let customerResults = customers.results as Record<string, unknown>[];
+	let invoiceResults = invoices.results as Record<string, unknown>[];
+	let profileResult = userProfile as Record<string, unknown> | null;
 
 	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
@@ -659,7 +947,6 @@ app.get("/zip", async (c) => {
 		projectResults = await Promise.all(
 			projectResults.map(async (r) => ({
 				...r,
-				customerId: await decrypt(r.customerId as string, c.env),
 				description: await decrypt((r.description as string) ?? "", c.env),
 				rate_in_cents: Number(await decrypt(r.rate_in_cents as string, c.env)),
 			})),
@@ -670,9 +957,6 @@ app.get("/zip", async (c) => {
 				description: r.description
 					? await decrypt(r.description as string, c.env)
 					: r.description,
-				invoiceId: r.invoiceId
-					? await decrypt(r.invoiceId as string, c.env)
-					: r.invoiceId,
 			})),
 		);
 		entryResults = await Promise.all(
@@ -682,17 +966,53 @@ app.get("/zip", async (c) => {
 				amount: Number(await decrypt(r.amount as string, c.env)),
 			})),
 		);
+		customerResults = await Promise.all(
+			customerResults.map(async (r) => ({
+				...r,
+				name: await decrypt(r.name as string, c.env),
+				email: await decrypt(r.email as string, c.env),
+				address: r.address ? await decrypt(r.address as string, c.env) : null,
+			})),
+		);
+		invoiceResults = await Promise.all(
+			invoiceResults.map(async (r) => ({
+				...r,
+				amount_cents: Number(await decrypt(r.amount_cents as string, c.env)),
+				description: r.description
+					? await decrypt(r.description as string, c.env)
+					: null,
+			})),
+		);
+		if (profileResult) {
+			profileResult = {
+				...profileResult,
+				venmoHandle: profileResult.venmoHandle
+					? await decrypt(profileResult.venmoHandle as string, c.env)
+					: null,
+				paypalHandle: profileResult.paypalHandle
+					? await decrypt(profileResult.paypalHandle as string, c.env)
+					: null,
+				businessName: profileResult.businessName
+					? await decrypt(profileResult.businessName as string, c.env)
+					: null,
+				businessAddress: profileResult.businessAddress
+					? await decrypt(profileResult.businessAddress as string, c.env)
+					: null,
+			};
+		}
 	}
 
 	const data: ExportData = {
-		version: "1.0.0",
+		version: "2.0.0",
 		exportDate: new Date().toISOString(),
 		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
 		projects: projectResults as unknown as ExportData["projects"],
 		timesheets: timesheetResults as unknown as ExportData["timesheets"],
 		timesheetEntries: entryResults as unknown as ExportData["timesheetEntries"],
 		transactions: transactionResults as unknown as ExportData["transactions"],
-		userProfile: userProfile as unknown as ExportData["userProfile"],
+		customers: customerResults as unknown as ExportData["customers"],
+		invoices: invoiceResults as unknown as ExportData["invoices"],
+		userProfile: profileResult as unknown as ExportData["userProfile"],
 	};
 
 	const zipEntries: Record<string, Uint8Array> = {};
