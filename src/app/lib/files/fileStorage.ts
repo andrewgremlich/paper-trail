@@ -24,7 +24,7 @@ export const openAttachment = async (relPath: string): Promise<void> => {
 };
 
 export const removeAttachment = async (relPath: string): Promise<void> => {
-	await api.delete(`/api/v1/files/${relPath}`);
+	await api.delete(`/files/${relPath}`);
 };
 
 export const checkFileLink = async (path: string): Promise<boolean> => {
