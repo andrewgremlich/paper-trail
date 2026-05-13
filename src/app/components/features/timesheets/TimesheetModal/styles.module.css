@@ -10,3 +10,8 @@
 .infoGrid {
 	margin-bottom: 1.5rem;
 }
+
+.timesheetInfoSpan {
+	font-size: 15px;
+	color: var(--neutral-800);
+}

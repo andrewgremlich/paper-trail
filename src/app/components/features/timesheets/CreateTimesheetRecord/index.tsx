@@ -51,7 +51,8 @@ export const CreateTimesheetRecord = ({
 				const formData = new FormData(evt.currentTarget);
 				try {
 					await mutateAsync(formData);
-					evt.currentTarget.reset();
+					console.log(evt.target);
+					evt.target.reset();
 				} catch (e) {
 					console.error(e);
 				}

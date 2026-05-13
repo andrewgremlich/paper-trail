@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import classnames from "classnames";
+
 import { GenerateInvoice } from "@/components/features/invoices/GenerateInvoice";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
-import { H2, P } from "@/components/layout/HtmlElements";
+import { H2, Span } from "@/components/layout/HtmlElements";
 import { DeleteItem } from "@/components/shared/DeleteItem";
 import { EditToggleButton } from "@/components/shared/EditToggleButton";
 import { Dialog } from "@/components/ui/Dialog";
@@ -12,6 +14,7 @@ import { deleteTimesheet, getTimesheetById } from "@/lib/db";
 import { getCustomer } from "@/lib/db/customers";
 import { getInvoices } from "@/lib/db/invoices";
 import { usePaperTrailStore } from "@/lib/store";
+
 import { CreateTimesheetRecord } from "../CreateTimesheetRecord";
 import { TimesheetEditForm } from "../TimesheetEditForm";
 import { TimesheetTable } from "../TimesheetTable";
@@ -94,22 +97,23 @@ export const TimesheetModal = () => {
 				/>
 			)}
 			{!isEditing && (
-				<Grid gap={4} className={styles.infoGrid}>
-					{timesheet?.description ? (
-						<P>Description: {timesheet?.description}</P>
-					) : null}
+				<Grid gap={4} className={classnames(styles.infoGrid, styles.timesheetInfoSpan)} cols={2}>
+					{timesheet?.id && <Span>ID: {timesheet.id}</Span>}
+					{timesheet?.description && (
+						<Span>Description: {timesheet?.description}</Span>
+					)}
 					{timesheet?.projectRate && (
-						<P>
+						<Span>
 							Project Rate: ${(timesheet.projectRate / 100).toFixed(2)}/hour
-						</P>
+						</Span>
 					)}
 					{timesheet?.customerId && (
-						<P>
+						<Span>
 							Customer:{" "}
 							{customer ? `${customer.name} (${customer.email})` : "…"}
-						</P>
+						</Span>
 					)}
-					{timesheetInvoice && <P>Invoice: {timesheetInvoice.number}</P>}
+					{timesheetInvoice && <span>Invoice: {timesheetInvoice.number}</span>}
 					{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 				</Grid>
 			)}
