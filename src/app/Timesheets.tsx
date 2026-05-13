@@ -47,7 +47,7 @@ export const Timesheets = () => {
 								}`}
 								description={
 									timesheet.description
-										? `${timesheet.description} (#${timesheet.id})`
+										? timesheet.description
 										: "No description provided"
 								}
 								action={() => {
