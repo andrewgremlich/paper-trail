@@ -38,7 +38,6 @@ pnpm run migrate:remote
 - Dev environment variables come from `.dev.vars` — sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
 - API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.jsonc`
 - All other routes fall through to the SPA via `not_found_handling = "single-page-application"`
-- `ENCRYPTION_KEY` in `.dev.vars` must be a base64-encoded 32-byte value (256-bit AES key)
 
 ## Architecture
 

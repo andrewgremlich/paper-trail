@@ -1,7 +1,7 @@
 {
   "name": "paper-trail",
   "description": "A Paper Trail that integrates with Stripe in order to send invoices.",
-  "version": "3.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
