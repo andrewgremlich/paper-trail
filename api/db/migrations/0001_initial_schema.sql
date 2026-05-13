@@ -1,8 +1,7 @@
 -- Migration 0001 — Initial schema
 --
--- Single-source-of-truth for Paper Trail. Earlier migrations
--- (initial, stripe-replacement, uuid-primary-keys) were squashed into
--- this file before any production data existed.
+-- Single-source-of-truth for Paper Trail. All migrations have been
+-- squashed into this file before any production data existed.
 --
 -- Conventions:
 -- * users.id stays INTEGER (autoincrement). Cloudflare Access auth
@@ -31,6 +30,12 @@ CREATE TABLE IF NOT EXISTS users (
   paypalHandle TEXT,          -- encrypted, nullable
   businessName TEXT,          -- encrypted, nullable but required to send
   businessAddress TEXT,       -- encrypted, nullable but required to send
+  -- Per-user Resend config (migrations 0003). Both encrypted at rest.
+  -- When both are set, invoice/consent emails are sent via the user's own
+  -- Resend account. When unset, falls back to the shared RESEND_API_KEY env
+  -- var and uses a minimal link-only email body.
+  resendApiKey TEXT,          -- encrypted, nullable
+  resendFromAddress TEXT,     -- encrypted, nullable
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -59,12 +64,15 @@ CREATE TABLE IF NOT EXISTS customers (
   consentRequestedAt TEXT,
   consentIpHash TEXT,         -- salted SHA-256 of confirmer IP
   consentUaHash TEXT,         -- salted SHA-256 of confirmer UA
+  -- Single-use token so customers can self-service revoke consent (migration 0002).
+  revokeToken TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_customers_userId ON customers(userId);
 CREATE INDEX IF NOT EXISTS idx_customers_consentToken ON customers(consentToken);
+CREATE INDEX IF NOT EXISTS idx_customers_revokeToken ON customers(revokeToken);
 
 -- =====================
 -- customer_events  (consent audit log)
@@ -183,6 +191,10 @@ CREATE TABLE IF NOT EXISTS invoices (
   paidAt TEXT,
   voidedAt TEXT,
   archivedAt TEXT,                                             -- soft-delete; rows are never hard-deleted
+  -- Per-invoice access token (migration 0004). Required in the hosted URL
+  -- query string (?t=<token>) for sent invoices. Rotated on every send so
+  -- old emailed links stop working after a resend.
+  accessToken TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (userId, number)
@@ -192,6 +204,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_userId ON invoices(userId);
 CREATE INDEX IF NOT EXISTS idx_invoices_customerId ON invoices(customerId);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_timesheetId ON invoices(timesheetId);
+CREATE INDEX IF NOT EXISTS idx_invoices_accessToken ON invoices(accessToken);
 
 -- =====================
 -- invoice_events  (audit log; includes hashed-IP/UA on 'viewed' rows)
