@@ -1,4 +1,9 @@
 import type { Context, Next } from "hono";
+import {
+	AccessJwtError,
+	getAccessConfig,
+	verifyAccessJwt,
+} from "../lib/cfAccessJwt";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 
@@ -8,11 +13,26 @@ export type AuthVariables = {
 };
 
 /**
- * Middleware that extracts the authenticated user identity from Cloudflare Access headers.
- * Cloudflare Access injects `Cf-Access-Authenticated-User-Email` after verifying
- * the user's GitHub OAuth session.
+ * Middleware that resolves the authenticated user identity for a request.
  *
- * In development, set CF_ACCESS_BYPASS=true and CF_ACCESS_DEV_EMAIL to skip Access validation.
+ * Cloudflare Access fronts this Worker. Access mints a per-request RS256
+ * JWT (header `Cf-Access-Jwt-Assertion`) and *also* echoes the identity in
+ * `Cf-Access-Authenticated-User-Email`. We **must** verify the JWT — the
+ * header on its own is spoofable by anyone who can reach the Worker URL
+ * directly (workers.dev preview URL, internal LAN, etc.). Without
+ * verification, the entire app is exposed to anyone with a TCP socket.
+ *
+ * Production:
+ * - Reads `Cf-Access-Jwt-Assertion`, verifies signature against the team's
+ *   JWKS, and checks `iss` + `aud` + `exp`. The `email` claim is the
+ *   source of truth.
+ * - Refuses to start if `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD` are
+ *   not set — fail closed.
+ *
+ * Development:
+ * - `CF_ACCESS_BYPASS=true` short-circuits the verification and uses
+ *   `CF_ACCESS_DEV_EMAIL` (`dev@localhost` if unset) so `pnpm run dev`
+ *   works without an Access tunnel.
  */
 export async function cfAccessAuth(
 	c: Context<{ Bindings: Env; Variables: AuthVariables }>,
@@ -21,11 +41,51 @@ export async function cfAccessAuth(
 	const env = c.env;
 	let email: string | null = null;
 
-	// In development, allow bypassing Cloudflare Access
 	if (env.CF_ACCESS_BYPASS === "true") {
 		email = env.CF_ACCESS_DEV_EMAIL || "dev@localhost";
 	} else {
-		email = c.req.header("Cf-Access-Authenticated-User-Email") ?? null;
+		let config: { teamDomain: string; aud: string } | null;
+		try {
+			config = getAccessConfig(env);
+		} catch (err) {
+			if (err instanceof AccessJwtError) {
+				console.error("Access config error", { reason: err.reason });
+				return c.json(
+					{ error: "Authentication is misconfigured on the server" },
+					500,
+				);
+			}
+			throw err;
+		}
+
+		if (!config) {
+			// Neither bypass nor JWT config — fail closed.
+			console.error(
+				"Access config missing — set CF_ACCESS_TEAM_DOMAIN + CF_ACCESS_AUD, or CF_ACCESS_BYPASS=true for dev",
+			);
+			return c.json(
+				{ error: "Authentication is not configured on the server" },
+				500,
+			);
+		}
+
+		const token = c.req.header("Cf-Access-Jwt-Assertion");
+		if (!token) {
+			return c.json({ error: "Unauthorized: no Access JWT" }, 401);
+		}
+
+		try {
+			const claims = await verifyAccessJwt(token, config.teamDomain, config.aud);
+			email = claims.email;
+		} catch (err) {
+			if (err instanceof AccessJwtError) {
+				// Log the reason for diagnostics but never reflect it to the
+				// client — it would help an attacker tune a forgery attempt.
+				console.warn("Access JWT rejected", { reason: err.reason });
+				return c.json({ error: "Unauthorized" }, 401);
+			}
+			throw err;
+		}
 	}
 
 	if (!email) {

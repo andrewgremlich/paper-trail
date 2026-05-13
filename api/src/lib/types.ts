@@ -3,6 +3,12 @@ export interface Env {
 	FILES_BUCKET: R2Bucket;
 	CF_ACCESS_BYPASS?: string;
 	CF_ACCESS_DEV_EMAIL?: string;
+	// Cloudflare Access JWT verification config. Both must be set in
+	// production; setting neither (and CF_ACCESS_BYPASS) is rejected by the
+	// auth middleware so we fail closed instead of trusting a spoofable
+	// header.
+	CF_ACCESS_TEAM_DOMAIN?: string;
+	CF_ACCESS_AUD?: string;
 	ENCRYPTION_KEY: string;
 	RESEND_API_KEY?: string;
 	RESEND_FROM_ADDRESS?: string;
