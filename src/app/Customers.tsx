@@ -13,6 +13,7 @@ import {
 	deleteCustomer,
 	getCustomers,
 	requestConsent,
+	revokeConsent,
 	updateCustomer,
 } from "./lib/db/customers";
 
@@ -91,6 +92,20 @@ export const Customers = () => {
 			},
 		});
 
+	const { mutate: revokeConsentMutation, isPending: isRevokingConsent } =
+		useMutation({
+			mutationFn: revokeConsent,
+			onSuccess: () => {
+				invalidate();
+			},
+			onError: (e) => {
+				console.error("Revoke consent failed:", e);
+				window.alert(
+					e instanceof Error ? e.message : "Could not revoke consent.",
+				);
+			},
+		});
+
 	if (isLoading) {
 		return (
 			<Main>
@@ -148,6 +163,7 @@ export const Customers = () => {
 									key={c.id}
 									customer={c}
 									isRequestingConsent={isRequestingConsent}
+									isRevokingConsent={isRevokingConsent}
 									onSave={save}
 									onDelete={() => {
 										if (
@@ -159,6 +175,7 @@ export const Customers = () => {
 										}
 									}}
 									onRequestConsent={requestConsentMutation}
+									onRevokeConsent={revokeConsentMutation}
 								/>
 							))}
 						</TBody>

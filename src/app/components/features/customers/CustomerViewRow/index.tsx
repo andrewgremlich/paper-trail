@@ -1,4 +1,4 @@
-import { Edit, Mail, Trash } from "lucide-react";
+import { Edit, Mail, Trash, X } from "lucide-react";
 import { useState } from "react";
 import { Flex } from "@/components/layout/Flex";
 import { Button } from "@/components/ui/Button";
@@ -10,17 +10,21 @@ import { CustomerDialog } from "../CustomerDialog";
 type Props = {
 	customer: Customer;
 	isRequestingConsent: boolean;
+	isRevokingConsent: boolean;
 	onSave: (formData: FormData) => Promise<void>;
 	onDelete: () => void;
 	onRequestConsent: (id: string) => void;
+	onRevokeConsent: (id: string) => void;
 };
 
 export const CustomerViewRow = ({
 	customer: c,
 	isRequestingConsent,
+	isRevokingConsent,
 	onSave,
 	onDelete,
 	onRequestConsent,
+	onRevokeConsent,
 }: Props) => {
 	const [editing, setEditing] = useState(false);
 	const { road, city, state, zip } = parseAddress(c.address ?? null);
@@ -51,6 +55,23 @@ export const CustomerViewRow = ({
 					>
 						{c.consentRequestedAt ? "Resend" : "Request"}
 					</Button>
+					{c.consentToEmailInvoices && (
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							onClick={() => {
+								if (window.confirm(`Revoke email consent for ${c.name}?`)) {
+									onRevokeConsent(c.id);
+								}
+							}}
+							disabled={isRevokingConsent}
+							leftIcon={<X size={20} />}
+							aria-label="Revoke consent"
+						>
+							Revoke
+						</Button>
+					)}
 					<Button
 						type="button"
 						size="sm"

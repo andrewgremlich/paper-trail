@@ -20,3 +20,6 @@ export const deleteCustomer = (id: string): Promise<{ success: true }> =>
 
 export const requestConsent = (id: string): Promise<{ success: true }> =>
 	api.post(`/customers/${id}/request-consent`);
+
+export const revokeConsent = (id: string): Promise<{ success: true }> =>
+	api.post(`/customers/${id}/revoke-consent`);
