@@ -108,7 +108,7 @@ app.get("/:token", async (c) => {
 			"Consent to electronic invoicing",
 			`<h1>Consent to receive invoices by email</h1>
 			 <p><strong>${escape(businessName)}</strong> would like to send invoices to <strong>${escape(customerEmail)}</strong>.</p>
-			 <p>By agreeing, you confirm you're okay receiving invoices and payment links at this email address. You can revoke this at any time by replying to any invoice.</p>
+			 <p>By agreeing, you confirm you're okay receiving invoices and payment links at this email address. You can revoke this at any time using the unsubscribe link included in every invoice.</p>
 			 <form method="POST" action="/consent/${escape(token)}">
 			   <button class="agree" type="submit" name="decision" value="agree">I agree</button>
 			   <button class="decline" type="submit" name="decision" value="decline">No, thanks</button>
@@ -184,7 +184,7 @@ app.post("/:token", async (c) => {
 			page(
 				"Consent recorded",
 				`<h1>Thanks — consent recorded</h1>
-				 <p>You'll receive invoices at this email address. You can revoke consent at any time by replying to any invoice.</p>`,
+				 <p>You'll receive invoices at this email address. You can revoke consent at any time using the unsubscribe link included in every invoice.</p>`,
 			),
 			200,
 			{ "Cache-Control": "no-store" },
@@ -220,6 +220,125 @@ app.post("/:token", async (c) => {
 			"Declined",
 			`<h1>Noted</h1>
 			 <p>You won't receive invoices at this email address. The sender has been notified.</p>`,
+		),
+		200,
+		{ "Cache-Control": "no-store" },
+	);
+});
+
+// ─── Revocation routes ────────────────────────────────────────────────────────
+
+type RevokeRow = {
+	id: string;
+	userId: number;
+	name: string;
+	email: string;
+	revokeToken: string;
+};
+
+const lookupRevokeToken = async (
+	token: string,
+	env: Env,
+): Promise<RevokeRow | null> => {
+	const db = getDb(env);
+	return db
+		.prepare(
+			`SELECT id, userId, name, email, revokeToken
+			 FROM customers WHERE revokeToken = ?`,
+		)
+		.bind(token)
+		.first<RevokeRow>();
+};
+
+// GET /consent/revoke/:token — show the revocation confirmation page
+app.get("/revoke/:token", async (c) => {
+	const token = c.req.param("token");
+	const row = await lookupRevokeToken(token, c.env);
+	if (!row) {
+		return c.html(
+			page(
+				"Link not found",
+				`<h1>This link is no longer valid</h1>
+				 <p>The revocation link has already been used or doesn't exist. If you still want to revoke consent, reply to any invoice email.</p>`,
+			),
+			410,
+		);
+	}
+
+	const customerEmail = await decrypt(row.email, c.env);
+
+	return c.html(
+		page(
+			"Revoke invoice email consent",
+			`<h1>Revoke consent to receive invoices by email</h1>
+			 <p>You are about to revoke your consent to receive invoices at <strong>${escape(customerEmail)}</strong>.</p>
+			 <p>After revoking, you will no longer receive invoice emails at this address.</p>
+			 <form method="POST" action="/consent/revoke/${escape(token)}">
+			   <button class="agree" type="submit">Yes, revoke my consent</button>
+			 </form>
+			 <p class="muted">If you didn't intend to do this, you can safely close this page.</p>`,
+		),
+		200,
+		{ "Cache-Control": "no-store" },
+	);
+});
+
+// POST /consent/revoke/:token — execute the revocation
+app.post("/revoke/:token", async (c) => {
+	const token = c.req.param("token");
+	const row = await lookupRevokeToken(token, c.env);
+	if (!row) {
+		return c.html(
+			page(
+				"Link not found",
+				`<h1>This link is no longer valid</h1>
+				 <p>The revocation link has already been used or doesn't exist.</p>`,
+			),
+			410,
+		);
+	}
+
+	const db = getDb(c.env);
+	const ip =
+		c.req.header("CF-Connecting-IP") ||
+		c.req.header("X-Forwarded-For") ||
+		"";
+	const ua = c.req.header("User-Agent") ?? "";
+	const ipHash = ip ? await sha256Hex(ip, c.env) : null;
+	const uaHash = ua ? await sha256Hex(ua, c.env) : null;
+	const now = new Date().toISOString();
+
+	await db
+		.prepare(
+			`UPDATE customers
+			 SET consentToEmailInvoices = 0, consentedAt = NULL,
+			     revokeToken = NULL, consentIpHash = ?, consentUaHash = ?
+			 WHERE id = ?`,
+		)
+		.bind(ipHash, uaHash, row.id)
+		.run();
+
+	await db
+		.prepare(
+			`INSERT INTO customer_events (id, customerId, userId, type, payload)
+			 VALUES (?, ?, ?, 'consent_revoked', ?)`,
+		)
+		.bind(
+			crypto.randomUUID(),
+			row.id,
+			row.userId,
+			await encrypt(
+				JSON.stringify({ ipHash, uaHash, tokenLast4: token.slice(-4), at: now }),
+				c.env,
+			),
+		)
+		.run();
+
+	return c.html(
+		page(
+			"Consent revoked",
+			`<h1>Consent revoked</h1>
+			 <p>Your consent has been removed. You will no longer receive invoice emails at this address.</p>`,
 		),
 		200,
 		{ "Cache-Control": "no-store" },
