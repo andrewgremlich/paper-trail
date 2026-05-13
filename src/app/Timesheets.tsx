@@ -1,22 +1,24 @@
 import "./globals.css";
 
-import { useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { FolderPlus } from "lucide-react";
 import { useState } from "react";
 
+import { CreateCustomer } from "@/components/features/customers/CreateCustomer";
 import { GenerateProject } from "@/components/features/projects/GenerateProject";
 import { GenerateProjectDialog } from "@/components/features/projects/GenerateProjectDialog";
 import { Flex } from "@/components/layout/Flex";
-import { H1, H2, Main, Section } from "@/components/layout/HtmlElements";
+import { H1, H2, Main, P, Section } from "@/components/layout/HtmlElements";
 import { CardPreview } from "@/components/shared/CardPreview";
 import { Button } from "@/components/ui/Button";
 import { getAllProjects, getAllTimesheets } from "@/lib/db";
-import { getCustomers } from "@/lib/db/customers";
+import { createCustomer, getCustomers } from "@/lib/db/customers";
 import { usePaperTrailStore } from "@/lib/store";
 
 export const Timesheets = () => {
 	const { openModal } = usePaperTrailStore();
 	const [creatingProject, setCreatingProject] = useState(false);
+	const queryClient = useQueryClient();
 
 	const [{ data: projects }, { data: timesheets }, { data: customers }] =
 		useQueries({
@@ -27,7 +29,18 @@ export const Timesheets = () => {
 			],
 		});
 
+	const { mutateAsync: addCustomer } = useMutation({
+		mutationFn: async (formData: FormData) =>
+			createCustomer({
+				name: String(formData.get("name") ?? ""),
+				email: String(formData.get("email") ?? ""),
+				address: String(formData.get("address") ?? "") || null,
+			}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+	});
+
 	const hasData = (projects?.length ?? 0) > 0 || (timesheets?.length ?? 0) > 0;
+	const hasNoCustomers = customers !== undefined && customers.length === 0;
 
 	return (
 		<Main>
@@ -59,7 +72,13 @@ export const Timesheets = () => {
 				</>
 			)}
 
-			{hasData ? (
+			{hasNoCustomers ? (
+				<Section aria-labelledby="new-customer-heading">
+					<H2 id="new-customer-heading">Add your first customer</H2>
+					<P>Create a customer before setting up a project.</P>
+					<CreateCustomer onSubmit={(fd) => addCustomer(fd).then(() => {})} />
+				</Section>
+			) : hasData ? (
 				<Section aria-labelledby="projects-heading">
 					<Flex
 						justify="between"
