@@ -1053,7 +1053,12 @@ app.get("/zip", async (c) => {
 				const decrypted = await decryptBuffer(encryptedBytes, c.env);
 
 				const contentType = object.httpMetadata?.contentType ?? "";
-				const ext = contentTypeToExtension(contentType);
+				const extFromContentType = contentTypeToExtension(contentType);
+				const originalName = object.customMetadata?.originalName ?? "";
+				const extFromName = originalName.includes(".")
+					? originalName.slice(originalName.lastIndexOf("."))
+					: "";
+				const ext = extFromContentType || extFromName;
 				const txMeta = txByFilePath.get(key);
 				const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
 				const date = txMeta?.date ?? "";

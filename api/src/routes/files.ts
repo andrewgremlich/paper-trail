@@ -20,6 +20,7 @@ app.post("/upload", async (c) => {
 
 	await c.env.FILES_BUCKET.put(key, encrypted, {
 		httpMetadata: { contentType: file.type },
+		customMetadata: { originalName: file.name },
 	});
 
 	return c.json({ key }, 201);
