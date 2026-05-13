@@ -84,7 +84,7 @@ export const GenerateTimesheet = ({
 						}
 					/>
 					<Button
-						variant="ghost"
+						variant="secondary"
 						size="md"
 						onClick={() => {
 							dispatch({

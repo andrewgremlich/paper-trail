@@ -71,6 +71,7 @@ export const Nav = () => {
 
 				<div>
 					<Button
+						className={styles.settings}
 						variant="ghost"
 						size="icon"
 						onClick={() => openModal({ type: "settings" })}
