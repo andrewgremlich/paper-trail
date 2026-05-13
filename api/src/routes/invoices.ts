@@ -2,11 +2,20 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
-import { renderInvoiceHtml } from "../lib/invoiceHtml";
+import {
+	renderMinimalInvoiceHtml,
+	resolveEmailDelivery,
+} from "../lib/emailDelivery";
 import { randomHexToken } from "../lib/hash";
-import { RateLimitError, assertWithinSendLimit } from "../lib/rateLimit";
+import { renderInvoiceHtml } from "../lib/invoiceHtml";
+import { assertWithinSendLimit, RateLimitError } from "../lib/rateLimit";
 import { ResendError, sendEmail } from "../lib/resend";
-import type { Env, Invoice, InvoiceSnapshot, InvoiceStatus } from "../lib/types";
+import type {
+	Env,
+	Invoice,
+	InvoiceSnapshot,
+	InvoiceStatus,
+} from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -29,16 +38,17 @@ const createInvoiceSchema = z
 			.optional(),
 	})
 	.refine(
-		(v) => v.timesheetId != null || (v.amountCents != null && v.amountCents > 0),
+		(v) =>
+			v.timesheetId != null || (v.amountCents != null && v.amountCents > 0),
 		{
 			message: "Either timesheetId or amountCents (> 0) is required",
 			path: ["amountCents"],
 		},
 	)
-	.refine(
-		(v) => !v.issuedAt || !v.dueDate || v.dueDate >= v.issuedAt,
-		{ message: "dueDate must be on or after issuedAt", path: ["dueDate"] },
-	);
+	.refine((v) => !v.issuedAt || !v.dueDate || v.dueDate >= v.issuedAt, {
+		message: "dueDate must be on or after issuedAt",
+		path: ["dueDate"],
+	});
 
 type DbInvoiceRow = {
 	id: string;
@@ -59,11 +69,16 @@ type DbInvoiceRow = {
 	updatedAt: string;
 };
 
-const decryptInvoice = async (row: DbInvoiceRow, env: Env): Promise<Invoice> => {
+const decryptInvoice = async (
+	row: DbInvoiceRow,
+	env: Env,
+): Promise<Invoice> => {
 	const amount = isEncryptionEnabled(env)
 		? Number(await decrypt(row.amount_cents, env))
 		: Number(row.amount_cents);
-	const description = row.description ? await decrypt(row.description, env) : null;
+	const description = row.description
+		? await decrypt(row.description, env)
+		: null;
 	return {
 		id: row.id,
 		userId: row.userId,
@@ -491,16 +506,19 @@ app.post("/:id/send", async (c) => {
 		.first<DbInvoiceRow>();
 	if (!row) return c.json({ error: "Invoice not found" }, 404);
 	if (row.status === "void" || row.status === "paid") {
-		return c.json({ error: `Invoice is ${row.status}`, code: "INVALID_STATE" }, 409);
+		return c.json(
+			{ error: `Invoice is ${row.status}`, code: "INVALID_STATE" },
+			409,
+		);
 	}
 
 	// Preconditions: customer consent + seller business identity + config.
 	const cust = await db
 		.prepare(
-			"SELECT email, consentToEmailInvoices FROM customers WHERE id = ?",
+			"SELECT name, email, consentToEmailInvoices FROM customers WHERE id = ?",
 		)
 		.bind(row.customerId)
-		.first<{ email: string; consentToEmailInvoices: number }>();
+		.first<{ name: string; email: string; consentToEmailInvoices: number }>();
 	if (!cust) return c.json({ error: "Customer not found" }, 404);
 	if (!cust.consentToEmailInvoices) {
 		return c.json(
@@ -514,13 +532,16 @@ app.post("/:id/send", async (c) => {
 
 	const user = await db
 		.prepare(
-			"SELECT email, businessName, businessAddress FROM users WHERE id = ?",
+			`SELECT email, businessName, businessAddress, resendApiKey, resendFromAddress
+			 FROM users WHERE id = ?`,
 		)
 		.bind(userId)
 		.first<{
 			email: string;
 			businessName: string | null;
 			businessAddress: string | null;
+			resendApiKey: string | null;
+			resendFromAddress: string | null;
 		}>();
 	if (!user?.businessName || !user.businessAddress) {
 		return c.json(
@@ -532,10 +553,21 @@ app.post("/:id/send", async (c) => {
 			412,
 		);
 	}
-	if (!c.env.APP_BASE_URL || !c.env.RESEND_FROM_ADDRESS) {
+	if (!c.env.APP_BASE_URL) {
 		return c.json(
 			{
-				error: "Email is not configured (APP_BASE_URL / RESEND_FROM_ADDRESS).",
+				error: "Email is not configured (APP_BASE_URL).",
+				code: "EMAIL_NOT_CONFIGURED",
+			},
+			500,
+		);
+	}
+	const delivery = await resolveEmailDelivery(user, c.env);
+	if ("error" in delivery) {
+		return c.json(
+			{
+				error:
+					"Email is not configured. Set RESEND_API_KEY and RESEND_FROM_ADDRESS, or configure your own Resend account in Settings.",
 				code: "EMAIL_NOT_CONFIGURED",
 			},
 			500,
@@ -561,7 +593,9 @@ app.post("/:id/send", async (c) => {
 
 	const snapshot = await buildSnapshot(row, c.env);
 	const base = c.env.APP_BASE_URL.replace(/\/$/, "");
-	const hostedUrl = `${base}/invoice/${row.id}`;
+
+	const accessToken = randomHexToken(32);
+	const hostedUrl = `${base}/invoice/${row.id}?t=${accessToken}`;
 
 	const revokeToken = randomHexToken(32);
 	await db
@@ -570,20 +604,33 @@ app.post("/:id/send", async (c) => {
 		.run();
 	const revokeUrl = `${base}/consent/revoke/${revokeToken}`;
 
-	const html = renderInvoiceHtml(snapshot, { hostedUrl, revokeUrl });
 	const customerEmail = await decrypt(cust.email, c.env);
+	const customerName = await decrypt(cust.name, c.env);
+
+	// BYO users get the full rich invoice email; shared-account users get
+	// the minimal link-only template so invoice details don't land in the
+	// operator's Resend dashboard.
+	const html = delivery.usingByo
+		? renderInvoiceHtml(snapshot, { hostedUrl, revokeUrl })
+		: renderMinimalInvoiceHtml({
+				businessName: snapshot.seller.businessName,
+				customerName,
+				hostedUrl,
+				revokeUrl,
+			});
+	const subject = delivery.usingByo
+		? `Invoice ${row.number} from ${snapshot.seller.businessName}`
+		: `Invoice from ${snapshot.seller.businessName}`;
 
 	try {
-		await sendEmail(
-			{
-				from: c.env.RESEND_FROM_ADDRESS,
-				to: customerEmail,
-				subject: `Invoice ${row.number} from ${snapshot.seller.businessName}`,
-				html,
-				replyTo: user.email,
-			},
-			c.env,
-		);
+		await sendEmail({
+			from: delivery.fromAddress,
+			to: customerEmail,
+			subject,
+			html,
+			replyTo: user.email,
+			apiKey: delivery.apiKey,
+		});
 	} catch (err) {
 		if (err instanceof ResendError && err.code === "domain_not_verified") {
 			return c.json(
@@ -603,12 +650,13 @@ app.post("/:id/send", async (c) => {
 	await db
 		.prepare(
 			`UPDATE invoices
-			 SET status = 'sent', sentAt = ?, snapshot = ?
+			 SET status = 'sent', sentAt = ?, snapshot = ?, accessToken = ?
 			 WHERE id = ? AND userId = ?`,
 		)
 		.bind(
 			now,
 			await encrypt(JSON.stringify(snapshot), c.env),
+			accessToken,
 			id,
 			userId,
 		)

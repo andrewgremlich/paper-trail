@@ -59,7 +59,6 @@ export const Invoices = () => {
 				<H1 style={{ marginBottom: "0px" }}>Invoices</H1>
 				<Button
 					type="button"
-					variant="ghost"
 					onClick={() => openModal({ type: "invoice" })}
 					leftIcon={<NotebookPen size={16} />}
 				>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Mail } from "lucide-react";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
 import { Flex } from "@/components/layout/Flex";
-import { P } from "@/components/layout/HtmlElements";
+import { P, Span } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { Grid } from "@/components/ui/Grid";
 import { getCustomer } from "@/lib/db/customers";
@@ -78,9 +78,9 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 				<P className={styles.preLine}>{invoice.description}</P>
 			)}
 
-			<Grid rows={4} flow="col" columnGap={24}>
-				<P>Invoice Number: {invoice.number}</P>
-				<P>
+			<Grid cols={2}>
+				<Span>Invoice Number: {invoice.number}</Span>
+				<Span>
 					Customer:{" "}
 					{customer ? (
 						<button
@@ -94,11 +94,11 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 					) : (
 						"…"
 					)}
-				</P>
-				<P>Amount: {formatCents(invoice.amount_cents)}</P>
-				<P>Status: {statusLabel(invoice.status)}</P>
-				<P>Issued: {invoice.issuedAt}</P>
-				<P>Due: {invoice.dueDate}</P>
+				</Span>
+				<Span>Amount: {formatCents(invoice.amount_cents)}</Span>
+				<Span>Status: {statusLabel(invoice.status)}</Span>
+				<Span>Issued: {invoice.issuedAt}</Span>
+				<Span>Due: {invoice.dueDate}</Span>
 				{invoice.sentAt && <P>Sent: {invoice.sentAt.slice(0, 10)}</P>}
 				{invoice.paidAt && <P>Paid: {invoice.paidAt.slice(0, 10)}</P>}
 			</Grid>

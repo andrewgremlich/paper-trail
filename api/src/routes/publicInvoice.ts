@@ -13,7 +13,14 @@ import type { Env, InvoiceSnapshot } from "../lib/types";
  * Renders the immutable snapshot if the invoice has been sent; otherwise
  * shows a draft preview built from current data with a warning banner.
  *
- * The URL parameter IS the invoice id (a UUID).
+ * Sent invoices require a per-invoice access token in the query string
+ * (`?t=<token>`) that matches `invoices.accessToken`. The token is
+ * generated and rotated by the send handler in routes/invoices.ts, so
+ * old emailed links stop working after a resend. Without the token, the
+ * route returns 404 — never disclosing whether the invoice exists.
+ *
+ * Drafts (no snapshot yet) are tokenless because they are only ever
+ * opened from the authenticated app via "Preview".
  */
 
 const app = new Hono<{ Bindings: Env }>();
@@ -25,7 +32,8 @@ app.get("/:id", async (c) => {
 	const row = await db
 		.prepare(
 			`SELECT id, userId, customerId, timesheetId, number, status,
-			        amount_cents, description, issuedAt, dueDate, snapshot
+			        amount_cents, description, issuedAt, dueDate, snapshot,
+			        accessToken
 			 FROM invoices WHERE id = ? AND archivedAt IS NULL`,
 		)
 		.bind(id)
@@ -41,14 +49,32 @@ app.get("/:id", async (c) => {
 			issuedAt: string;
 			dueDate: string;
 			snapshot: string | null;
+			accessToken: string | null;
 		}>();
 
+	const notFound = c.html(
+		"<!DOCTYPE html><html><body><h1>Invoice not found</h1></body></html>",
+		404,
+		{ "Cache-Control": "no-store" },
+	);
+
 	if (!row) {
-		return c.html(
-			"<!DOCTYPE html><html><body><h1>Invoice not found</h1></body></html>",
-			404,
-			{ "Cache-Control": "no-store" },
-		);
+		return notFound;
+	}
+
+	// Sent invoices require the per-invoice access token. Drafts are
+	// tokenless (only viewed from the authenticated app).
+	if (row.snapshot) {
+		const providedToken = c.req.query("t");
+		const expected = row.accessToken;
+		if (
+			!expected ||
+			!providedToken ||
+			providedToken.length !== expected.length ||
+			providedToken !== expected
+		) {
+			return notFound;
+		}
 	}
 
 	let snapshot: InvoiceSnapshot | null = null;
@@ -78,9 +104,7 @@ app.get("/:id", async (c) => {
 				businessAddress: string | null;
 			}>();
 		const customer = await db
-			.prepare(
-				"SELECT name, email, address FROM customers WHERE id = ?",
-			)
+			.prepare("SELECT name, email, address FROM customers WHERE id = ?")
 			.bind(row.customerId)
 			.first<{ name: string; email: string; address: string | null }>();
 		if (!user || !customer) {
@@ -167,9 +191,7 @@ app.get("/:id", async (c) => {
 	// Log a 'viewed' event with hashed IP+UA (only for sent invoices to avoid noise from drafts).
 	if (row.status === "sent" || row.status === "paid") {
 		const ip =
-			c.req.header("CF-Connecting-IP") ||
-			c.req.header("X-Forwarded-For") ||
-			"";
+			c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 		const ua = c.req.header("User-Agent") ?? "";
 		const ipHash = ip ? await sha256Hex(ip, c.env) : null;
 		const uaHash = ua ? await sha256Hex(ua, c.env) : null;

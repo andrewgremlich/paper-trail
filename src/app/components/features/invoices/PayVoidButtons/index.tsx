@@ -15,6 +15,8 @@ const isTerminal = (status: Invoice["status"]) =>
 export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 	const queryClient = useQueryClient();
 	const [sendError, setSendError] = useState<string | null>(null);
+	const [payError, setPayError] = useState<string | null>(null);
+	const [voidError, setVoidError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 
 	const invalidate = () => {
@@ -54,14 +56,18 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 		},
 	});
 
-	const { mutateAsync: pay, isPending: isPaying } = useMutation({
+	const { mutate: pay, isPending: isPaying } = useMutation({
 		mutationFn: () => markInvoicePaid(invoice.id),
 		onSuccess: invalidate,
+		onError: (e) =>
+			setPayError(e instanceof Error ? e.message : "Failed to mark as paid"),
 	});
 
-	const { mutateAsync: voidIt, isPending: isVoiding } = useMutation({
+	const { mutate: voidIt, isPending: isVoiding } = useMutation({
 		mutationFn: () => voidInvoice(invoice.id),
 		onSuccess: invalidate,
+		onError: (e) =>
+			setVoidError(e instanceof Error ? e.message : "Failed to void invoice"),
 	});
 
 	const hostedUrl = `${window.location.origin}/invoice/${invoice.id}`;
@@ -110,7 +116,10 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 				</Button>
 				<Button
 					size="sm"
-					onClick={() => pay()}
+					onClick={() => {
+						setPayError(null);
+						pay();
+					}}
 					disabled={isTerminal(invoice.status) || isPaying}
 				>
 					{invoice.status === "paid" ? "Already paid" : "Mark as paid"}
@@ -118,13 +127,18 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 				<Button
 					size="sm"
 					variant="secondary"
-					onClick={() => voidIt()}
+					onClick={() => {
+						setVoidError(null);
+						voidIt();
+					}}
 					disabled={isTerminal(invoice.status) || isVoiding}
 				>
 					{invoice.status === "void" ? "Already voided" : "Void invoice"}
 				</Button>
 			</Flex>
 			{sendError && <P className={styles.error}>{sendError}</P>}
+			{payError && <P className={styles.error}>{payError}</P>}
+			{voidError && <P className={styles.error}>{voidError}</P>}
 			{invoice.status === "paid" && <P>Invoice has been marked as paid.</P>}
 			{invoice.status === "void" && <P>Invoice has been voided.</P>}
 		</>
