@@ -15,11 +15,10 @@ export const InvoiceProfileSection = () => {
 		queryFn: getUserProfile,
 	});
 
-	const { mutate, isPending, isSuccess } = useMutation({
+	const { mutate, isPending, isSuccess, isError } = useMutation({
 		mutationFn: async (formData: FormData) => {
 			return updateUserProfile({
 				displayName: String(formData.get("displayName") ?? "").trim(),
-				email: String(formData.get("email") ?? "").trim(),
 				businessName: String(formData.get("businessName") ?? "").trim() || null,
 				businessAddress:
 					String(formData.get("businessAddress") ?? "").trim() || null,
@@ -65,12 +64,13 @@ export const InvoiceProfileSection = () => {
 				/>
 				<Input
 					label="Reply-to email"
-					name="email"
-					type="email"
 					defaultValue={profile.email}
-					required
-					autoComplete="email"
+					disabled
+					aria-describedby="email-hint"
 				/>
+				<span id="email-hint" className={styles.hint}>
+					This is your login email and cannot be changed here.
+				</span>
 				<Input
 					label="Business name (shown on invoices)"
 					name="businessName"
@@ -108,6 +108,11 @@ export const InvoiceProfileSection = () => {
 					{isSuccess && !isPending && (
 						<span className={styles.saved} aria-live="polite">
 							Saved.
+						</span>
+					)}
+					{isError && !isPending && (
+						<span className={styles.error} aria-live="polite">
+							Save failed. Please try again.
 						</span>
 					)}
 				</div>

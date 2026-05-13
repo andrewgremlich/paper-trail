@@ -9,7 +9,6 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 const updateProfileSchema = z.object({
 	displayName: z.string().trim().max(200).default(""),
-	email: z.string().trim().email().max(320),
 	venmoHandle: z.string().trim().max(120).optional().nullable(),
 	paypalHandle: z.string().trim().max(120).optional().nullable(),
 	businessName: z.string().trim().max(200).optional().nullable(),
@@ -89,14 +88,13 @@ app.put("/", async (c) => {
 	await db
 		.prepare(
 			`UPDATE users
-			 SET displayName = ?, email = ?,
+			 SET displayName = ?,
 			     venmoHandle = ?, paypalHandle = ?,
 			     businessName = ?, businessAddress = ?
 			 WHERE id = ?`,
 		)
 		.bind(
 			body.displayName,
-			body.email,
 			await encOrNull(body.venmoHandle),
 			await encOrNull(body.paypalHandle),
 			await encOrNull(body.businessName),

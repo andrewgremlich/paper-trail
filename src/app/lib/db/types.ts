@@ -109,7 +109,6 @@ export type UserProfile = {
 export type UpdateUserProfile = Pick<
 	UserProfile,
 	| "displayName"
-	| "email"
 	| "venmoHandle"
 	| "paypalHandle"
 	| "businessName"

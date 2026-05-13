@@ -7,12 +7,8 @@ export const getUserProfile = async (): Promise<UserProfile> => {
 
 export const updateUserProfile = async (
 	profile: UpdateUserProfile,
-): Promise<UserProfile | null> => {
-	try {
-		return await api.put<UserProfile>("/user-profile", profile);
-	} catch {
-		return null;
-	}
+): Promise<UserProfile> => {
+	return api.put<UserProfile>("/user-profile", profile);
 };
 
 export const deleteAllUserData = async (): Promise<void> => {
