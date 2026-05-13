@@ -20,17 +20,10 @@
 }
 
 .settings {
+	rotate: -10deg;
+	transition: rotate 200ms ease-out;
+
 	&:hover {
-		animation: rotate 200ms ease-in-out forwards;
-	}
-}
-
-@keyframes rotate {
-	from {
-		transform: rotate(0deg);
-	}
-
-	to {
-		transform: rotate(60deg);
+		rotate: 10deg;
 	}
 }
