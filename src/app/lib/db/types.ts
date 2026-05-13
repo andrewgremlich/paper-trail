@@ -102,6 +102,10 @@ export type UserProfile = {
 	paypalHandle: Nullable<string>;
 	businessName: Nullable<string>;
 	businessAddress: Nullable<string>;
+	// True if the user has stored a Resend API key. The key itself is never
+	// returned by the API.
+	hasResendApiKey: boolean;
+	resendFromAddress: Nullable<string>;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -113,7 +117,12 @@ export type UpdateUserProfile = Pick<
 	| "paypalHandle"
 	| "businessName"
 	| "businessAddress"
->;
+> & {
+	resendFromAddress?: Nullable<string>;
+	// Three-state: undefined leaves the stored key alone, null/"" clears
+	// it, a non-empty string replaces it.
+	resendApiKey?: Nullable<string>;
+};
 
 export type Customer = {
 	id: string;

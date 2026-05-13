@@ -1,5 +1,3 @@
-import type { Env } from "./types";
-
 /**
  * Thin wrapper around the Resend HTTP API.
  *
@@ -14,17 +12,17 @@ export type ResendSendInput = {
 	subject: string;
 	html: string;
 	replyTo?: string;
+	// Resend API key. Callers resolve which key to use (per-user BYO or the
+	// shared env key) and pass it explicitly so this wrapper doesn't reach
+	// into env on its own.
+	apiKey: string;
 };
 
 export class ResendError extends Error {
 	readonly code: "domain_not_verified" | "api_key_missing" | "unknown";
 	readonly status: number;
 
-	constructor(
-		code: ResendError["code"],
-		status: number,
-		message: string,
-	) {
+	constructor(code: ResendError["code"], status: number, message: string) {
 		super(message);
 		this.name = "ResendError";
 		this.code = code;
@@ -34,20 +32,19 @@ export class ResendError extends Error {
 
 export const sendEmail = async (
 	input: ResendSendInput,
-	env: Env,
 ): Promise<{ id: string }> => {
-	if (!env.RESEND_API_KEY) {
+	if (!input.apiKey) {
 		throw new ResendError(
 			"api_key_missing",
 			500,
-			"RESEND_API_KEY is not configured",
+			"Resend API key is not configured",
 		);
 	}
 
 	const response = await fetch("https://api.resend.com/emails", {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${env.RESEND_API_KEY}`,
+			Authorization: `Bearer ${input.apiKey}`,
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({

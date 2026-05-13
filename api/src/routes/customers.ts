@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { decrypt, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
+import { resolveEmailDelivery } from "../lib/emailDelivery";
 import { randomHexToken } from "../lib/hash";
 import { ResendError, sendEmail } from "../lib/resend";
 import type { Customer, Env } from "../lib/types";
@@ -87,7 +88,10 @@ app.get("/:id", async (c) => {
 app.post("/", async (c) => {
 	const parsed = customerSchema.safeParse(await c.req.json());
 	if (!parsed.success) {
-		return c.json({ error: "Invalid customer", issues: parsed.error.issues }, 400);
+		return c.json(
+			{ error: "Invalid customer", issues: parsed.error.issues },
+			400,
+		);
 	}
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
@@ -116,7 +120,10 @@ app.put("/:id", async (c) => {
 	const id = c.req.param("id");
 	const parsed = customerSchema.safeParse(await c.req.json());
 	if (!parsed.success) {
-		return c.json({ error: "Invalid customer", issues: parsed.error.issues }, 400);
+		return c.json(
+			{ error: "Invalid customer", issues: parsed.error.issues },
+			400,
+		);
 	}
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
@@ -146,7 +153,9 @@ app.delete("/:id", async (c) => {
 	const userId = c.get("userId");
 
 	const invRef = await db
-		.prepare("SELECT COUNT(*) AS n FROM invoices WHERE customerId = ? AND userId = ?")
+		.prepare(
+			"SELECT COUNT(*) AS n FROM invoices WHERE customerId = ? AND userId = ?",
+		)
 		.bind(id, userId)
 		.first<{ n: number }>();
 
@@ -163,7 +172,9 @@ app.delete("/:id", async (c) => {
 
 	// Null out any projects pointing at this customer so the user can re-link.
 	await db
-		.prepare("UPDATE projects SET customerId = NULL WHERE customerId = ? AND userId = ?")
+		.prepare(
+			"UPDATE projects SET customerId = NULL WHERE customerId = ? AND userId = ?",
+		)
 		.bind(id, userId)
 		.run();
 
@@ -196,10 +207,16 @@ app.post("/:id/request-consent", async (c) => {
 
 	const userRow = await db
 		.prepare(
-			"SELECT email, businessName FROM users WHERE id = ?",
+			`SELECT email, businessName, resendApiKey, resendFromAddress
+			 FROM users WHERE id = ?`,
 		)
 		.bind(userId)
-		.first<{ email: string; businessName: string | null }>();
+		.first<{
+			email: string;
+			businessName: string | null;
+			resendApiKey: string | null;
+			resendFromAddress: string | null;
+		}>();
 	if (!userRow) return c.json({ error: "User not found" }, 500);
 
 	const businessName = userRow.businessName
@@ -208,19 +225,28 @@ app.post("/:id/request-consent", async (c) => {
 	if (!businessName) {
 		return c.json(
 			{
-				error:
-					"Set your business name in Settings before requesting consent.",
+				error: "Set your business name in Settings before requesting consent.",
 				code: "BUSINESS_NAME_MISSING",
 			},
 			412,
 		);
 	}
 
-	if (!c.env.APP_BASE_URL || !c.env.RESEND_FROM_ADDRESS) {
+	if (!c.env.APP_BASE_URL) {
+		return c.json(
+			{
+				error: "Email is not configured (APP_BASE_URL).",
+				code: "EMAIL_NOT_CONFIGURED",
+			},
+			500,
+		);
+	}
+	const delivery = await resolveEmailDelivery(userRow, c.env);
+	if ("error" in delivery) {
 		return c.json(
 			{
 				error:
-					"Email is not configured. Set APP_BASE_URL and RESEND_FROM_ADDRESS.",
+					"Email is not configured. Set RESEND_API_KEY and RESEND_FROM_ADDRESS, or configure your own Resend account in Settings.",
 				code: "EMAIL_NOT_CONFIGURED",
 			},
 			500,
@@ -255,16 +281,14 @@ app.post("/:id/request-consent", async (c) => {
 </body></html>`;
 
 	try {
-		await sendEmail(
-			{
-				from: c.env.RESEND_FROM_ADDRESS,
-				to: customerEmail,
-				subject: `${businessName} would like to send you invoices by email`,
-				html,
-				replyTo: userRow.email,
-			},
-			c.env,
-		);
+		await sendEmail({
+			from: delivery.fromAddress,
+			to: customerEmail,
+			subject: `${businessName} would like to send you invoices by email`,
+			html,
+			replyTo: userRow.email,
+			apiKey: delivery.apiKey,
+		});
 	} catch (err) {
 		// Roll the token back so the user can retry once they fix the config.
 		await db
@@ -296,10 +320,7 @@ app.post("/:id/request-consent", async (c) => {
 			crypto.randomUUID(),
 			id,
 			userId,
-			await encrypt(
-				JSON.stringify({ tokenLast4: token.slice(-4) }),
-				c.env,
-			),
+			await encrypt(JSON.stringify({ tokenLast4: token.slice(-4) }), c.env),
 		)
 		.run();
 
@@ -314,9 +335,7 @@ app.post("/:id/revoke-consent", async (c) => {
 	const userId = c.get("userId");
 
 	const row = await db
-		.prepare(
-			"SELECT id, userId FROM customers WHERE id = ? AND userId = ?",
-		)
+		.prepare("SELECT id, userId FROM customers WHERE id = ? AND userId = ?")
 		.bind(id, userId)
 		.first<{ id: string; userId: number }>();
 	if (!row) return c.json({ error: "Customer not found" }, 404);

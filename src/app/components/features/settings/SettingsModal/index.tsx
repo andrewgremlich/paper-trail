@@ -3,6 +3,7 @@ import { ModalHeader } from "@/components/shared/ModalHeader";
 import { Dialog } from "@/components/ui/Dialog";
 import { usePaperTrailStore } from "@/lib/store";
 import { DeleteDataSection } from "../DeleteDataSection";
+import { EmailDeliverySection } from "../EmailDeliverySection";
 import { ExportImportSection } from "../ExportImportSection";
 import { InvoiceProfileSection } from "../InvoiceProfileSection";
 import { ThemeSection } from "../ThemeSection";
@@ -26,6 +27,7 @@ export const SettingsModal = () => {
 			/>
 			<ThemeSection />
 			<InvoiceProfileSection />
+			<EmailDeliverySection />
 			<ExportImportSection />
 			<DeleteDataSection />
 		</Dialog>

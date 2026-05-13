@@ -9,7 +9,7 @@ export interface Env {
 	APP_BASE_URL?: string;
 }
 
-export type Nullable<T> = T | null | undefined;
+type Nullable<T> = T | null | undefined;
 
 export type Project = {
 	id: string;
@@ -57,7 +57,7 @@ export type TimesheetDetails = Timesheet & {
 	projectRate: Nullable<number>;
 };
 
-export type Transaction = {
+type Transaction = {
 	id: string;
 	userId: number;
 	projectId: string;
@@ -78,6 +78,10 @@ export type UserProfile = {
 	paypalHandle: Nullable<string>;
 	businessName: Nullable<string>;
 	businessAddress: Nullable<string>;
+	// The API key itself is never returned to clients; only a boolean
+	// indicator. The from-address is returned in plaintext.
+	hasResendApiKey: boolean;
+	resendFromAddress: Nullable<string>;
 	createdAt: string;
 	updatedAt: string;
 };

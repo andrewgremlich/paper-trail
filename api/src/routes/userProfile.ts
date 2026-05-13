@@ -13,6 +13,13 @@ const updateProfileSchema = z.object({
 	paypalHandle: z.string().trim().max(120).optional().nullable(),
 	businessName: z.string().trim().max(200).optional().nullable(),
 	businessAddress: z.string().trim().max(1000).optional().nullable(),
+	// Per-user Resend config. `resendApiKey` is write-only:
+	//   - omit / undefined  -> leave existing value untouched
+	//   - empty string / null -> clear the stored key
+	//   - non-empty string  -> replace the stored key
+	// `resendFromAddress` is symmetric but returned in plaintext on GET.
+	resendApiKey: z.string().trim().max(200).optional().nullable(),
+	resendFromAddress: z.string().trim().max(200).optional().nullable(),
 });
 
 type DbUserRow = {
@@ -24,6 +31,8 @@ type DbUserRow = {
 	paypalHandle: string | null;
 	businessName: string | null;
 	businessAddress: string | null;
+	resendApiKey: string | null;
+	resendFromAddress: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -38,29 +47,29 @@ const decryptProfile = async (
 	email: row.email,
 	venmoHandle: row.venmoHandle ? await decrypt(row.venmoHandle, env) : null,
 	paypalHandle: row.paypalHandle ? await decrypt(row.paypalHandle, env) : null,
-	businessName: row.businessName
-		? await decrypt(row.businessName, env)
-		: null,
+	businessName: row.businessName ? await decrypt(row.businessName, env) : null,
 	businessAddress: row.businessAddress
 		? await decrypt(row.businessAddress, env)
+		: null,
+	hasResendApiKey: row.resendApiKey != null,
+	resendFromAddress: row.resendFromAddress
+		? await decrypt(row.resendFromAddress, env)
 		: null,
 	createdAt: row.createdAt,
 	updatedAt: row.updatedAt,
 });
+
+const USER_SELECT = `SELECT id, uuid, displayName, email, venmoHandle, paypalHandle,
+	        businessName, businessAddress, resendApiKey, resendFromAddress,
+	        createdAt, updatedAt
+	 FROM users WHERE id = ?`;
 
 // GET /api/v1/user-profile
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	const row = await db
-		.prepare(
-			`SELECT id, uuid, displayName, email, venmoHandle, paypalHandle,
-			        businessName, businessAddress, createdAt, updatedAt
-			 FROM users WHERE id = ?`,
-		)
-		.bind(userId)
-		.first<DbUserRow>();
+	const row = await db.prepare(USER_SELECT).bind(userId).first<DbUserRow>();
 
 	if (!row) {
 		return c.json({ error: "User not found" }, 404);
@@ -90,7 +99,8 @@ app.put("/", async (c) => {
 			`UPDATE users
 			 SET displayName = ?,
 			     venmoHandle = ?, paypalHandle = ?,
-			     businessName = ?, businessAddress = ?
+			     businessName = ?, businessAddress = ?,
+			     resendFromAddress = ?
 			 WHERE id = ?`,
 		)
 		.bind(
@@ -99,18 +109,22 @@ app.put("/", async (c) => {
 			await encOrNull(body.paypalHandle),
 			await encOrNull(body.businessName),
 			await encOrNull(body.businessAddress),
+			await encOrNull(body.resendFromAddress),
 			userId,
 		)
 		.run();
 
-	const updated = await db
-		.prepare(
-			`SELECT id, uuid, displayName, email, venmoHandle, paypalHandle,
-			        businessName, businessAddress, createdAt, updatedAt
-			 FROM users WHERE id = ?`,
-		)
-		.bind(userId)
-		.first<DbUserRow>();
+	// `resendApiKey` is write-only with three-state semantics: undefined =
+	// leave existing value untouched, null/"" = clear, non-empty = replace.
+	// A separate UPDATE so we only touch it when the client opted in.
+	if (body.resendApiKey !== undefined) {
+		await db
+			.prepare("UPDATE users SET resendApiKey = ? WHERE id = ?")
+			.bind(await encOrNull(body.resendApiKey), userId)
+			.run();
+	}
+
+	const updated = await db.prepare(USER_SELECT).bind(userId).first<DbUserRow>();
 	if (!updated) return c.json({ error: "User not found" }, 404);
 	return c.json(await decryptProfile(updated, c.env));
 });
@@ -129,10 +143,12 @@ app.delete("/", async (c) => {
 		.all<{ filePath: string }>();
 
 	const r2Keys = txRows
-		.map((r) => r.filePath)
-		.filter((p) => !/^https?:\/\//i.test(p));
+		.map((r: { filePath: string }) => r.filePath)
+		.filter((p: string) => !/^https?:\/\//i.test(p));
 
-	await Promise.all(r2Keys.map((key) => c.env.FILES_BUCKET.delete(key)));
+	await Promise.all(
+		r2Keys.map((key: string) => c.env.FILES_BUCKET.delete(key)),
+	);
 
 	// Invoices reference customers (RESTRICT) so wipe them first.
 	await db
