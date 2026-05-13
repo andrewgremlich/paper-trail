@@ -97,7 +97,11 @@ export const TimesheetModal = () => {
 				/>
 			)}
 			{!isEditing && (
-				<Grid gap={4} className={classnames(styles.infoGrid, styles.timesheetInfoSpan)} cols={2}>
+				<Grid
+					gap={4}
+					className={classnames(styles.infoGrid, styles.timesheetInfoSpan)}
+					cols={2}
+				>
 					{timesheet?.id && <Span>ID: {timesheet.id}</Span>}
 					{timesheet?.description && (
 						<Span>Description: {timesheet?.description}</Span>
@@ -114,15 +118,16 @@ export const TimesheetModal = () => {
 						</Span>
 					)}
 					{timesheetInvoice && <span>Invoice: {timesheetInvoice.number}</span>}
-					{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 				</Grid>
 			)}
+			{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 			{timesheet && (
 				<>
 					<CreateTimesheetRecord
 						active={timesheet.active}
 						timesheetId={timesheet.id}
 						projectRate={timesheet.projectRate ?? 25}
+						hasActiveInvoice={!!timesheetInvoice && timesheetInvoice.status !== "void"}
 					/>
 					<TimesheetTable
 						entries={timesheet.entries || []}

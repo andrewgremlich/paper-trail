@@ -12,10 +12,12 @@ export const CreateTimesheetRecord = ({
 	timesheetId,
 	projectRate,
 	active,
+	hasActiveInvoice = false,
 }: {
 	timesheetId: string;
 	projectRate: number;
 	active: boolean;
+	hasActiveInvoice?: boolean;
 }) => {
 	const queryClient = useQueryClient();
 	const { mutateAsync } = useMutation({
@@ -66,6 +68,7 @@ export const CreateTimesheetRecord = ({
 					label="Date"
 					type="date"
 					defaultValue={format(new Date(), "yyyy-MM-dd")}
+					disabled={!active || hasActiveInvoice}
 					required
 				/>
 				<Input
@@ -75,15 +78,22 @@ export const CreateTimesheetRecord = ({
 					label="Hours"
 					min="0.25"
 					placeholder="Hours worked"
+					disabled={!active || hasActiveInvoice}
 					required
 				/>
 				<Input
 					name="description"
 					label="Description"
 					placeholder="Work description"
+					disabled={!active || hasActiveInvoice}
 					required
 				/>
-				<Button type="submit" variant="secondary" size="md" disabled={!active}>
+				<Button
+					type="submit"
+					variant="secondary"
+					size="md"
+					disabled={!active || hasActiveInvoice}
+				>
 					<PlusIcon />
 				</Button>
 			</Flex>
