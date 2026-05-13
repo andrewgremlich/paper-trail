@@ -247,7 +247,7 @@ app.post("/:id/request-consent", async (c) => {
 	const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;line-height:1.5;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px">
 <p>Hi ${escapeText(customerName)},</p>
 <p><strong>${escapeText(businessName)}</strong> would like your permission to send you invoices by email.</p>
-<p>If you agree, you'll receive HTML invoices at this email address (${escapeText(customerEmail)}) with payment links. You can revoke consent at any time by replying to any invoice.</p>
+<p>If you agree, you'll receive HTML invoices at this email address (${escapeText(customerEmail)}) with payment links. You can revoke consent at any time using the unsubscribe link included in every invoice.</p>
 <p style="margin:32px 0">
   <a href="${escapeText(consentUrl)}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Review consent request</a>
 </p>
@@ -300,6 +300,49 @@ app.post("/:id/request-consent", async (c) => {
 				JSON.stringify({ tokenLast4: token.slice(-4) }),
 				c.env,
 			),
+		)
+		.run();
+
+	return c.json({ success: true });
+});
+
+// POST /api/v1/customers/:id/revoke-consent
+// Authenticated route — lets the seller revoke consent on behalf of a customer.
+app.post("/:id/revoke-consent", async (c) => {
+	const id = c.req.param("id");
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const row = await db
+		.prepare(
+			"SELECT id, userId FROM customers WHERE id = ? AND userId = ?",
+		)
+		.bind(id, userId)
+		.first<{ id: string; userId: number }>();
+	if (!row) return c.json({ error: "Customer not found" }, 404);
+
+	const now = new Date().toISOString();
+
+	await db
+		.prepare(
+			`UPDATE customers
+			 SET consentToEmailInvoices = 0, consentedAt = NULL,
+			     revokeToken = NULL
+			 WHERE id = ? AND userId = ?`,
+		)
+		.bind(id, userId)
+		.run();
+
+	await db
+		.prepare(
+			`INSERT INTO customer_events (id, customerId, userId, type, payload)
+			 VALUES (?, ?, ?, 'consent_revoked', ?)`,
+		)
+		.bind(
+			crypto.randomUUID(),
+			id,
+			userId,
+			await encrypt(JSON.stringify({ revokedBy: "seller", at: now }), c.env),
 		)
 		.run();
 
