@@ -24,12 +24,15 @@ export const GenerateProject = ({ customers, onSuccess }: Props) => {
 			const customerId = customerIdRaw.length > 0 ? customerIdRaw : null;
 			const description = String(formData.get("description") || "");
 
-			return generateProject({
-				name,
-				rate_in_cents: rate * 100,
-				customerId,
-				description,
-			});
+			return generateProject(
+				{
+					name,
+					rate_in_cents: rate * 100,
+					customerId,
+					description,
+				},
+				{ createTimesheet: true },
+			);
 		},
 		onSuccess: async (data) => {
 			if (!data) return;
