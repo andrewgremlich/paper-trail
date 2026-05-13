@@ -6,7 +6,7 @@ import {
 	Paperclip,
 	TrashIcon,
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { TD } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
@@ -16,6 +16,7 @@ import {
 	saveAttachment,
 } from "@/lib/files/fileStorage";
 import { formatDate } from "@/lib/utils";
+import { TransactionDialog } from "../TransactionDialog";
 import styles from "./styles.module.css";
 
 interface FileStatusCellProps {
@@ -76,19 +77,10 @@ const FileStatusCell = ({ path, txId, onReplaceFile }: FileStatusCellProps) => {
 				await openAttachment(path);
 			}}
 		>
-			<FolderOpen size={16} aria-hidden="true" />
+			<FolderOpen size={24} aria-hidden="true" />
 		</Button>
 	);
 };
-
-interface TransactionViewRowProps {
-	tx: Transaction;
-	projects: Project[] | undefined;
-	path: string;
-	onEdit: () => void;
-	onDelete: (formData: FormData) => Promise<void>;
-	onReplaceFile: (id: string, newPath: string) => Promise<void>;
-}
 
 const NoFileCell = ({
 	txId,
@@ -112,10 +104,10 @@ const NoFileCell = ({
 				type="button"
 				size="sm"
 				variant="ghost"
+				leftIcon={<Paperclip size={14} aria-hidden="true" />}
 				onClick={() => fileInputRef.current?.click()}
 				aria-label="Upload file for this transaction"
 			>
-				<Paperclip size={14} aria-hidden="true" />
 				Upload
 			</Button>
 			<input
@@ -129,64 +121,71 @@ const NoFileCell = ({
 	);
 };
 
+interface TransactionViewRowProps {
+	tx: Transaction;
+	projects: Project[] | undefined;
+	path: string;
+	onSave: (formData: FormData) => Promise<void>;
+	onDelete: (id: string) => Promise<void>;
+	onReplaceFile: (id: string, newPath: string) => Promise<void>;
+}
+
 export const TransactionViewRow = ({
 	tx,
 	projects,
 	path,
-	onEdit,
+	onSave,
 	onDelete,
 	onReplaceFile,
-}: TransactionViewRowProps) => (
-	<>
-		<TD>
-			<span>{formatDate(tx.date)}</span>
-		</TD>
-		<TD>
-			<span>{tx.description}</span>
-		</TD>
-		<TD>
-			<span>
-				{projects?.find((project) => project.id === tx.projectId)?.name}
-			</span>
-		</TD>
-		<TD>
-			<span>${tx.amount.toFixed(2)}</span>
-		</TD>
-		<TD>
-			{path.length > 0 ? (
-				<FileStatusCell
-					path={path}
-					txId={tx.id}
-					onReplaceFile={onReplaceFile}
-				/>
-			) : (
-				<NoFileCell txId={tx.id} onReplaceFile={onReplaceFile} />
-			)}
-		</TD>
-		<TD>
-			<Button
-				variant="ghost"
-				type="button"
-				onClick={onEdit}
-				aria-label="Edit Transaction"
-			>
-				<Edit />
-			</Button>
-		</TD>
-		<TD>
-			<form
-				onSubmit={async (evt) => {
-					evt.preventDefault();
-					const confirmed = window.confirm(
-						"Are you sure you want to delete this transaction?",
-					);
-					if (!confirmed) return;
-					const fd = new FormData(evt.currentTarget);
-					await onDelete(fd);
-				}}
-			>
-				<input type="hidden" name="id" value={tx.id} />
+}: TransactionViewRowProps) => {
+	const [editing, setEditing] = useState(false);
+
+	return (
+		<>
+			<TD>
+				<span>{formatDate(tx.date)}</span>
+			</TD>
+			<TD>
+				<span>{tx.description}</span>
+			</TD>
+			<TD>
+				<span>
+					{projects?.find((project) => project.id === tx.projectId)?.name}
+				</span>
+			</TD>
+			<TD>
+				<span>${tx.amount.toFixed(2)}</span>
+			</TD>
+			<TD>
+				{path.length > 0 ? (
+					<FileStatusCell
+						path={path}
+						txId={tx.id}
+						onReplaceFile={onReplaceFile}
+					/>
+				) : (
+					<NoFileCell txId={tx.id} onReplaceFile={onReplaceFile} />
+				)}
+			</TD>
+			<TD className={styles.buttonsCell}>
 				<Button
+					variant="ghost"
+					type="button"
+					size="icon"
+					onClick={() => setEditing(true)}
+					aria-label="Edit Transaction"
+				>
+					<Edit />
+				</Button>
+				<Button
+					onClick={async () => {
+						const confirmed = window.confirm(
+							"Are you sure you want to delete this transaction?",
+						);
+						if (!confirmed) return;
+
+						await onDelete(tx.id);
+					}}
 					variant="ghost"
 					size="icon"
 					type="submit"
@@ -194,7 +193,17 @@ export const TransactionViewRow = ({
 				>
 					<TrashIcon />
 				</Button>
-			</form>
-		</TD>
-	</>
-);
+			</TD>
+			<TransactionDialog
+				isOpen={editing}
+				tx={tx}
+				projects={projects}
+				onSave={async (fd) => {
+					await onSave(fd);
+					setEditing(false);
+				}}
+				onClose={() => setEditing(false)}
+			/>
+		</>
+	);
+};

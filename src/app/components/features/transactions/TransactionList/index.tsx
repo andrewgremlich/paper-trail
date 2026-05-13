@@ -1,6 +1,5 @@
 import { Table, TBody, TH, THead, TR } from "@/components/ui/Table";
 import type { Project, Transaction } from "@/lib/db";
-import { TransactionEditRow } from "../TransactionEditRow";
 import { TransactionTotalRow } from "../TransactionTotalRow";
 import { TransactionViewRow } from "../TransactionViewRow";
 import styles from "./styles.module.css";
@@ -8,20 +7,14 @@ import styles from "./styles.module.css";
 interface TransactionListProps {
 	transactions: Transaction[];
 	projects: Project[] | undefined;
-	editingId: string | null;
-	onEdit: (id: string) => void;
-	onCancelEdit: () => void;
 	onSave: (formData: FormData) => Promise<void>;
-	onDelete: (formData: FormData) => Promise<void>;
+	onDelete: (id: string) => Promise<void>;
 	onReplaceFile: (id: string, newPath: string) => Promise<void>;
 }
 
 export const TransactionList = ({
 	transactions,
 	projects,
-	editingId,
-	onEdit,
-	onCancelEdit,
 	onSave,
 	onDelete,
 	onReplaceFile,
@@ -39,36 +32,22 @@ export const TransactionList = ({
 					<TH>Project</TH>
 					<TH>Amount</TH>
 					<TH>File</TH>
-					<TH>Edit</TH>
-					<TH>Delete</TH>
+					<TH>Actions</TH>
 				</TR>
 			</THead>
 			<TBody>
-				{transactions.map((tx) => {
-					const path = tx.filePath ?? "";
-					return (
-						<TR key={tx.id}>
-							{editingId === tx.id ? (
-								<TransactionEditRow
-									tx={tx}
-									projects={projects}
-									path={path}
-									onSave={onSave}
-									onCancel={onCancelEdit}
-								/>
-							) : (
-								<TransactionViewRow
-									tx={tx}
-									projects={projects}
-									path={path}
-									onEdit={() => onEdit(tx.id)}
-									onDelete={onDelete}
-									onReplaceFile={onReplaceFile}
-								/>
-							)}
-						</TR>
-					);
-				})}
+				{transactions.map((tx) => (
+					<TR key={tx.id}>
+						<TransactionViewRow
+							tx={tx}
+							projects={projects}
+							path={tx.filePath ?? ""}
+							onSave={onSave}
+							onDelete={onDelete}
+							onReplaceFile={onReplaceFile}
+						/>
+					</TR>
+				))}
 				<TransactionTotalRow transactions={transactions} />
 			</TBody>
 		</Table>

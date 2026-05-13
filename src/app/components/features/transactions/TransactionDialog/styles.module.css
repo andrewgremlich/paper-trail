@@ -1,0 +1,30 @@
+.fileSection {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.fileLabel {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--foreground);
+}
+
+.fileRow {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.fileName {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	max-width: 12rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hiddenInput {
+	display: none;
+}

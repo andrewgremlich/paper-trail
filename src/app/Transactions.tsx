@@ -16,7 +16,6 @@ import { saveAttachment } from "./lib/files/fileStorage";
 export const Transactions = () => {
 	const queryClient = useQueryClient();
 	const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-	const [editingId, setEditingId] = useState<string | null>(null);
 	const { data: projects } = useQuery({
 		queryKey: ["projects"],
 		queryFn: getAllProjects,
@@ -85,9 +84,7 @@ export const Transactions = () => {
 				queryKey: ["transactions", activeProjectId],
 			});
 		},
-		onSuccess: async () => {
-			setEditingId(null);
-		},
+		onSuccess: async () => {},
 		onError: (error) => {
 			console.error("Failed to update transaction:", error);
 		},
@@ -113,8 +110,7 @@ export const Transactions = () => {
 		},
 	});
 	const { mutateAsync: removeTx } = useMutation({
-		mutationFn: async (formData: FormData) => {
-			const id = String(formData.get("id") ?? "");
+		mutationFn: async (id: string) => {
 			await deleteTransaction(id);
 			await queryClient.invalidateQueries({
 				queryKey: ["transactions", activeProjectId],
@@ -163,9 +159,6 @@ export const Transactions = () => {
 			<TransactionList
 				transactions={transactions ?? []}
 				projects={projects}
-				editingId={editingId}
-				onEdit={setEditingId}
-				onCancelEdit={() => setEditingId(null)}
 				onSave={saveEdit}
 				onDelete={removeTx}
 				onReplaceFile={async (id, newPath) => replaceFile({ id, newPath })}
