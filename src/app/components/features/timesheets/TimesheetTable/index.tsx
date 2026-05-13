@@ -78,8 +78,7 @@ export const TimesheetTable = ({
 							<TH>Hours</TH>
 							<TH>Description</TH>
 							<TH className={styles.noWrap}>Amount ($)</TH>
-							<TH></TH>
-							<TH></TH>
+							<TH>Actions</TH>
 						</TR>
 					</THead>
 					<TBody>
@@ -119,7 +118,7 @@ export const TimesheetTable = ({
 											/>
 										</TD>
 										<TD>${(entry.amount / 100).toFixed(2)}</TD>
-										<TD>
+										<Flex as="td">
 											<form
 												id={`edit-form-${entry.id}`}
 												onSubmit={async (evt) => {
@@ -143,8 +142,6 @@ export const TimesheetTable = ({
 													<Save />
 												</Button>
 											</form>
-										</TD>
-										<TD>
 											<Button
 												type="button"
 												size="sm"
@@ -153,7 +150,7 @@ export const TimesheetTable = ({
 											>
 												<Ban />
 											</Button>
-										</TD>
+										</Flex>
 									</>
 								) : (
 									<>
@@ -161,7 +158,7 @@ export const TimesheetTable = ({
 										<TD>{entry.minutes / 60}</TD>
 										<TD>{entry.description}</TD>
 										<TD>${(entry.amount / 100).toFixed(2)}</TD>
-										<TD>
+										<Flex as="td">
 											<Button
 												type="button"
 												disabled={!active}
@@ -171,8 +168,6 @@ export const TimesheetTable = ({
 											>
 												<Edit />
 											</Button>
-										</TD>
-										<TD>
 											<form
 												onSubmit={(evt) => {
 													evt.preventDefault();
@@ -190,7 +185,7 @@ export const TimesheetTable = ({
 													<TrashIcon />
 												</Button>
 											</form>
-										</TD>
+										</Flex>
 									</>
 								)}
 							</TR>
