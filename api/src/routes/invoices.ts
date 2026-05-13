@@ -3,6 +3,7 @@ import { z } from "zod";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
+import { randomHexToken } from "../lib/hash";
 import { RateLimitError, assertWithinSendLimit } from "../lib/rateLimit";
 import { ResendError, sendEmail } from "../lib/resend";
 import type { Env, Invoice, InvoiceSnapshot, InvoiceStatus } from "../lib/types";
@@ -559,8 +560,17 @@ app.post("/:id/send", async (c) => {
 	}
 
 	const snapshot = await buildSnapshot(row, c.env);
-	const hostedUrl = `${c.env.APP_BASE_URL.replace(/\/$/, "")}/invoice/${row.id}`;
-	const html = renderInvoiceHtml(snapshot, { hostedUrl });
+	const base = c.env.APP_BASE_URL.replace(/\/$/, "");
+	const hostedUrl = `${base}/invoice/${row.id}`;
+
+	const revokeToken = randomHexToken(32);
+	await db
+		.prepare("UPDATE customers SET revokeToken = ? WHERE id = ? AND userId = ?")
+		.bind(revokeToken, row.customerId, userId)
+		.run();
+	const revokeUrl = `${base}/consent/revoke/${revokeToken}`;
+
+	const html = renderInvoiceHtml(snapshot, { hostedUrl, revokeUrl });
 	const customerEmail = await decrypt(cust.email, c.env);
 
 	try {

@@ -60,6 +60,8 @@ const nl2br = (value: string): string =>
 export type RenderOptions = {
 	/** Absolute URL of the hosted invoice page, used by the email "View invoice" link. */
 	hostedUrl?: string;
+	/** Absolute URL the customer can visit to revoke email consent (email only). */
+	revokeUrl?: string;
 	/** Show a banner indicating this is a draft preview (used on the hosted page only). */
 	isDraftPreview?: boolean;
 	/** Show the Print button on the hosted page. */
@@ -71,6 +73,7 @@ export const renderInvoiceHtml = (
 	options: RenderOptions = {},
 ): string => {
 	const { seller, buyer, invoice, lineItems } = snapshot;
+	const { revokeUrl } = options;
 
 	const lineItemsHtml = lineItems
 		.map(
@@ -113,6 +116,10 @@ export const renderInvoiceHtml = (
 
 	const hostedLink = options.hostedUrl
 		? `<p class="hosted-link"><a href="${escapeHtml(options.hostedUrl)}">View this invoice online</a></p>`
+		: "";
+
+	const revokeLink = revokeUrl
+		? `<p class="revoke-link">Don't want to receive invoice emails? <a href="${escapeHtml(revokeUrl)}">Revoke consent</a></p>`
 		: "";
 
 	const printButton = options.includePrintButton
@@ -193,6 +200,7 @@ export const renderInvoiceHtml = (
     margin-bottom: 16px;
   }
   .hosted-link { font-size: 14px; color: #666; }
+  .revoke-link { font-size: 12px; color: #999; margin-top: 8px; }
   .desc { margin-bottom: 24px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
   @media print {
     body { background: #fff; padding: 0; }
@@ -261,6 +269,7 @@ export const renderInvoiceHtml = (
     </div>
 
     ${hostedLink}
+    ${revokeLink}
   </div>
 </body>
 </html>`;
