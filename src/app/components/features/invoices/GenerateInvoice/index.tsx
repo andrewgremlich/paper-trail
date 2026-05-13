@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { NotebookText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { TimesheetDetails } from "@/lib/db";
 import { createInvoice } from "@/lib/db/invoices";
@@ -25,9 +26,16 @@ export const GenerateInvoice = ({
 					"This project has no customer linked. Open Customers and attach one to the project first.",
 				);
 			}
+			const today = new Date();
+			const issuedAt = [
+				today.getFullYear(),
+				String(today.getMonth() + 1).padStart(2, "0"),
+				String(today.getDate()).padStart(2, "0"),
+			].join("-");
 			return createInvoice({
 				timesheetId: timesheet.id,
 				customerId: timesheet.customerId,
+				issuedAt,
 			});
 		},
 		onSuccess: async () => {
@@ -35,6 +43,9 @@ export const GenerateInvoice = ({
 				queryKey: ["timesheet", activeTimesheetId],
 			});
 			await queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			await queryClient.invalidateQueries({
+				queryKey: ["invoice-by-timesheet", activeTimesheetId],
+			});
 		},
 	});
 
@@ -55,6 +66,7 @@ export const GenerateInvoice = ({
 				variant="default"
 				className={styles.button}
 				disabled={!canGenerate}
+				leftIcon={<NotebookText />}
 				isLoading={isPending}
 			>
 				{timesheet?.active ? "Generate Invoice" : "Invoice Generated"}
