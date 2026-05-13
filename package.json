@@ -12,7 +12,8 @@
     "migrate": "wrangler d1 migrations apply paper-trail-db --local",
     "migrate:remote": "wrangler d1 migrations apply paper-trail-db --remote",
     "deploy": "pnpm run build && wrangler deploy",
-    "enc:key": "node ./scripts/generate-encryption-key.mjs"
+    "enc:key": "node ./scripts/generate-encryption-key.mjs",
+    "knip": "knip"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",
@@ -41,6 +42,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "happy-dom": "^20.9.0",
+    "knip": "^6.13.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.12",
     "vitest": "^4.1.6",

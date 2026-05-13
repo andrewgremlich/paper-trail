@@ -4,7 +4,7 @@ import { Flex } from "@/components/layout/Flex";
 import { Label } from "@/components/layout/HtmlElements";
 import styles from "./styles.module.css";
 
-export type SelectOption = {
+type SelectOption = {
 	value: string | number;
 	label: ReactNode;
 	disabled?: boolean;

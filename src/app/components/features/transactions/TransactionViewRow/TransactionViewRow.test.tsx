@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Transaction } from "@/lib/db";
 import { TransactionViewRow } from "./index";
 
@@ -10,10 +11,25 @@ vi.mock("@/lib/files/fileStorage", () => ({
 	saveAttachment: vi.fn(),
 }));
 
+vi.mock("../TransactionDialog", () => ({
+	TransactionDialog: () => null,
+}));
+
 const makeQueryClient = () =>
 	new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 describe("TransactionViewRow", () => {
+	let container: HTMLDivElement;
+
+	beforeEach(() => {
+		container = document.createElement("div");
+		document.body.appendChild(container);
+	});
+
+	afterEach(() => {
+		document.body.removeChild(container);
+	});
+
 	const mockTransaction: Transaction = {
 		id: "tx-1",
 		userId: 1,
@@ -51,29 +67,33 @@ describe("TransactionViewRow", () => {
 		},
 	];
 
-	const mockOnEdit = vi.fn();
 	const mockOnDelete = vi.fn();
+	const mockOnSave = vi.fn();
 	const mockOnReplaceFile = vi.fn();
 
-	const renderRow = (path: string, tx = mockTransaction) =>
-		renderToStaticMarkup(
-			<QueryClientProvider client={makeQueryClient()}>
-				<table>
-					<tbody>
-						<tr>
-							<TransactionViewRow
-								tx={tx}
-								projects={mockProjects}
-								path={path}
-								onEdit={mockOnEdit}
-								onDelete={mockOnDelete}
-								onReplaceFile={mockOnReplaceFile}
-							/>
-						</tr>
-					</tbody>
-				</table>
-			</QueryClientProvider>,
-		);
+	const renderRow = (path: string, tx = mockTransaction) => {
+		act(() => {
+			createRoot(container).render(
+				<QueryClientProvider client={makeQueryClient()}>
+					<table>
+						<tbody>
+							<tr>
+								<TransactionViewRow
+									tx={tx}
+									projects={mockProjects}
+									path={path}
+									onSave={mockOnSave}
+									onDelete={mockOnDelete}
+									onReplaceFile={mockOnReplaceFile}
+								/>
+							</tr>
+						</tbody>
+					</table>
+				</QueryClientProvider>,
+			);
+		});
+		return container.innerHTML;
+	};
 
 	it("renders formatted transaction date", () => {
 		expect(renderRow("")).toContain("Jan 15, 2024");
@@ -91,14 +111,13 @@ describe("TransactionViewRow", () => {
 		expect(renderRow("")).toContain("$100.50");
 	});
 
-	it('renders "No File" when path is empty', () => {
-		expect(renderRow("")).toContain("No File");
+	it("renders upload button when path is empty", () => {
+		expect(renderRow("")).toContain("Upload");
 	});
 
-	it("renders delete button with hidden input", () => {
+	it("renders edit and delete buttons", () => {
 		const html = renderRow("");
-		expect(html).toContain('type="hidden"');
-		expect(html).toContain('value="1"');
+		expect(html).toContain('aria-label="Edit Transaction"');
 		expect(html).toContain('aria-label="Delete Transaction"');
 	});
 });

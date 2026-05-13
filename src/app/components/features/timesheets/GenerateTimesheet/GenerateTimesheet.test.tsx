@@ -45,7 +45,7 @@ describe("GenerateTimesheet", () => {
 	it("renders hidden input for projectId", () => {
 		const html = renderComponent();
 		expect(html).toContain('name="projectId"');
-		expect(html).toContain('value="1"');
+		expect(html).toContain('value="proj-1"');
 	});
 
 	it("renders timesheet name input with label", () => {

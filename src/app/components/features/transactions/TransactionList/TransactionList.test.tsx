@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Transaction } from "@/lib/db";
 import { TransactionList } from "./index";
 
@@ -10,10 +11,25 @@ vi.mock("@/lib/files/fileStorage", () => ({
 	saveAttachment: vi.fn(),
 }));
 
+vi.mock("../TransactionDialog", () => ({
+	TransactionDialog: () => null,
+}));
+
 const makeQueryClient = () =>
 	new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 describe("TransactionList", () => {
+	let container: HTMLDivElement;
+
+	beforeEach(() => {
+		container = document.createElement("div");
+		document.body.appendChild(container);
+	});
+
+	afterEach(() => {
+		document.body.removeChild(container);
+	});
+
 	const mockTransactions: Transaction[] = [
 		{
 			id: "tx-1",
@@ -53,30 +69,26 @@ describe("TransactionList", () => {
 		},
 	];
 
-	const mockOnEdit = vi.fn();
-	const mockOnCancelEdit = vi.fn();
 	const mockOnSave = vi.fn();
 	const mockOnDelete = vi.fn();
 	const mockOnReplaceFile = vi.fn();
 
-	const renderList = (
-		transactions: Transaction[],
-		editingId: string | null = null,
-	) =>
-		renderToStaticMarkup(
-			<QueryClientProvider client={makeQueryClient()}>
-				<TransactionList
-					transactions={transactions}
-					projects={mockProjects}
-					editingId={editingId}
-					onEdit={mockOnEdit}
-					onCancelEdit={mockOnCancelEdit}
-					onSave={mockOnSave}
-					onDelete={mockOnDelete}
-					onReplaceFile={mockOnReplaceFile}
-				/>
-			</QueryClientProvider>,
-		);
+	const renderList = (transactions: Transaction[]) => {
+		act(() => {
+			createRoot(container).render(
+				<QueryClientProvider client={makeQueryClient()}>
+					<TransactionList
+						transactions={transactions}
+						projects={mockProjects}
+						onSave={mockOnSave}
+						onDelete={mockOnDelete}
+						onReplaceFile={mockOnReplaceFile}
+					/>
+				</QueryClientProvider>,
+			);
+		});
+		return container.innerHTML;
+	};
 
 	it("renders 'No transactions found' when transactions array is empty", () => {
 		expect(renderList([])).toContain("No transactions found.");
@@ -92,8 +104,9 @@ describe("TransactionList", () => {
 		expect(renderList(mockTransactions)).toContain("Total: $300.50");
 	});
 
-	it("renders edit row when editingId matches transaction", () => {
-		expect(renderList(mockTransactions, "tx-1")).toContain("tx-edit-form-tx-1");
+	it("renders edit buttons for each transaction row", () => {
+		const html = renderList(mockTransactions);
+		expect(html).toContain('aria-label="Edit Transaction"');
 	});
 
 	it("renders view row when not editing", () => {

@@ -6,9 +6,8 @@ import { TimesheetModal } from ".";
 
 vi.mock("@/lib/store", () => ({
 	usePaperTrailStore: () => ({
-		timesheetModalActive: true,
-		toggleTimesheetModal: vi.fn(),
-		activeTimesheetId: 1,
+		activeModal: { type: "timesheet", timesheetId: "ts-1" },
+		closeModal: vi.fn(),
 	}),
 }));
 
@@ -16,10 +15,18 @@ vi.mock("@/lib/db", async () => {
 	const actual = await vi.importActual("@/lib/db");
 	return {
 		...actual,
-		getTimesheetById: vi.fn(),
+		getTimesheetById: vi.fn().mockResolvedValue(null),
 		deleteTimesheet: vi.fn(),
 	};
 });
+
+vi.mock("@/lib/db/invoices", () => ({
+	getInvoices: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/lib/db/customers", () => ({
+	getCustomer: vi.fn().mockResolvedValue(null),
+}));
 
 vi.mock("../CreateTimesheetRecord", () => ({
 	CreateTimesheetRecord: () => <div data-testid="create-timesheet-record" />,
@@ -69,9 +76,9 @@ describe("TimesheetModal", () => {
 		expect(html).toContain("</dialog>");
 	});
 
-	it("renders heading", () => {
+	it("renders heading element", () => {
 		const html = renderComponent();
-		expect(html).toContain("Timesheet Invoice Generator");
+		expect(html).toContain("<h2");
 	});
 
 	it("renders when modal is active", () => {

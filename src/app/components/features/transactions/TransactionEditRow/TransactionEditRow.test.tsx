@@ -104,7 +104,7 @@ describe("TransactionEditRow", () => {
 		expect(html).toContain('value="100.50"');
 	});
 
-	it('renders "No File" when path is empty', () => {
+	it("renders upload button when path is empty", () => {
 		const html = renderToStaticMarkup(
 			<table>
 				<tbody>
@@ -120,7 +120,7 @@ describe("TransactionEditRow", () => {
 				</tbody>
 			</table>,
 		);
-		expect(html).toContain("No File");
+		expect(html).toContain("Upload");
 	});
 
 	it('renders "View File" button when path is provided', () => {

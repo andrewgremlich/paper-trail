@@ -109,9 +109,7 @@ export const TransactionDialog = ({
 					label="Project"
 					name="projectId"
 					defaultValue={tx.projectId ?? ""}
-					options={
-						projects?.map((p) => ({ value: p.id, label: p.name })) ?? []
-					}
+					options={projects?.map((p) => ({ value: p.id, label: p.name })) ?? []}
 				/>
 				<Input
 					label="Amount"

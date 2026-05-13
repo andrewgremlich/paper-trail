@@ -1,12 +1,6 @@
 import { api } from "./client";
 import type { ExportData } from "./types";
 
-export const exportAllData = async (encrypted = false): Promise<ExportData> => {
-	return api.get<ExportData>(
-		`/export/data${encrypted ? "?encrypted=true" : ""}`,
-	);
-};
-
 export const exportZipData = async (
 	encrypted = false,
 ): Promise<ArrayBuffer> => {

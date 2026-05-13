@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
 import classnames from "classnames";
+import { useId, useState } from "react";
 
 import { GenerateInvoice } from "@/components/features/invoices/GenerateInvoice";
 import { PayVoidButtons } from "@/components/features/invoices/PayVoidButtons";
@@ -127,7 +127,9 @@ export const TimesheetModal = () => {
 						active={timesheet.active}
 						timesheetId={timesheet.id}
 						projectRate={timesheet.projectRate ?? 25}
-						hasActiveInvoice={!!timesheetInvoice && timesheetInvoice.status !== "void"}
+						hasActiveInvoice={
+							!!timesheetInvoice && timesheetInvoice.status !== "void"
+						}
 					/>
 					<TimesheetTable
 						entries={timesheet.entries || []}

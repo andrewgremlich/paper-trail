@@ -8,7 +8,7 @@ function logErrorToMyService(
 	console.error("Captured error:", error, { componentStack, ownerStack });
 }
 
-export interface ErrorBoundaryProps {
+interface ErrorBoundaryProps {
 	children: React.ReactNode;
 	fallback: React.ReactNode | ((error: Error | null) => React.ReactNode);
 	onError?: (error: Error, info: React.ErrorInfo) => void;
@@ -20,7 +20,7 @@ interface ErrorBoundaryState {
 	error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<
+class ErrorBoundary extends React.Component<
 	ErrorBoundaryProps,
 	ErrorBoundaryState
 > {

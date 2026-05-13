@@ -5,7 +5,7 @@ import { ProjectPageTab } from "./types";
 
 export type Theme = "light" | "dark" | "system";
 
-export type ActiveModal =
+type ActiveModal =
 	| { type: "project"; projectId: string }
 	| { type: "timesheet"; timesheetId: string }
 	| { type: "settings" }

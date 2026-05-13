@@ -17,7 +17,7 @@ describe("ExportImportSection", () => {
 	it("renders heading and description", () => {
 		const html = renderToStaticMarkup(wrapper(<ExportImportSection />));
 		expect(html).toContain("Backup &amp; Restore");
-		expect(html).toContain("Export all your data to a JSON file");
+		expect(html).toContain("Export all your data for backup");
 	});
 
 	it("renders export and import buttons", () => {

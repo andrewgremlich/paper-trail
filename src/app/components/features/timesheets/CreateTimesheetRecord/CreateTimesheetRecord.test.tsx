@@ -27,7 +27,7 @@ describe("CreateTimesheetRecord", () => {
 	it("renders hidden input for timesheetId", () => {
 		const html = renderComponent();
 		expect(html).toContain('name="timesheetId"');
-		expect(html).toContain('value="1"');
+		expect(html).toContain('value="ts-1"');
 	});
 
 	it("renders hidden input for projectRate", () => {
