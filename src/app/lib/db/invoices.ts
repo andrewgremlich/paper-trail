@@ -37,8 +37,15 @@ export const sendInvoice = (
 ): Promise<{ success: true; hostedUrl: string }> =>
 	api.post(`/invoices/${id}/send`);
 
-export const markInvoicePaid = (id: string): Promise<{ success: true }> =>
-	api.post(`/invoices/${id}/pay`);
+export const markInvoicePaid = (id: string): Promise<{ success: true }> => {
+	const today = new Date();
+	const paidDate = [
+		today.getFullYear(),
+		String(today.getMonth() + 1).padStart(2, "0"),
+		String(today.getDate()).padStart(2, "0"),
+	].join("-");
+	return api.post(`/invoices/${id}/pay`, { paidDate });
+};
 
 export const voidInvoice = (id: string): Promise<{ success: true }> =>
 	api.post(`/invoices/${id}/void`);

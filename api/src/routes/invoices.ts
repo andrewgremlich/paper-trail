@@ -616,6 +616,16 @@ app.post("/:id/pay", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
+	let paidDate: string | null = null;
+	try {
+		const body = await c.req.json<{ paidDate?: string }>();
+		if (body?.paidDate && /^\d{4}-\d{2}-\d{2}$/.test(body.paidDate)) {
+			paidDate = body.paidDate;
+		}
+	} catch {
+		// no body — fine
+	}
+
 	const row = await db
 		.prepare(
 			`SELECT id, customerId, status, amount_cents, number, timesheetId
@@ -678,7 +688,7 @@ app.post("/:id/pay", async (c) => {
 			.bind(
 				crypto.randomUUID(),
 				projectId,
-				now.slice(0, 10),
+				paidDate ?? now.slice(0, 10),
 				await encrypt(`Invoice ${row.number} marked as paid`, c.env),
 				await encrypt(String(amountCents), c.env),
 				userId,
