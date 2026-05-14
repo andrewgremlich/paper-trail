@@ -1,5 +1,11 @@
 import { Hono } from "hono";
 import { decrypt, encrypt } from "../lib/crypto";
+import {
+	CSRF_FIELD,
+	csrfFormField,
+	issueCsrfToken,
+	validateCsrfToken,
+} from "../lib/csrf";
 import { getDb } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import type { Env } from "../lib/types";
@@ -115,6 +121,7 @@ app.get("/:token", async (c) => {
 
 	const customerEmail = await decrypt(row.email, c.env);
 
+	const csrf = issueCsrfToken(c);
 	return c.html(
 		page(
 			"Consent to electronic invoicing",
@@ -122,6 +129,7 @@ app.get("/:token", async (c) => {
 			 <p><strong>${escape(businessName)}</strong> would like to send invoices to <strong>${escape(customerEmail)}</strong>.</p>
 			 <p>By agreeing, you confirm you're okay receiving invoices and payment links at this email address. You can revoke this at any time using the unsubscribe link included in every invoice.</p>
 			 <form method="POST" action="/consent/${escape(token)}">
+			   ${csrfFormField(csrf)}
 			   <button class="agree" type="submit" name="decision" value="agree">I agree</button>
 			   <button class="decline" type="submit" name="decision" value="decline">No, thanks</button>
 			 </form>
@@ -149,6 +157,17 @@ app.post("/:token", async (c) => {
 	}
 
 	const form = await c.req.parseBody();
+	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+		return c.html(
+			page(
+				"Session expired",
+				`<h1>Session expired</h1>
+				 <p>This consent page is no longer valid. Please open the consent link again from your email.</p>`,
+			),
+			403,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
 	const decision = form.decision === "agree" ? "agree" : "decline";
 
 	const db = getDb(c.env);
@@ -280,6 +299,7 @@ app.get("/revoke/:token", async (c) => {
 	}
 
 	const customerEmail = await decrypt(row.email, c.env);
+	const csrf = issueCsrfToken(c);
 
 	return c.html(
 		page(
@@ -288,6 +308,7 @@ app.get("/revoke/:token", async (c) => {
 			 <p>You are about to revoke your consent to receive invoices at <strong>${escape(customerEmail)}</strong>.</p>
 			 <p>After revoking, you will no longer receive invoice emails at this address.</p>
 			 <form method="POST" action="/consent/revoke/${escape(token)}">
+			   ${csrfFormField(csrf)}
 			   <button class="agree" type="submit">Yes, revoke my consent</button>
 			 </form>
 			 <p class="muted">If you didn't intend to do this, you can safely close this page.</p>`,
@@ -309,6 +330,19 @@ app.post("/revoke/:token", async (c) => {
 				 <p>The revocation link has already been used or doesn't exist.</p>`,
 			),
 			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
+
+	const form = await c.req.parseBody();
+	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+		return c.html(
+			page(
+				"Session expired",
+				`<h1>Session expired</h1>
+				 <p>This revocation page is no longer valid. Please open the revoke link again from your email.</p>`,
+			),
+			403,
 			PUBLIC_PAGE_HEADERS,
 		);
 	}

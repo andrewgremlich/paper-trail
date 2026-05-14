@@ -11,6 +11,27 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 // fragments past the routing layer.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+
+// MIME types accepted for transaction attachments. Anything else is
+// rejected: text/html in particular would otherwise be rendered same-
+// origin when the user later opens the link, giving us stored XSS even
+// after the Content-Disposition / nosniff hardening on download.
+const ALLOWED_UPLOAD_TYPES = new Set([
+	"image/jpeg",
+	"image/jpg",
+	"image/png",
+	"image/gif",
+	"image/webp",
+	"image/heic",
+	"image/heif",
+	"application/pdf",
+	"text/plain",
+	"text/csv",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.ms-excel",
+]);
+
 const isValidKey = (key: string): boolean => UUID_RE.test(key);
 
 /**
@@ -70,6 +91,28 @@ app.post("/upload", async (c) => {
 
 	if (!file) {
 		return c.json({ error: "No file provided" }, 400);
+	}
+
+	if (file.size > MAX_UPLOAD_BYTES) {
+		return c.json(
+			{
+				error: `File too large. Max ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`,
+				code: "FILE_TOO_LARGE",
+			},
+			413,
+		);
+	}
+
+	const contentType = (file.type || "application/octet-stream").toLowerCase();
+	if (!ALLOWED_UPLOAD_TYPES.has(contentType)) {
+		return c.json(
+			{
+				error: "Unsupported file type",
+				code: "UNSUPPORTED_FILE_TYPE",
+				contentType,
+			},
+			415,
+		);
 	}
 
 	const key = crypto.randomUUID();

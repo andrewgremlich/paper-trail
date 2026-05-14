@@ -1,9 +1,26 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import * as XLSX from "xlsx";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
+import {
+	descriptionSchema,
+	dollarAmountSchema,
+	filePathSchema,
+	isoDateSchema,
+	userOwnsProject,
+	uuidSchema,
+} from "../lib/validators";
 import type { AuthVariables } from "../middleware/auth";
+
+const transactionBodySchema = z.object({
+	projectId: uuidSchema,
+	date: isoDateSchema,
+	description: descriptionSchema,
+	amount: dollarAmountSchema,
+	filePath: filePathSchema,
+});
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -128,15 +145,21 @@ app.get("/:id", async (c) => {
 
 // POST /api/v1/transactions - create transaction
 app.post("/", async (c) => {
-	const body = await c.req.json<{
-		projectId: string;
-		date: string;
-		description: string;
-		amount: number;
-		filePath?: string;
-	}>();
+	const parsed = transactionBodySchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid transaction", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+
+	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
+		return c.json({ error: "Project not found" }, 404);
+	}
+
 	const amountInCents = Math.round(body.amount * 100);
 	const id = crypto.randomUUID();
 
@@ -165,15 +188,21 @@ app.post("/", async (c) => {
 // PUT /api/v1/transactions/:id - update transaction
 app.put("/:id", async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<{
-		projectId: string;
-		date: string;
-		description: string;
-		amount: number;
-		filePath?: string;
-	}>();
+	const parsed = transactionBodySchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid transaction", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+
+	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
+		return c.json({ error: "Project not found" }, 404);
+	}
+
 	const amountInCents = Math.round(body.amount * 100);
 
 	const encDescription = await encrypt(body.description, c.env);

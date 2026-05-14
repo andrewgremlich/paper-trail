@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
-import { sha256Hex } from "../lib/hash";
+import { constantTimeEqual, sha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
 import type { Env, InvoiceSnapshot } from "../lib/types";
 
@@ -75,15 +75,16 @@ app.get("/:id", async (c) => {
 	}
 
 	// Sent invoices require the per-invoice access token. Drafts are
-	// tokenless (only viewed from the authenticated app).
+	// tokenless (only viewed from the authenticated app). Comparison is
+	// constant-time so this route does not leak whether the prefix
+	// matched via response timing.
 	if (row.snapshot) {
 		const providedToken = c.req.query("t");
 		const expected = row.accessToken;
 		if (
 			!expected ||
 			!providedToken ||
-			providedToken.length !== expected.length ||
-			providedToken !== expected
+			!constantTimeEqual(providedToken, expected)
 		) {
 			return notFound;
 		}

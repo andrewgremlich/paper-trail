@@ -1,8 +1,27 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
-import type { Env, Project } from "../lib/types";
+import type { Env } from "../lib/types";
+import {
+	descriptionSchema,
+	positiveMoneyCentsSchema,
+	shortNameSchema,
+	userOwnsCustomer,
+	uuidSchema,
+} from "../lib/validators";
 import type { AuthVariables } from "../middleware/auth";
+
+const projectCreateSchema = z.object({
+	name: shortNameSchema,
+	customerId: uuidSchema.nullable().optional(),
+	rate_in_cents: positiveMoneyCentsSchema,
+	description: descriptionSchema.default(""),
+});
+
+const projectUpdateSchema = projectCreateSchema.extend({
+	active: z.boolean(),
+});
 
 async function decryptProjectRow(
 	row: Record<string, unknown>,
@@ -86,14 +105,20 @@ app.get("/:id", async (c) => {
 
 // POST /api/v1/projects - create project, optionally with initial timesheet
 app.post("/", async (c) => {
-	const body = await c.req.json<{
-		name: string;
-		customerId: string | null;
-		rate_in_cents: number;
-		description: string;
-	}>();
+	const parsed = projectCreateSchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid project", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+
+	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
+		return c.json({ error: "Customer not found" }, 404);
+	}
 
 	const encRate = await encrypt(String(body.rate_in_cents), c.env);
 	const encDescription = await encrypt(body.description, c.env);
@@ -185,17 +210,23 @@ app.post("/", async (c) => {
 // PUT /api/v1/projects/:id - update project
 app.put("/:id", async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<Project>();
+	const parsed = projectUpdateSchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid project", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const rate = body.rate_in_cents ?? 0;
 
-	if (!body.name || rate < 0) {
-		return c.json({ error: "Invalid project data" }, 400);
+	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
+		return c.json({ error: "Customer not found" }, 404);
 	}
 
-	const encRate = await encrypt(String(rate), c.env);
-	const encDescription = await encrypt(body.description ?? "", c.env);
+	const encRate = await encrypt(String(body.rate_in_cents), c.env);
+	const encDescription = await encrypt(body.description, c.env);
 
 	await db
 		.prepare(
