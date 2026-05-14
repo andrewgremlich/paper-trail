@@ -27,3 +27,19 @@ export const randomHexToken = (bytes = 32): string => {
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
 };
+
+/**
+ * Constant-time string equality. Always scans `max(a, b)` bytes so the
+ * runtime doesn't leak a prefix-match-length signal even when the
+ * provided value is shorter than the expected one.
+ */
+export const constantTimeEqual = (a: string, b: string): boolean => {
+	const aBytes = new TextEncoder().encode(a);
+	const bBytes = new TextEncoder().encode(b);
+	let diff = aBytes.length ^ bBytes.length;
+	const max = Math.max(aBytes.length, bBytes.length);
+	for (let i = 0; i < max; i++) {
+		diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+	}
+	return diff === 0;
+};

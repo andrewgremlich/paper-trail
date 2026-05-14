@@ -4,9 +4,16 @@ import { decrypt, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { resolveEmailDelivery } from "../lib/emailDelivery";
 import { randomHexToken } from "../lib/hash";
+import { assertWithinSendLimit, RateLimitError } from "../lib/rateLimit";
 import { ResendError, sendEmail } from "../lib/resend";
 import type { Customer, Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
+
+// Refuse to re-send a consent email to the same customer within this
+// window if they haven't acted on the previous one. Keeps an honest
+// retry possible after a day, but stops a tight loop of unsolicited
+// emails to the same recipient.
+const CONSENT_REREQUEST_BACKOFF_MS = 24 * 60 * 60 * 1000;
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -205,6 +212,33 @@ app.post("/:id/request-consent", async (c) => {
 		.first<DbCustomerRow>();
 	if (!customerRow) return c.json({ error: "Customer not found" }, 404);
 
+	// 24h back-off: if a consent request was already sent and the customer
+	// hasn't acted on it, don't pelt them with another one.
+	if (
+		!customerRow.consentToEmailInvoices &&
+		customerRow.consentRequestedAt
+	) {
+		const requestedMs = Date.parse(customerRow.consentRequestedAt);
+		if (
+			Number.isFinite(requestedMs) &&
+			Date.now() - requestedMs < CONSENT_REREQUEST_BACKOFF_MS
+		) {
+			const retryAfterSeconds = Math.ceil(
+				(requestedMs + CONSENT_REREQUEST_BACKOFF_MS - Date.now()) / 1000,
+			);
+			return c.json(
+				{
+					error:
+						"A consent request was already sent recently. Wait 24 hours before resending.",
+					code: "CONSENT_REREQUEST_TOO_SOON",
+					retryAfterSeconds,
+				},
+				429,
+				{ "Retry-After": String(retryAfterSeconds) },
+			);
+		}
+	}
+
 	const userRow = await db
 		.prepare(
 			`SELECT email, businessName, resendApiKey, resendFromAddress
@@ -251,6 +285,25 @@ app.post("/:id/request-consent", async (c) => {
 			},
 			500,
 		);
+	}
+
+	// Share the invoice-send rate limit budget: spam-protects the operator
+	// and keeps a single user from being used as an email cannon.
+	try {
+		await assertWithinSendLimit(userId, c.env);
+	} catch (err) {
+		if (err instanceof RateLimitError) {
+			return c.json(
+				{
+					error: "Send rate limit exceeded. Try again later.",
+					code: "RATE_LIMITED",
+					retryAfterSeconds: err.retryAfterSeconds,
+				},
+				429,
+				{ "Retry-After": String(err.retryAfterSeconds) },
+			);
+		}
+		throw err;
 	}
 
 	const token = randomHexToken(32);

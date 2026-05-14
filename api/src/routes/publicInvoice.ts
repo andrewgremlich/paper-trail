@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
-import { sha256Hex } from "../lib/hash";
+import { constantTimeEqual, sha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
 import type { Env, InvoiceSnapshot } from "../lib/types";
 
@@ -24,6 +24,18 @@ import type { Env, InvoiceSnapshot } from "../lib/types";
  */
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Headers applied to every public hosted page. `no-referrer` is the
+// critical one — the URL carries the per-invoice access token as
+// `?t=<token>`, and the hosted page links out to Venmo / PayPal. Without
+// this, those third parties (and any intermediate proxy) would receive
+// the token in the Referer header.
+const PUBLIC_PAGE_HEADERS = {
+	"Cache-Control": "no-store",
+	"Referrer-Policy": "no-referrer",
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "DENY",
+} as const;
 
 app.get("/:id", async (c) => {
 	const id = c.req.param("id");
@@ -55,7 +67,7 @@ app.get("/:id", async (c) => {
 	const notFound = c.html(
 		"<!DOCTYPE html><html><body><h1>Invoice not found</h1></body></html>",
 		404,
-		{ "Cache-Control": "no-store" },
+		PUBLIC_PAGE_HEADERS,
 	);
 
 	if (!row) {
@@ -63,15 +75,16 @@ app.get("/:id", async (c) => {
 	}
 
 	// Sent invoices require the per-invoice access token. Drafts are
-	// tokenless (only viewed from the authenticated app).
+	// tokenless (only viewed from the authenticated app). Comparison is
+	// constant-time so this route does not leak whether the prefix
+	// matched via response timing.
 	if (row.snapshot) {
 		const providedToken = c.req.query("t");
 		const expected = row.accessToken;
 		if (
 			!expected ||
 			!providedToken ||
-			providedToken.length !== expected.length ||
-			providedToken !== expected
+			!constantTimeEqual(providedToken, expected)
 		) {
 			return notFound;
 		}
@@ -111,7 +124,7 @@ app.get("/:id", async (c) => {
 			return c.html(
 				"<!DOCTYPE html><html><body><h1>Invoice not available</h1></body></html>",
 				404,
-				{ "Cache-Control": "no-store" },
+				PUBLIC_PAGE_HEADERS,
 			);
 		}
 
@@ -213,7 +226,7 @@ app.get("/:id", async (c) => {
 		isDraftPreview,
 		includePrintButton: true,
 	});
-	return c.html(html, 200, { "Cache-Control": "no-store" });
+	return c.html(html, 200, PUBLIC_PAGE_HEADERS);
 });
 
 export { app as publicInvoiceRoutes };

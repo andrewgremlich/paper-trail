@@ -1,5 +1,11 @@
 import { Hono } from "hono";
 import { decrypt, encrypt } from "../lib/crypto";
+import {
+	CSRF_FIELD,
+	csrfFormField,
+	issueCsrfToken,
+	validateCsrfToken,
+} from "../lib/csrf";
 import { getDb } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import type { Env } from "../lib/types";
@@ -19,6 +25,16 @@ const app = new Hono<{ Bindings: Env }>();
 
 const CONSENT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+// Headers applied to every public consent page. `no-referrer` keeps the
+// single-use consent/revoke token from leaking via Referer to any link
+// the customer might follow off the page.
+const PUBLIC_PAGE_HEADERS = {
+	"Cache-Control": "no-store",
+	"Referrer-Policy": "no-referrer",
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "DENY",
+} as const;
+
 const escape = (value: string | null | undefined): string => {
 	if (value == null) return "";
 	return String(value)
@@ -34,6 +50,7 @@ const page = (title: string, body: string): string =>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex,nofollow" />
+<meta name="referrer" content="no-referrer" />
 <title>${escape(title)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; background: #f5f5f5; margin: 0; padding: 48px 12px; }
@@ -89,6 +106,7 @@ app.get("/:token", async (c) => {
 				 <p>Consent links expire after 30 days or once they've been used. Please ask the sender for a new link.</p>`,
 			),
 			410,
+			PUBLIC_PAGE_HEADERS,
 		);
 	}
 
@@ -103,6 +121,7 @@ app.get("/:token", async (c) => {
 
 	const customerEmail = await decrypt(row.email, c.env);
 
+	const csrf = issueCsrfToken(c);
 	return c.html(
 		page(
 			"Consent to electronic invoicing",
@@ -110,13 +129,14 @@ app.get("/:token", async (c) => {
 			 <p><strong>${escape(businessName)}</strong> would like to send invoices to <strong>${escape(customerEmail)}</strong>.</p>
 			 <p>By agreeing, you confirm you're okay receiving invoices and payment links at this email address. You can revoke this at any time using the unsubscribe link included in every invoice.</p>
 			 <form method="POST" action="/consent/${escape(token)}">
+			   ${csrfFormField(csrf)}
 			   <button class="agree" type="submit" name="decision" value="agree">I agree</button>
 			   <button class="decline" type="submit" name="decision" value="decline">No, thanks</button>
 			 </form>
 			 <p class="muted">If you weren't expecting this, you can safely close this page — no email will be sent without your consent.</p>`,
 		),
 		200,
-		{ "Cache-Control": "no-store" },
+		PUBLIC_PAGE_HEADERS,
 	);
 });
 
@@ -132,10 +152,22 @@ app.post("/:token", async (c) => {
 				 <p>Consent links expire after 30 days or once they've been used.</p>`,
 			),
 			410,
+			PUBLIC_PAGE_HEADERS,
 		);
 	}
 
 	const form = await c.req.parseBody();
+	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+		return c.html(
+			page(
+				"Session expired",
+				`<h1>Session expired</h1>
+				 <p>This consent page is no longer valid. Please open the consent link again from your email.</p>`,
+			),
+			403,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
 	const decision = form.decision === "agree" ? "agree" : "decline";
 
 	const db = getDb(c.env);
@@ -187,7 +219,7 @@ app.post("/:token", async (c) => {
 				 <p>You'll receive invoices at this email address. You can revoke consent at any time using the unsubscribe link included in every invoice.</p>`,
 			),
 			200,
-			{ "Cache-Control": "no-store" },
+			PUBLIC_PAGE_HEADERS,
 		);
 	}
 
@@ -222,7 +254,7 @@ app.post("/:token", async (c) => {
 			 <p>You won't receive invoices at this email address. The sender has been notified.</p>`,
 		),
 		200,
-		{ "Cache-Control": "no-store" },
+		PUBLIC_PAGE_HEADERS,
 	);
 });
 
@@ -262,10 +294,12 @@ app.get("/revoke/:token", async (c) => {
 				 <p>The revocation link has already been used or doesn't exist. If you still want to revoke consent, reply to any invoice email.</p>`,
 			),
 			410,
+			PUBLIC_PAGE_HEADERS,
 		);
 	}
 
 	const customerEmail = await decrypt(row.email, c.env);
+	const csrf = issueCsrfToken(c);
 
 	return c.html(
 		page(
@@ -274,12 +308,13 @@ app.get("/revoke/:token", async (c) => {
 			 <p>You are about to revoke your consent to receive invoices at <strong>${escape(customerEmail)}</strong>.</p>
 			 <p>After revoking, you will no longer receive invoice emails at this address.</p>
 			 <form method="POST" action="/consent/revoke/${escape(token)}">
+			   ${csrfFormField(csrf)}
 			   <button class="agree" type="submit">Yes, revoke my consent</button>
 			 </form>
 			 <p class="muted">If you didn't intend to do this, you can safely close this page.</p>`,
 		),
 		200,
-		{ "Cache-Control": "no-store" },
+		PUBLIC_PAGE_HEADERS,
 	);
 });
 
@@ -295,6 +330,20 @@ app.post("/revoke/:token", async (c) => {
 				 <p>The revocation link has already been used or doesn't exist.</p>`,
 			),
 			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
+
+	const form = await c.req.parseBody();
+	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+		return c.html(
+			page(
+				"Session expired",
+				`<h1>Session expired</h1>
+				 <p>This revocation page is no longer valid. Please open the revoke link again from your email.</p>`,
+			),
+			403,
+			PUBLIC_PAGE_HEADERS,
 		);
 	}
 
@@ -341,7 +390,7 @@ app.post("/revoke/:token", async (c) => {
 			 <p>Your consent has been removed. You will no longer receive invoice emails at this address.</p>`,
 		),
 		200,
-		{ "Cache-Control": "no-store" },
+		PUBLIC_PAGE_HEADERS,
 	);
 });
 

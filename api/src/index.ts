@@ -17,13 +17,18 @@ import { userProfileRoutes } from "./routes/userProfile";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use(
-	"/*",
-	cors({
-		origin: (origin) => origin,
+// CORS is restricted to the configured app origin. The frontend and API
+// are served from the same Worker so cross-origin requests are not part
+// of the normal flow — reflecting arbitrary origins with credentials
+// would let any site read authenticated API responses through the user's
+// active Cloudflare Access session.
+app.use("/*", async (c, next) => {
+	const allowed = c.env.APP_BASE_URL?.replace(/\/$/, "");
+	return cors({
+		origin: (origin) => (allowed && origin === allowed ? origin : null),
 		credentials: true,
-	}),
-);
+	})(c, next);
+});
 
 // Public, unauthenticated routes (mounted BEFORE the v1 auth middleware).
 // These serve the customer-facing pages — the customer doesn't have a

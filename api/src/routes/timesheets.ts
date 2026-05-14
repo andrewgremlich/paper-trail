@@ -1,8 +1,27 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
+import {
+	descriptionSchema,
+	shortNameSchema,
+	userOwnsProject,
+	uuidSchema,
+} from "../lib/validators";
 import type { AuthVariables } from "../middleware/auth";
+
+const timesheetCreateSchema = z.object({
+	projectId: uuidSchema,
+	name: shortNameSchema,
+	description: descriptionSchema.nullable().optional(),
+});
+
+const timesheetUpdateSchema = z.object({
+	name: shortNameSchema,
+	description: descriptionSchema.nullable().optional(),
+	active: z.boolean(),
+});
 
 async function decryptTimesheetRow(
 	row: Record<string, unknown>,
@@ -141,13 +160,20 @@ app.get("/:id", async (c) => {
 
 // POST /api/v1/timesheets - create timesheet
 app.post("/", async (c) => {
-	const body = await c.req.json<{
-		projectId: string;
-		name: string;
-		description?: string;
-	}>();
+	const parsed = timesheetCreateSchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid timesheet", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+
+	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
+		return c.json({ error: "Project not found" }, 404);
+	}
 
 	const encDescription = body.description
 		? await encrypt(body.description, c.env)
@@ -184,11 +210,14 @@ app.post("/", async (c) => {
 // PUT /api/v1/timesheets/:id - update timesheet
 app.put("/:id", async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<{
-		name: string;
-		description?: string;
-		active: boolean;
-	}>();
+	const parsed = timesheetUpdateSchema.safeParse(await c.req.json());
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid timesheet", issues: parsed.error.issues },
+			400,
+		);
+	}
+	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 

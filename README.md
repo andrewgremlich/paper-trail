@@ -50,6 +50,16 @@ A web-based timesheet and invoicing application that integrates with Stripe for 
    wrangler secret put STRIPE_SECRET_KEY
    ```
 
+6. Configure Cloudflare Access JWT verification (production only — required):
+   ```bash
+   wrangler secret put CF_ACCESS_TEAM_DOMAIN   # e.g. acme.cloudflareaccess.com
+   wrangler secret put CF_ACCESS_AUD           # Access app Application Audience Tag
+   ```
+   The auth middleware verifies the `Cf-Access-Jwt-Assertion` header against
+   the team's JWKS on every request. Without these two secrets (and without
+   `CF_ACCESS_BYPASS=true` for dev), the API refuses to start — failing
+   closed instead of trusting the (spoofable) email header.
+
 ## Security
 
 ### Encryption at Rest
@@ -68,7 +78,13 @@ Unencrypted values are handled gracefully on read, so enabling encryption on an 
 ### Other Security Measures
 
 - Stripe API keys stored as Wrangler secrets, never in code or localStorage
-- Authentication via Cloudflare Access (GitHub OAuth)
+- Authentication via Cloudflare Access (GitHub OAuth) — JWT signature is verified
+  against the team's JWKS on every request; the email header alone is not trusted
+- CORS restricted to `APP_BASE_URL` (no wildcard reflection of arbitrary origins)
+- R2 file routes (`/api/v1/files/*`) authorise each request against the
+  caller's `transactions.filePath` ownership; UUIDs are validated before lookup
+- Public invoice and consent pages send `Referrer-Policy: no-referrer` to
+  prevent per-invoice access tokens from leaking via Referer to Venmo/PayPal
 - All database queries scoped by `userId` for multi-user data isolation
 - Parameterized queries (D1 `.bind()`) to prevent SQL injection
 - Sanitized file names and paths for attachments
