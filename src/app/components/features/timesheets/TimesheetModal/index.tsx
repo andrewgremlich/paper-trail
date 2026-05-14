@@ -67,7 +67,7 @@ export const TimesheetModal = () => {
 			<Flex justify="between" className={styles.header}>
 				<H2 id={headingId} style={{ marginBottom: 0 }}>
 					{timesheet?.name}
-					{!timesheet?.active && " (Closed)"}
+					{timesheet?.closed && " (Closed)"}
 				</H2>
 				<Flex gap={2} items="center">
 					<EditToggleButton
@@ -117,14 +117,18 @@ export const TimesheetModal = () => {
 							{customer ? `${customer.name} (${customer.email})` : "…"}
 						</Span>
 					)}
-					{timesheetInvoice && <span>Invoice: {timesheetInvoice.number}</span>}
+					{timesheetInvoice && (
+						<span>
+							Invoice: {timesheetInvoice.number} ({timesheetInvoice.status})
+						</span>
+					)}
 				</Grid>
 			)}
 			{timesheetInvoice && <PayVoidButtons invoice={timesheetInvoice} />}
 			{timesheet && (
 				<>
 					<CreateTimesheetRecord
-						active={timesheet.active}
+						active={!timesheet.closed}
 						timesheetId={timesheet.id}
 						projectRate={timesheet.projectRate ?? 25}
 						hasActiveInvoice={
@@ -133,7 +137,7 @@ export const TimesheetModal = () => {
 					/>
 					<TimesheetTable
 						entries={timesheet.entries || []}
-						active={timesheet.active}
+						active={!timesheet.closed}
 						projectRate={timesheet.projectRate ?? 25}
 					/>
 				</>

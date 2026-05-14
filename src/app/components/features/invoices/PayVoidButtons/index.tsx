@@ -22,6 +22,7 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 	const invalidate = () => {
 		queryClient.invalidateQueries({ queryKey: ["invoice-detail", invoice.id] });
 		queryClient.invalidateQueries({ queryKey: ["invoices"] });
+		queryClient.invalidateQueries({ queryKey: ["invoice-by-timesheet"] });
 	};
 
 	const { mutateAsync: send, isPending: isSending } = useMutation({
@@ -120,7 +121,7 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 						setPayError(null);
 						pay();
 					}}
-					disabled={isTerminal(invoice.status) || isPaying}
+					disabled={isTerminal(invoice.status) || isPaying || isSending}
 				>
 					{invoice.status === "paid" ? "Already paid" : "Mark as paid"}
 				</Button>
@@ -131,7 +132,7 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 						setVoidError(null);
 						voidIt();
 					}}
-					disabled={isTerminal(invoice.status) || isVoiding}
+					disabled={isTerminal(invoice.status) || isVoiding || isSending}
 				>
 					{invoice.status === "void" ? "Already voided" : "Void invoice"}
 				</Button>
@@ -139,6 +140,7 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 			{sendError && <P className={styles.error}>{sendError}</P>}
 			{payError && <P className={styles.error}>{payError}</P>}
 			{voidError && <P className={styles.error}>{voidError}</P>}
+			{invoice.status === "sent" && <P>Invoice has been sent.</P>}
 			{invoice.status === "paid" && <P>Invoice has been marked as paid.</P>}
 			{invoice.status === "void" && <P>Invoice has been voided.</P>}
 		</>
