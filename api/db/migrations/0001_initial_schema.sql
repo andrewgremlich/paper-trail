@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE INDEX IF NOT EXISTS idx_customers_userId ON customers(userId);
 CREATE INDEX IF NOT EXISTS idx_customers_consentToken ON customers(consentToken);
 CREATE INDEX IF NOT EXISTS idx_customers_revokeToken ON customers(revokeToken);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_revokeToken_unique
+  ON customers(revokeToken) WHERE revokeToken IS NOT NULL;
 
 -- =====================
 -- customer_events  (consent audit log)
@@ -116,7 +118,7 @@ CREATE TABLE IF NOT EXISTS timesheets (
   projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,           -- encrypted, nullable
-  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  closed INTEGER NOT NULL DEFAULT 0 CHECK (closed IN (0, 1)),
   userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -205,6 +207,8 @@ CREATE INDEX IF NOT EXISTS idx_invoices_customerId ON invoices(customerId);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_timesheetId ON invoices(timesheetId);
 CREATE INDEX IF NOT EXISTS idx_invoices_accessToken ON invoices(accessToken);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_accessToken_unique
+  ON invoices(accessToken) WHERE accessToken IS NOT NULL;
 
 -- =====================
 -- invoice_events  (audit log; includes hashed-IP/UA on 'viewed' rows)
