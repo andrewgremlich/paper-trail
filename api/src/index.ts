@@ -3,10 +3,12 @@ import { cors } from "hono/cors";
 import type { Env } from "./lib/types";
 import type { AuthVariables } from "./middleware/auth";
 import { cfAccessAuth } from "./middleware/auth";
+import { attachmentRoutes } from "./routes/attachments";
 import { consentRoutes } from "./routes/consent";
 import { customerRoutes } from "./routes/customers";
 import { exportImportRoutes } from "./routes/exportImport";
 import { fileRoutes } from "./routes/files";
+import { runAttachmentSweep } from "./scheduled";
 import { invoiceRoutes } from "./routes/invoices";
 import { projectRoutes } from "./routes/projects";
 import { publicInvoiceRoutes } from "./routes/publicInvoice";
@@ -50,10 +52,20 @@ v1.route("/user-profile", userProfileRoutes);
 v1.route("/customers", customerRoutes);
 v1.route("/invoices", invoiceRoutes);
 v1.route("/files", fileRoutes);
+v1.route("/attachments", attachmentRoutes);
 v1.route("/export", exportImportRoutes);
 v1.route("/import", exportImportRoutes);
 v1.get("/health", (c) => c.json({ status: "ok", version: "v1" }));
 
 app.route("/api/v1", v1);
 
-export default app;
+export default {
+	fetch: app.fetch,
+	async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+		ctx.waitUntil(
+			runAttachmentSweep(env).then((result) => {
+				console.log("attachment sweep complete", result);
+			}),
+		);
+	},
+} satisfies ExportedHandler<Env>;

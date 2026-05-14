@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     ),
   description TEXT NOT NULL,  -- encrypted
   amount TEXT NOT NULL,       -- encrypted string of integer cents (signed)
-  filePath TEXT,              -- R2 key, nullable
+  filePath TEXT,              -- R2 key, nullable. Mirrors attachments.id when set.
   userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -173,6 +173,53 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE INDEX IF NOT EXISTS idx_transactions_projectId ON transactions(projectId);
 CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions(userId);
+
+-- =====================
+-- attachments  (lifecycle authority for R2 file objects)
+--
+-- A row exists for every R2 object the user has uploaded. The R2 key IS
+-- the attachments.id (UUIDv4), so there is exactly one source of truth
+-- for "this file exists and belongs to this user".
+--
+-- Lifecycle states, by column values:
+--   * pending:  attachedAt IS NULL
+--               (just uploaded, not yet linked to a transaction)
+--   * attached: attachedAt IS NOT NULL AND txId IS NOT NULL
+--   * orphaned: attachedAt IS NOT NULL AND txId IS NULL
+--               (was attached, then the transaction was deleted, the
+--               attachment was replaced, or the linked tx was deleted by
+--               cascade)
+--
+-- The cron sweeper (see api/src/scheduled.ts) deletes pending rows older
+-- than PENDING_TTL and orphaned rows older than ORPHAN_GRACE_PERIOD,
+-- removing both the DB row and the R2 object in lockstep.
+--
+-- originalName is encrypted because filenames frequently leak intent or
+-- subject matter ("medical_invoice.pdf", "lawsuit_settlement.pdf"). All
+-- other columns stay plaintext because they're either non-sensitive
+-- (size, content type) or required for sweep predicates / FK joins
+-- (userId, txId, createdAt, attachedAt).
+-- =====================
+CREATE TABLE IF NOT EXISTS attachments (
+  id TEXT PRIMARY KEY,                -- R2 object key (UUIDv4)
+  userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  originalName TEXT NOT NULL,         -- encrypted
+  contentType TEXT NOT NULL,
+  sizeBytes INTEGER NOT NULL CHECK (sizeBytes >= 0),
+  txId TEXT REFERENCES transactions(id) ON DELETE SET NULL,
+  attachedAt TEXT,                    -- NULL while pending; set on first attach
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_userId ON attachments(userId);
+CREATE INDEX IF NOT EXISTS idx_attachments_txId ON attachments(txId);
+-- Partial index makes the cron's "find pending uploads" scan O(pending) not O(all).
+CREATE INDEX IF NOT EXISTS idx_attachments_pending
+  ON attachments(createdAt) WHERE attachedAt IS NULL;
+-- Partial index for the cron's "find orphaned attachments" scan.
+CREATE INDEX IF NOT EXISTS idx_attachments_orphaned
+  ON attachments(attachedAt) WHERE txId IS NULL AND attachedAt IS NOT NULL;
 
 -- =====================
 -- invoices  (source of truth; the URL on the public hosted page is the id)
@@ -286,4 +333,11 @@ AFTER UPDATE ON invoices
 FOR EACH ROW
 BEGIN
   UPDATE invoices SET updatedAt = datetime('now') WHERE id = OLD.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_attachments_set_updatedAt
+AFTER UPDATE ON attachments
+FOR EACH ROW
+BEGIN
+  UPDATE attachments SET updatedAt = datetime('now') WHERE id = OLD.id;
 END;

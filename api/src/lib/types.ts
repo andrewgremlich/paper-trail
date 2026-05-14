@@ -192,6 +192,21 @@ export type InvoiceSnapshot = {
 	}>;
 };
 
+export type AttachmentStatus = "pending" | "attached" | "orphaned";
+
+export type Attachment = {
+	id: string;
+	userId: number;
+	originalName: string;
+	contentType: string;
+	sizeBytes: number;
+	txId: Nullable<string>;
+	attachedAt: Nullable<string>;
+	createdAt: string;
+	updatedAt: string;
+	status: AttachmentStatus;
+};
+
 export type ExportData = {
 	version: string;
 	exportDate: string;

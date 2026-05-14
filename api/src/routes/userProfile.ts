@@ -134,21 +134,23 @@ app.delete("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	// Collect R2 keys from all transactions before deleting DB rows
-	const { results: txRows } = await db
-		.prepare(
-			"SELECT filePath FROM transactions WHERE userId = ? AND filePath IS NOT NULL AND filePath != ''",
-		)
+	// Collect R2 keys from the attachments table — it's the source of
+	// truth for file ownership now. This catches both attached files AND
+	// orphaned/pending ones that the per-transaction scan above used to
+	// miss.
+	const { results: attRows } = await db
+		.prepare("SELECT id FROM attachments WHERE userId = ?")
 		.bind(userId)
-		.all<{ filePath: string }>();
-
-	const r2Keys = txRows
-		.map((r: { filePath: string }) => r.filePath)
-		.filter((p: string) => !/^https?:\/\//i.test(p));
+		.all<{ id: string }>();
 
 	await Promise.all(
-		r2Keys.map((key: string) => c.env.FILES_BUCKET.delete(key)),
+		attRows.map((r: { id: string }) => c.env.FILES_BUCKET.delete(r.id)),
 	);
+
+	await db
+		.prepare("DELETE FROM attachments WHERE userId = ?")
+		.bind(userId)
+		.run();
 
 	// Invoices reference customers (RESTRICT) so wipe them first.
 	await db

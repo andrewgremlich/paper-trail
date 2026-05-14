@@ -166,6 +166,28 @@ app.post("/", async (c) => {
 		return c.json({ error: "Project not found" }, 404);
 	}
 
+	// External (http(s)) filePaths are legacy and not tracked in
+	// attachments. Only internal R2 keys link into the attachments table.
+	const internalFilePath =
+		body.filePath && !/^https?:\/\//i.test(body.filePath)
+			? body.filePath
+			: null;
+
+	if (internalFilePath) {
+		// Verify the caller actually owns the attachment they're linking.
+		// Without this check, a caller could attach another tenant's
+		// pending upload to their own transaction and then download it.
+		const owned = await db
+			.prepare(
+				"SELECT 1 AS ok FROM attachments WHERE id = ? AND userId = ? LIMIT 1",
+			)
+			.bind(internalFilePath, userId)
+			.first<{ ok: number }>();
+		if (!owned?.ok) {
+			return c.json({ error: "Attachment not found" }, 404);
+		}
+	}
+
 	const amountInCents = Math.round(body.amount * 100);
 	const id = crypto.randomUUID();
 
@@ -188,6 +210,19 @@ app.post("/", async (c) => {
 		)
 		.run();
 
+	// Mark the attachment as attached. Doing this AFTER the transaction
+	// insert means a failed insert leaves the attachment pending — the
+	// cron will clean it up after PENDING_TTL.
+	if (internalFilePath) {
+		await db
+			.prepare(
+				`UPDATE attachments SET txId = ?, attachedAt = COALESCE(attachedAt, datetime('now'))
+				WHERE id = ? AND userId = ?`,
+			)
+			.bind(id, internalFilePath, userId)
+			.run();
+	}
+
 	return c.json({ success: true, id }, 201);
 });
 
@@ -207,6 +242,39 @@ app.put("/:id", async (c) => {
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
+	}
+
+	const newInternalFilePath =
+		body.filePath && !/^https?:\/\//i.test(body.filePath)
+			? body.filePath
+			: null;
+
+	// Look up the previous filePath so we can orphan the old attachment if
+	// it's being replaced or cleared. Reading-before-writing is fine here
+	// because the user already owns this row (the WHERE clause below
+	// enforces it) and there's no concurrent path that mutates filePath
+	// for the same row.
+	const prev = await db
+		.prepare(
+			"SELECT filePath FROM transactions WHERE id = ? AND userId = ?",
+		)
+		.bind(id, userId)
+		.first<{ filePath: string | null }>();
+
+	if (!prev) {
+		return c.json({ error: "Transaction not found" }, 404);
+	}
+
+	if (newInternalFilePath) {
+		const owned = await db
+			.prepare(
+				"SELECT 1 AS ok FROM attachments WHERE id = ? AND userId = ? LIMIT 1",
+			)
+			.bind(newInternalFilePath, userId)
+			.first<{ ok: number }>();
+		if (!owned?.ok) {
+			return c.json({ error: "Attachment not found" }, 404);
+		}
 	}
 
 	const amountInCents = Math.round(body.amount * 100);
@@ -231,10 +299,41 @@ app.put("/:id", async (c) => {
 		)
 		.run();
 
+	// If the filePath changed and the previous one was an internal R2 key,
+	// orphan its attachment row. The cron sweeper will delete the R2
+	// object and the row after the orphan grace period.
+	const prevInternal =
+		prev.filePath && !/^https?:\/\//i.test(prev.filePath)
+			? prev.filePath
+			: null;
+	if (prevInternal && prevInternal !== newInternalFilePath) {
+		await db
+			.prepare(
+				"UPDATE attachments SET txId = NULL WHERE id = ? AND userId = ?",
+			)
+			.bind(prevInternal, userId)
+			.run();
+	}
+
+	if (newInternalFilePath && newInternalFilePath !== prevInternal) {
+		await db
+			.prepare(
+				`UPDATE attachments SET txId = ?, attachedAt = COALESCE(attachedAt, datetime('now'))
+				WHERE id = ? AND userId = ?`,
+			)
+			.bind(id, newInternalFilePath, userId)
+			.run();
+	}
+
 	return c.json({ success: true });
 });
 
 // DELETE /api/v1/transactions/:id
+//
+// The attachments FK uses ON DELETE SET NULL, so deleting the transaction
+// automatically orphans the linked attachment (txId becomes NULL). The
+// cron sweeper then removes the R2 object + row after the orphan grace
+// period — no work needed here beyond the row delete.
 app.delete("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);

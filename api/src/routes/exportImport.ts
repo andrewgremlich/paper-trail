@@ -697,6 +697,13 @@ app.post("/zip", async (c) => {
 	// the source of truth — orphaned uploads only happen the other way (an
 	// R2 object whose transaction got rolled back), which can't occur because
 	// uploads come last.
+	// Build a map from new R2 key → linking transaction id so we can write
+	// the attachments row with the correct txId on import.
+	const txByNewKey = new Map<string, string>();
+	for (const tx of data.transactions) {
+		if (tx.filePath) txByNewKey.set(tx.filePath, tx.id);
+	}
+
 	await Promise.all(
 		fileEntries.map(async ([path, bytes]) => {
 			const oldKey = path.slice("files/".length);
@@ -707,7 +714,33 @@ app.post("/zip", async (c) => {
 			const toStore = isDataEncrypted
 				? bytes.buffer as ArrayBuffer
 				: await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
-			await c.env.FILES_BUCKET.put(newKey, toStore);
+			await c.env.FILES_BUCKET.put(newKey, toStore, {
+				customMetadata: {
+					originalName: oldKey,
+					ownerUserId: String(userId),
+				},
+			});
+
+			// Insert the attachments row so the imported file is tracked by
+			// the lifecycle authority. Without this row the cron sweep can't
+			// see it, the Files page can't list it, and the download
+			// endpoint can't serve it.
+			const linkedTxId = txByNewKey.get(newKey) ?? null;
+			await db
+				.prepare(
+					`INSERT INTO attachments (id, userId, originalName, contentType, sizeBytes, txId, attachedAt)
+					VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					newKey,
+					userId,
+					await encrypt(oldKey, c.env),
+					"application/octet-stream",
+					bytes.byteLength,
+					linkedTxId,
+					linkedTxId ? new Date().toISOString() : null,
+				)
+				.run();
 		}),
 	);
 
