@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import classnames from "classnames";
 import { useId, useState } from "react";
 
 import { GenerateInvoice } from "@/components/features/invoices/GenerateInvoice";
@@ -14,6 +13,7 @@ import { deleteTimesheet, getTimesheetById } from "@/lib/db";
 import { getCustomer } from "@/lib/db/customers";
 import { getInvoices } from "@/lib/db/invoices";
 import { usePaperTrailStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 import { CreateTimesheetRecord } from "../CreateTimesheetRecord";
 import { TimesheetEditForm } from "../TimesheetEditForm";
@@ -99,7 +99,7 @@ export const TimesheetModal = () => {
 			{!isEditing && (
 				<Grid
 					gap={4}
-					className={classnames(styles.infoGrid, styles.timesheetInfoSpan)}
+					className={cn(styles.infoGrid, styles.timesheetInfoSpan)}
 					cols={2}
 				>
 					{timesheet?.id && <Span>ID: {timesheet.id}</Span>}
