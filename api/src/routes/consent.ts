@@ -7,7 +7,7 @@ import {
 	validateCsrfToken,
 } from "../lib/csrf";
 import { getDb } from "../lib/db";
-import { sha256Hex } from "../lib/hash";
+import { hmacSha256Hex } from "../lib/hash";
 import type { Env } from "../lib/types";
 
 /**
@@ -176,8 +176,8 @@ app.post("/:token", async (c) => {
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await sha256Hex(ip, c.env) : null;
-	const uaHash = ua ? await sha256Hex(ua, c.env) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
 	const now = new Date().toISOString();
 
 	if (decision === "agree") {
@@ -203,9 +203,9 @@ app.post("/:token", async (c) => {
 				row.userId,
 				await encrypt(
 					JSON.stringify({
+						v: 2,
 						ipHash,
 						uaHash,
-						tokenLast4: token.slice(-4),
 					}),
 					c.env,
 				),
@@ -241,7 +241,7 @@ app.post("/:token", async (c) => {
 			row.id,
 			row.userId,
 			await encrypt(
-				JSON.stringify({ ipHash, uaHash, tokenLast4: token.slice(-4) }),
+				JSON.stringify({ v: 2, ipHash, uaHash }),
 				c.env,
 			),
 		)
@@ -353,8 +353,8 @@ app.post("/revoke/:token", async (c) => {
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await sha256Hex(ip, c.env) : null;
-	const uaHash = ua ? await sha256Hex(ua, c.env) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
 	const now = new Date().toISOString();
 
 	await db
@@ -377,7 +377,7 @@ app.post("/revoke/:token", async (c) => {
 			row.id,
 			row.userId,
 			await encrypt(
-				JSON.stringify({ ipHash, uaHash, tokenLast4: token.slice(-4), at: now }),
+				JSON.stringify({ v: 2, ipHash, uaHash, at: now }),
 				c.env,
 			),
 		)

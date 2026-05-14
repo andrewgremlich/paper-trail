@@ -14,8 +14,11 @@ export const exportZipData = async (
 	return response.arrayBuffer();
 };
 
+// `?confirm=true` is required by the backend so a stray POST can't wipe the
+// user's data. Both import flows are reached only via an explicit user action
+// in the Settings UI, so the parameter is always set here.
 export const importAllData = async (data: ExportData): Promise<void> => {
-	await api.post("/import/data", data);
+	await api.post("/import/data?confirm=true", data);
 };
 
 export const importZipData = async (
@@ -26,7 +29,7 @@ export const importZipData = async (
 	entriesCount: number;
 	transactionsCount: number;
 }> => {
-	const response = await fetch("/api/v1/import/zip", {
+	const response = await fetch("/api/v1/import/zip?confirm=true", {
 		method: "POST",
 		credentials: "include",
 		headers: { "Content-Type": "application/zip" },

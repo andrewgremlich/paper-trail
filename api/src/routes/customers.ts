@@ -373,7 +373,9 @@ app.post("/:id/request-consent", async (c) => {
 			crypto.randomUUID(),
 			id,
 			userId,
-			await encrypt(JSON.stringify({ tokenLast4: token.slice(-4) }), c.env),
+			// No payload fields — the bare 'consent_requested' row is the audit signal.
+			// We intentionally do not store any token bytes here (§13).
+			await encrypt(JSON.stringify({}), c.env),
 		)
 		.run();
 

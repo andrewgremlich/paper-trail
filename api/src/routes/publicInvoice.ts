@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
-import { constantTimeEqual, sha256Hex } from "../lib/hash";
+import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
 import type { Env, InvoiceSnapshot } from "../lib/types";
 
@@ -206,8 +206,8 @@ app.get("/:id", async (c) => {
 		const ip =
 			c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 		const ua = c.req.header("User-Agent") ?? "";
-		const ipHash = ip ? await sha256Hex(ip, c.env) : null;
-		const uaHash = ua ? await sha256Hex(ua, c.env) : null;
+		const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
+		const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
 		await db
 			.prepare(
 				`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
@@ -217,7 +217,7 @@ app.get("/:id", async (c) => {
 				crypto.randomUUID(),
 				row.id,
 				row.userId,
-				await encrypt(JSON.stringify({ ipHash, uaHash }), c.env),
+				await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), c.env),
 			)
 			.run();
 	}
