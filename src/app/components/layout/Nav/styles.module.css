@@ -12,7 +12,10 @@
 
 	& button {
 		box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.75);
-		transition: box-shadow 200ms ease-out, rotate 200ms ease-out, background-color 0.15s ease;
+		transition:
+			box-shadow 200ms ease-out,
+			rotate 200ms ease-out,
+			background-color 0.15s ease;
 
 		&:hover {
 			box-shadow: 0px 0px 25px 0px var(--green-500);
