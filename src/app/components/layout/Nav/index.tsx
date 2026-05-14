@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import styles from "./styles.module.css";
 
 export const Nav = () => {
-	const { openModal, changeActiveTab, activeTab } = usePaperTrailStore();
+	const { changeActiveTab, activeTab } = usePaperTrailStore();
 
 	return (
 		<div className={styles.navWrapper}>
@@ -71,12 +71,16 @@ export const Nav = () => {
 
 				<div>
 					<Button
-						className={styles.settings}
+						className={cn(
+							styles.settings,
+							activeTab === ProjectPageTab.Settings && styles.navButtonActive,
+						)}
 						variant="ghost"
 						size="icon"
-						onClick={() => openModal({ type: "settings" })}
+						onClick={() => changeActiveTab(ProjectPageTab.Settings)}
 						type="button"
-						aria-label="Open settings"
+						aria-label="Settings"
+						aria-pressed={activeTab === ProjectPageTab.Settings}
 					>
 						<Settings size={40} />
 					</Button>

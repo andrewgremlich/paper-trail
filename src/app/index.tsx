@@ -2,6 +2,7 @@ import { Customers } from "./Customers";
 import { Invoices } from "./Invoices";
 import { usePaperTrailStore } from "./lib/store";
 import { ProjectPageTab } from "./lib/types";
+import { Settings } from "./Settings";
 import { Timesheets } from "./Timesheets";
 import { Transactions } from "./Transactions";
 
@@ -17,6 +18,8 @@ export const App = () => {
 			return <Invoices />;
 		case ProjectPageTab.Customers:
 			return <Customers />;
+		case ProjectPageTab.Settings:
+			return <Settings />;
 		default:
 			return <Timesheets />;
 	}

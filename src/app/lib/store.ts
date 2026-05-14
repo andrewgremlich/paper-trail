@@ -8,7 +8,6 @@ export type Theme = "light" | "dark" | "system";
 type ActiveModal =
 	| { type: "project"; projectId: string }
 	| { type: "timesheet"; timesheetId: string }
-	| { type: "settings" }
 	| { type: "invoice"; invoiceId?: string }
 	| null;
 

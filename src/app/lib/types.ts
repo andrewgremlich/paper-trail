@@ -3,4 +3,5 @@ export enum ProjectPageTab {
 	Transactions = "Transactions",
 	Invoices = "Invoices",
 	Customers = "Customers",
+	Settings = "Settings",
 }
