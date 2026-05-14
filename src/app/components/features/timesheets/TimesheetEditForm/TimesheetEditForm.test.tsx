@@ -10,7 +10,7 @@ describe("TimesheetEditForm", () => {
 		userId: 1,
 		name: "Test Timesheet",
 		description: "Test Description",
-		active: true,
+		closed: false,
 		projectId: "proj-1",
 		projectRate: 5000,
 		customerId: "cust-42",

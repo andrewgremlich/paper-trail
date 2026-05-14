@@ -14,7 +14,7 @@ describe("GenerateInvoice", () => {
 		projectId: "proj-1",
 		customerId: "cust-42",
 		projectRate: 5000,
-		active: true,
+		closed: false,
 		entries: [
 			{
 				id: "entry-1",
@@ -60,7 +60,7 @@ describe("GenerateInvoice", () => {
 	it("renders Invoice Generated text when inactive", () => {
 		const inactiveTimesheet = {
 			...mockTimesheet,
-			active: false,
+			closed: true,
 		};
 		const html = renderComponent(inactiveTimesheet);
 		expect(html).toContain("Invoice Generated");
@@ -69,7 +69,7 @@ describe("GenerateInvoice", () => {
 	it("disables button when timesheet is inactive", () => {
 		const inactiveTimesheet = {
 			...mockTimesheet,
-			active: false,
+			closed: true,
 		};
 		const html = renderComponent(inactiveTimesheet);
 		expect(html).toContain("disabled");

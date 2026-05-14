@@ -52,16 +52,16 @@ export const updateTimesheet = async ({
 	id,
 	name,
 	description,
-	active,
+	closed,
 }: Pick<
 	Timesheet,
-	"id" | "name" | "description" | "active"
+	"id" | "name" | "description" | "closed"
 >): Promise<Timesheet | null> => {
 	try {
 		return await api.put<Timesheet>(`/timesheets/${id}`, {
 			name,
 			description,
-			active,
+			closed,
 		});
 	} catch (error) {
 		console.error("Error in updateTimesheet:", error);

@@ -301,7 +301,7 @@ async function buildImportBatch(
 		stmts.push(
 			db
 				.prepare(
-					`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
+					`INSERT INTO timesheets (id, projectId, name, description, closed, createdAt, updatedAt, userId)
 					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				)
 				.bind(
@@ -309,7 +309,7 @@ async function buildImportBatch(
 					ts.projectId,
 					ts.name,
 					ts.description,
-					ts.active ? 1 : 0,
+					ts.closed ? 1 : 0,
 					ts.createdAt,
 					ts.updatedAt,
 					userId,
@@ -459,7 +459,7 @@ app.get("/data", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+				`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 				FROM timesheets WHERE userId = ? ORDER BY id ASC`,
 			)
 			.bind(userId)
@@ -809,7 +809,7 @@ app.get("/zip", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+				`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 				FROM timesheets WHERE userId = ? ORDER BY id ASC`,
 			)
 			.bind(userId)

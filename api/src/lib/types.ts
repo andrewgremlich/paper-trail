@@ -35,7 +35,7 @@ export type Timesheet = {
 	projectId: string;
 	name: string;
 	description: Nullable<string>;
-	active: boolean | number;
+	closed: boolean | number;
 	createdAt: string;
 	updatedAt: string;
 };

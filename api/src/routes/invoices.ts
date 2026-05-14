@@ -283,7 +283,7 @@ app.post("/", async (c) => {
 	if (body.timesheetId) {
 		const ts = await db
 			.prepare(
-				`SELECT t.id, t.projectId, t.name, t.description, t.active,
+				`SELECT t.id, t.projectId, t.name, t.description, t.closed,
 				        p.rate_in_cents AS projectRate
 				 FROM timesheets t
 				 JOIN projects p ON p.id = t.projectId
@@ -295,11 +295,11 @@ app.post("/", async (c) => {
 				projectId: string;
 				name: string;
 				description: string | null;
-				active: number;
+				closed: number;
 				projectRate: string | number | null;
 			}>();
 		if (!ts) return c.json({ error: "Timesheet not found" }, 404);
-		if (!ts.active) return c.json({ error: "Timesheet already closed" }, 400);
+		if (ts.closed) return c.json({ error: "Timesheet already closed" }, 400);
 
 		const projectRate = isEncryptionEnabled(c.env)
 			? Number(await decrypt(String(ts.projectRate), c.env))
@@ -364,10 +364,9 @@ app.post("/", async (c) => {
 	await logEvent(invoiceId, userId, "created", { number }, c.env);
 
 	if (body.timesheetId) {
-		// Close the timesheet — matches the previous Stripe-flow behaviour.
 		await db
 			.prepare(
-				`UPDATE timesheets SET active = 0, updatedAt = datetime('now')
+				`UPDATE timesheets SET closed = 1, updatedAt = datetime('now')
 				 WHERE id = ? AND userId = ?`,
 			)
 			.bind(body.timesheetId, userId)

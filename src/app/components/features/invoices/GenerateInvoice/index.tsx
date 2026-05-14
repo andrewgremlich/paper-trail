@@ -50,7 +50,7 @@ export const GenerateInvoice = ({
 	});
 
 	const canGenerate =
-		timesheet?.active &&
+		!timesheet?.closed &&
 		timesheet?.entries.length > 0 &&
 		timesheet?.customerId != null;
 
@@ -69,7 +69,7 @@ export const GenerateInvoice = ({
 				leftIcon={<NotebookText />}
 				isLoading={isPending}
 			>
-				{timesheet?.active ? "Generate Invoice" : "Invoice Generated"}
+				{timesheet?.closed ? "Invoice Generated" : "Generate Invoice"}
 			</Button>
 			{timesheet?.customerId == null && (
 				<div className={styles.errorMessage}>

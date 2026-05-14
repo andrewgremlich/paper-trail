@@ -20,7 +20,7 @@ const timesheetCreateSchema = z.object({
 const timesheetUpdateSchema = z.object({
 	name: shortNameSchema,
 	description: descriptionSchema.nullable().optional(),
-	active: z.boolean(),
+	closed: z.boolean(),
 });
 
 async function decryptTimesheetRow(
@@ -42,7 +42,7 @@ app.get("/", async (c) => {
 	const userId = c.get("userId");
 	const { results } = await db
 		.prepare(
-			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 			FROM timesheets WHERE userId = ? ORDER BY createdAt DESC`,
 		)
 		.bind(userId)
@@ -50,7 +50,7 @@ app.get("/", async (c) => {
 	const rows = await Promise.all(
 		results.map(async (r: Record<string, unknown>) => ({
 			...(await decryptTimesheetRow(r, c.env)),
-			active: !!r.active,
+			closed: !!r.closed,
 		})),
 	);
 	return c.json(rows);
@@ -74,7 +74,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 
 	const row = await db
 		.prepare(
-			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
+			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.closed, t.createdAt, t.updatedAt,
 			        p.customerId AS customerId, p.rate_in_cents AS projectRate
 			 FROM timesheets t
 			 JOIN projects p ON p.id = t.projectId
@@ -96,7 +96,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 	return c.json({
 		...decrypted,
 		projectRate,
-		active: !!(row as Record<string, unknown>).active,
+		closed: !!(row as Record<string, unknown>).closed,
 	});
 });
 
@@ -108,7 +108,7 @@ app.get("/:id", async (c) => {
 
 	const header = await db
 		.prepare(
-			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.active, t.createdAt, t.updatedAt,
+			`SELECT t.id, t.userId, t.projectId, t.name, t.description, t.closed, t.createdAt, t.updatedAt,
 			p.customerId as customerId, p.rate_in_cents as projectRate
 			FROM timesheets t
 			JOIN projects p ON p.id = t.projectId
@@ -153,7 +153,7 @@ app.get("/:id", async (c) => {
 	return c.json({
 		...decryptedHeader,
 		projectRate,
-		active: !!header.active,
+		closed: !!header.closed,
 		entries,
 	});
 });
@@ -182,15 +182,15 @@ app.post("/", async (c) => {
 
 	await db
 		.prepare(
-			`INSERT INTO timesheets (id, projectId, name, description, active, userId)
+			`INSERT INTO timesheets (id, projectId, name, description, closed, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(id, body.projectId, body.name, encDescription, 1, userId)
+		.bind(id, body.projectId, body.name, encDescription, 0, userId)
 		.run();
 
 	const row = await db
 		.prepare(
-			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(id, userId)
@@ -204,7 +204,7 @@ app.post("/", async (c) => {
 		row as Record<string, unknown>,
 		c.env,
 	);
-	return c.json({ ...decryptedRow, active: !!row.active }, 201);
+	return c.json({ ...decryptedRow, closed: !!row.closed }, 201);
 });
 
 // PUT /api/v1/timesheets/:id - update timesheet
@@ -228,15 +228,15 @@ app.put("/:id", async (c) => {
 	await db
 		.prepare(
 			`UPDATE timesheets
-			SET name = ?, description = ?, active = ?, updatedAt = datetime('now')
+			SET name = ?, description = ?, closed = ?, updatedAt = datetime('now')
 			WHERE id = ? AND userId = ?`,
 		)
-		.bind(body.name, encDescription, body.active ? 1 : 0, id, userId)
+		.bind(body.name, encDescription, body.closed ? 1 : 0, id, userId)
 		.run();
 
 	const updated = await db
 		.prepare(
-			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(id, userId)
@@ -250,7 +250,7 @@ app.put("/:id", async (c) => {
 		updated as Record<string, unknown>,
 		c.env,
 	);
-	return c.json({ ...decryptedUpdated, active: !!updated.active });
+	return c.json({ ...decryptedUpdated, closed: !!updated.closed });
 });
 
 // DELETE /api/v1/timesheets/:id

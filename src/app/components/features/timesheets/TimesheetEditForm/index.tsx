@@ -24,7 +24,7 @@ export const TimesheetEditForm = ({
 				id: timesheet.id,
 				name: String(formData.get("name") || ""),
 				description: String(formData.get("description") || ""),
-				active: timesheet.active,
+				closed: timesheet.closed,
 			});
 		},
 		onSuccess: async () => {

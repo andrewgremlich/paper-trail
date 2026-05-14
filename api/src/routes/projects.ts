@@ -82,7 +82,7 @@ app.get("/:id", async (c) => {
 
 	const { results: timesheets } = await db
 		.prepare(
-			`SELECT id, name, description, active, createdAt, updatedAt
+			`SELECT id, name, description, closed, createdAt, updatedAt
 			FROM timesheets WHERE projectId = ? AND userId = ? ORDER BY createdAt DESC`,
 		)
 		.bind(projectId, userId)
@@ -97,7 +97,7 @@ app.get("/:id", async (c) => {
 				description: t.description
 					? await decrypt(t.description as string, c.env)
 					: t.description,
-				active: !!t.active,
+				closed: !!t.closed,
 			})),
 		),
 	});
@@ -167,7 +167,7 @@ app.post("/", async (c) => {
 	const timesheetId = crypto.randomUUID();
 	await db
 		.prepare(
-			`INSERT INTO timesheets (id, projectId, name, description, active, userId)
+			`INSERT INTO timesheets (id, projectId, name, description, closed, userId)
 			VALUES (?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
@@ -175,14 +175,14 @@ app.post("/", async (c) => {
 			projectId,
 			timesheetName,
 			await encrypt("Initial timesheet", c.env),
-			1,
+			0,
 			userId,
 		)
 		.run();
 
 	const tsRow = await db
 		.prepare(
-			`SELECT id, userId, projectId, name, description, active, createdAt, updatedAt
+			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
 			FROM timesheets WHERE id = ? AND userId = ?`,
 		)
 		.bind(timesheetId, userId)
@@ -200,7 +200,7 @@ app.post("/", async (c) => {
 				description: tsRow.description
 					? await decrypt(tsRow.description as string, c.env)
 					: tsRow.description,
-				active: !!tsRow.active,
+				closed: !!tsRow.closed,
 			},
 		},
 		201,

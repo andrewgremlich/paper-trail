@@ -23,7 +23,7 @@ export type Timesheet = {
 	projectId: string;
 	name: string;
 	description: Nullable<string>;
-	active: boolean;
+	closed: boolean;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -35,7 +35,7 @@ export type CreateTimesheet = Pick<
 
 export type MinimalTimesheet = Pick<
 	Timesheet,
-	"id" | "name" | "description" | "createdAt" | "updatedAt" | "active"
+	"id" | "name" | "description" | "createdAt" | "updatedAt" | "closed"
 >;
 
 export type TimesheetWithProject = Timesheet & {
