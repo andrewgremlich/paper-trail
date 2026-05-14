@@ -1,5 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
+// SheetJS (`xlsx`) is pinned to 0.18.5 (no caret) in package.json so a
+// future patch release can't sneak in. SheetJS has historically had
+// parse-time advisories; we only ever *write* xlsx (here and in the
+// frontend export), and never call `XLSX.read*` on untrusted input, so
+// those CVEs don't currently apply. Re-evaluate before adding a parse
+// path — see docs/SECURITY_REMAINING.md §16.
 import * as XLSX from "xlsx";
 import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";

@@ -1,11 +1,122 @@
 import { unzipSync, zipSync } from "fflate";
 import { Hono } from "hono";
+import { z } from "zod";
 import { decrypt, decryptBuffer, encrypt, encryptBuffer, isEncryptionEnabled } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
+
+// ─── Validation schemas ───────────────────────────────────────────────────────
+//
+// Encrypted exports keep numeric columns as base64 ciphertext strings, while
+// plaintext exports keep them as numbers. The schemas below accept either form
+// — type-checking the row values is the goal, not coercing them. The batch
+// builder chooses whether to encrypt each value based on `data.encrypted`.
+
+const stringOrNullish = z.union([z.string(), z.null()]).optional();
+const numericOrEncrypted = z.union([z.string(), z.number()]);
+const boolOrNumber = z.union([z.boolean(), z.number()]).optional();
+
+const customerImportSchema = z.object({
+	id: z.string().min(1),
+	name: z.string(),
+	email: z.string(),
+	address: stringOrNullish,
+	consentToEmailInvoices: boolOrNumber,
+	consentedAt: stringOrNullish,
+	consentRequestedAt: stringOrNullish,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const projectImportSchema = z.object({
+	id: z.string().min(1),
+	name: z.string(),
+	active: boolOrNumber,
+	customerId: stringOrNullish,
+	rate_in_cents: numericOrEncrypted,
+	description: stringOrNullish,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const timesheetImportSchema = z.object({
+	id: z.string().min(1),
+	projectId: z.string().min(1),
+	name: z.string(),
+	description: stringOrNullish,
+	active: boolOrNumber,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const timesheetEntryImportSchema = z.object({
+	id: z.string().min(1),
+	timesheetId: z.string().min(1),
+	date: z.string(),
+	minutes: z.number().int().nonnegative(),
+	description: z.string(),
+	amount: numericOrEncrypted,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const transactionImportSchema = z.object({
+	id: z.string().min(1),
+	projectId: z.string().min(1),
+	date: z.string(),
+	description: z.string(),
+	amount: numericOrEncrypted,
+	filePath: stringOrNullish,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const invoiceImportSchema = z.object({
+	id: z.string().min(1),
+	customerId: z.string().min(1),
+	timesheetId: stringOrNullish,
+	number: z.string(),
+	status: z.enum(["draft", "sent", "paid", "void"]),
+	amount_cents: numericOrEncrypted,
+	description: stringOrNullish,
+	issuedAt: z.string(),
+	dueDate: z.string(),
+	sentAt: stringOrNullish,
+	paidAt: stringOrNullish,
+	voidedAt: stringOrNullish,
+	archivedAt: stringOrNullish,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+const userProfileImportSchema = z
+	.object({
+		displayName: z.string().nullish(),
+		email: z.string().nullish(),
+		venmoHandle: stringOrNullish,
+		paypalHandle: stringOrNullish,
+		businessName: stringOrNullish,
+		businessAddress: stringOrNullish,
+	})
+	.partial();
+
+const exportDataSchema = z.object({
+	version: z.string(),
+	exportDate: z.string(),
+	encrypted: z.boolean().optional(),
+	customers: z.array(customerImportSchema).optional(),
+	projects: z.array(projectImportSchema),
+	timesheets: z.array(timesheetImportSchema),
+	timesheetEntries: z.array(timesheetEntryImportSchema),
+	transactions: z.array(transactionImportSchema),
+	invoices: z.array(invoiceImportSchema).optional(),
+	userProfile: userProfileImportSchema.nullish(),
+});
+
+type ValidatedImport = z.infer<typeof exportDataSchema>;
 
 function contentTypeToExtension(contentType: string): string {
 	const type = contentType.split(";")[0].trim().toLowerCase();
@@ -45,6 +156,283 @@ async function decryptTransactionRow(
 		: (row.amount as number);
 
 	return { ...row, description, amount };
+}
+
+// ─── Atomic-import batch builder ──────────────────────────────────────────────
+//
+// Encryption can't run inside a `db.batch()` because the bind() args are
+// captured eagerly. We resolve every encrypted value first, then build the
+// statement list, then hand the whole list to D1 in a single transactional
+// batch — any failure rolls the entire import back, leaving the previous data
+// intact (§15).
+
+async function buildImportBatch(
+	db: D1Database,
+	data: ValidatedImport,
+	userId: number,
+	env: Env,
+): Promise<D1PreparedStatement[]> {
+	const isDataEncrypted = data.encrypted === true;
+	const enc = (v: string) => (isDataEncrypted ? v : encrypt(v, env));
+	const encOrNull = async (v: string | null | undefined): Promise<string | null> =>
+		v == null ? null : await enc(v);
+
+	// Pre-encrypt all the values we'll need before constructing any statements.
+	const customers = await Promise.all(
+		(data.customers ?? []).map(async (customer) => ({
+			...customer,
+			name: await enc(customer.name),
+			email: await enc(customer.email),
+			address: await encOrNull(customer.address ?? null),
+		})),
+	);
+
+	const projects = await Promise.all(
+		data.projects.map(async (project) => ({
+			...project,
+			rate_in_cents: await enc(String(project.rate_in_cents)),
+			description: await enc(project.description ?? ""),
+		})),
+	);
+
+	const timesheets = await Promise.all(
+		data.timesheets.map(async (ts) => ({
+			...ts,
+			description: await encOrNull(ts.description ?? null),
+		})),
+	);
+
+	const entries = await Promise.all(
+		data.timesheetEntries.map(async (entry) => ({
+			...entry,
+			description: await enc(entry.description),
+			amount: await enc(String(entry.amount)),
+		})),
+	);
+
+	const transactions = await Promise.all(
+		data.transactions.map(async (tx) => ({
+			...tx,
+			description: await enc(tx.description),
+			amount: await enc(String(tx.amount)),
+		})),
+	);
+
+	const invoices = await Promise.all(
+		(data.invoices ?? []).map(async (inv) => ({
+			...inv,
+			amount_cents: await enc(String(inv.amount_cents)),
+			description: await encOrNull(inv.description ?? null),
+		})),
+	);
+
+	const profile = data.userProfile
+		? {
+				displayName: data.userProfile.displayName ?? "",
+				email: data.userProfile.email ?? "",
+				venmoHandle: await encOrNull(data.userProfile.venmoHandle),
+				paypalHandle: await encOrNull(data.userProfile.paypalHandle),
+				businessName: await encOrNull(data.userProfile.businessName),
+				businessAddress: await encOrNull(data.userProfile.businessAddress),
+			}
+		: null;
+
+	const stmts: D1PreparedStatement[] = [];
+
+	// Wipe existing rows in reverse-FK order.
+	stmts.push(
+		db.prepare("DELETE FROM invoice_events WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM invoices WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM customer_events WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM customers WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM timesheet_entries WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM transactions WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM timesheets WHERE userId = ?").bind(userId),
+		db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId),
+	);
+
+	// Insert customers first so projects/invoices can FK-link.
+	for (const customer of customers) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO customers (id, userId, name, email, address,
+					        consentToEmailInvoices, consentedAt, consentRequestedAt,
+					        createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					customer.id,
+					userId,
+					customer.name,
+					customer.email,
+					customer.address,
+					customer.consentToEmailInvoices ? 1 : 0,
+					customer.consentedAt ?? null,
+					customer.consentRequestedAt ?? null,
+					customer.createdAt,
+					customer.updatedAt,
+				),
+		);
+	}
+
+	for (const project of projects) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO projects (id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt, userId)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					project.id,
+					project.name,
+					project.active ? 1 : 0,
+					project.customerId ?? null,
+					project.rate_in_cents,
+					project.description,
+					project.createdAt,
+					project.updatedAt,
+					userId,
+				),
+		);
+	}
+
+	for (const ts of timesheets) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					ts.id,
+					ts.projectId,
+					ts.name,
+					ts.description,
+					ts.active ? 1 : 0,
+					ts.createdAt,
+					ts.updatedAt,
+					userId,
+				),
+		);
+	}
+
+	for (const entry of entries) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					entry.id,
+					entry.timesheetId,
+					entry.date,
+					entry.minutes,
+					entry.description,
+					entry.amount,
+					entry.createdAt,
+					entry.updatedAt,
+					userId,
+				),
+		);
+	}
+
+	for (const tx of transactions) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO transactions (id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					tx.id,
+					tx.projectId,
+					tx.date,
+					tx.description,
+					tx.amount,
+					tx.filePath ?? null,
+					tx.createdAt,
+					tx.updatedAt,
+					userId,
+				),
+		);
+	}
+
+	for (const inv of invoices) {
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO invoices
+					   (id, userId, customerId, timesheetId, number, status,
+					    amount_cents, description, issuedAt, dueDate,
+					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.bind(
+					inv.id,
+					userId,
+					inv.customerId,
+					inv.timesheetId ?? null,
+					inv.number,
+					inv.status,
+					inv.amount_cents,
+					inv.description,
+					inv.issuedAt,
+					inv.dueDate,
+					inv.sentAt ?? null,
+					inv.paidAt ?? null,
+					inv.voidedAt ?? null,
+					inv.archivedAt ?? null,
+					inv.createdAt,
+					inv.updatedAt,
+				),
+		);
+	}
+
+	if (profile) {
+		stmts.push(
+			db
+				.prepare(
+					`UPDATE users
+					 SET displayName = ?, email = ?,
+					     venmoHandle = ?, paypalHandle = ?,
+					     businessName = ?, businessAddress = ?
+					 WHERE id = ?`,
+				)
+				.bind(
+					profile.displayName,
+					profile.email,
+					profile.venmoHandle,
+					profile.paypalHandle,
+					profile.businessName,
+					profile.businessAddress,
+					userId,
+				),
+		);
+	}
+
+	return stmts;
+}
+
+// `?confirm=true` is required on every destructive import endpoint so a stray
+// frontend call (or a misclick that fires a default-method form) can't wipe
+// the user's data without an explicit go-ahead.
+function requireConfirm(c: { req: { query: (k: string) => string | undefined } }):
+	| { ok: true }
+	| { ok: false; response: Response } {
+	if (c.req.query("confirm") === "true") return { ok: true };
+	return {
+		ok: false,
+		response: new Response(
+			JSON.stringify({
+				error:
+					"Import requires explicit confirmation — call with ?confirm=true.",
+				code: "CONFIRMATION_REQUIRED",
+			}),
+			{ status: 400, headers: { "Content-Type": "application/json" } },
+		),
+	};
 }
 
 // GET /api/export/data?encrypted=true|false - export all data as JSON
@@ -208,294 +596,43 @@ app.get("/data", async (c) => {
 
 // POST /api/import/data - import JSON data (replaces existing)
 app.post("/data", async (c) => {
-	const data = await c.req.json<ExportData>();
+	const confirm = requireConfirm(c);
+	if (!confirm.ok) return confirm.response;
 
-	// Validate structure
-	if (
-		!data.version ||
-		!data.exportDate ||
-		!Array.isArray(data.projects) ||
-		!Array.isArray(data.timesheets) ||
-		!Array.isArray(data.timesheetEntries) ||
-		!Array.isArray(data.transactions)
-	) {
-		return c.json({ error: "Invalid backup file format" }, 400);
+	const raw = await c.req.json();
+	const parsed = exportDataSchema.safeParse(raw);
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid backup file format", issues: parsed.error.issues },
+			400,
+		);
 	}
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	// Delete existing data in reverse dependency order
-	await db
-		.prepare("DELETE FROM invoice_events WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM invoices WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM customer_events WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM customers WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM timesheet_entries WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM transactions WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db
-		.prepare("DELETE FROM timesheets WHERE userId = ?")
-		.bind(userId)
-		.run();
-	await db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId).run();
+	const stmts = await buildImportBatch(db, parsed.data, userId, c.env);
 
-	// Determine if imported data is already encrypted
-	const isDataEncrypted = data.encrypted === true;
-
-	// Insert customers first so projects can FK-link to them.
-	if (data.customers) {
-		for (const customer of data.customers) {
-			const name = isDataEncrypted
-				? customer.name
-				: await encrypt(customer.name, c.env);
-			const email = isDataEncrypted
-				? customer.email
-				: await encrypt(customer.email, c.env);
-			const address = customer.address
-				? isDataEncrypted
-					? customer.address
-					: await encrypt(customer.address, c.env)
-				: null;
-
-			await db
-				.prepare(
-					`INSERT INTO customers (id, userId, name, email, address,
-					        consentToEmailInvoices, consentedAt, consentRequestedAt,
-					        createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				)
-				.bind(
-					customer.id,
-					userId,
-					name,
-					email,
-					address,
-					customer.consentToEmailInvoices ? 1 : 0,
-					customer.consentedAt,
-					customer.consentRequestedAt,
-					customer.createdAt,
-					customer.updatedAt,
-				)
-				.run();
-		}
-	}
-
-	// Insert projects — customerId is now a plain INTEGER FK (no encryption)
-	for (const project of data.projects) {
-		const rate_in_cents = isDataEncrypted
-			? project.rate_in_cents
-			: await encrypt(String(project.rate_in_cents), c.env);
-		const description = isDataEncrypted
-			? project.description
-			: await encrypt(project.description ?? "", c.env);
-
-		await db
-			.prepare(
-				`INSERT INTO projects (id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				project.id,
-				project.name,
-				project.active ? 1 : 0,
-				project.customerId ?? null,
-				rate_in_cents,
-				description,
-				project.createdAt,
-				project.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	// Insert timesheets — invoiceId column is gone
-	for (const ts of data.timesheets) {
-		const description = isDataEncrypted
-			? ts.description
-			: ts.description
-				? await encrypt(ts.description, c.env)
-				: null;
-
-		await db
-			.prepare(
-				`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				ts.id,
-				ts.projectId,
-				ts.name,
-				description,
-				ts.active ? 1 : 0,
-				ts.createdAt,
-				ts.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	// Insert timesheet entries — encrypt if data is plaintext
-	for (const entry of data.timesheetEntries) {
-		const description = isDataEncrypted
-			? entry.description
-			: await encrypt(entry.description, c.env);
-		const amount = isDataEncrypted
-			? entry.amount
-			: await encrypt(String(entry.amount), c.env);
-
-		await db
-			.prepare(
-				`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				entry.id,
-				entry.timesheetId,
-				entry.date,
-				entry.minutes,
-				description,
-				amount,
-				entry.createdAt,
-				entry.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	// Insert transactions — encrypt if data is plaintext, store as-is if already encrypted
-	for (const tx of data.transactions) {
-		let description: string;
-		let amount: string | number;
-
-		if (isDataEncrypted) {
-			// Already encrypted with the same key — store as-is
-			description = tx.description;
-			amount = tx.amount;
-		} else {
-			// Plaintext import — encrypt before storing
-			description = await encrypt(tx.description, c.env);
-			amount = await encrypt(String(tx.amount), c.env);
-		}
-
-		await db
-			.prepare(
-				`INSERT INTO transactions (id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				tx.id,
-				tx.projectId,
-				tx.date,
-				description,
-				amount,
-				tx.filePath,
-				tx.createdAt,
-				tx.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	// Insert invoices (after customers + timesheets exist)
-	if (data.invoices) {
-		for (const inv of data.invoices) {
-			const amount_cents = isDataEncrypted
-				? inv.amount_cents
-				: await encrypt(String(inv.amount_cents), c.env);
-			const description = inv.description
-				? isDataEncrypted
-					? inv.description
-					: await encrypt(inv.description, c.env)
-				: null;
-
-			await db
-				.prepare(
-					`INSERT INTO invoices
-					   (id, userId, customerId, timesheetId, number, status,
-					    amount_cents, description, issuedAt, dueDate,
-					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				)
-				.bind(
-					inv.id,
-					userId,
-					inv.customerId,
-					inv.timesheetId,
-					inv.number,
-					inv.status,
-					amount_cents,
-					description,
-					inv.issuedAt,
-					inv.dueDate,
-					inv.sentAt,
-					inv.paidAt,
-					inv.voidedAt,
-					inv.archivedAt,
-					inv.createdAt,
-					inv.updatedAt,
-				)
-				.run();
-		}
-	}
-
-	// Update user profile if present (now includes business/payment fields)
-	if (data.userProfile) {
-		const p = data.userProfile;
-		const encOrNull = async (v: string | null | undefined) =>
-			v == null
-				? null
-				: isDataEncrypted
-					? v
-					: await encrypt(v, c.env);
-		await db
-			.prepare(
-				`UPDATE users
-				 SET displayName = ?, email = ?,
-				     venmoHandle = ?, paypalHandle = ?,
-				     businessName = ?, businessAddress = ?
-				 WHERE id = ?`,
-			)
-			.bind(
-				p.displayName,
-				p.email,
-				await encOrNull(p.venmoHandle),
-				await encOrNull(p.paypalHandle),
-				await encOrNull(p.businessName),
-				await encOrNull(p.businessAddress),
-				userId,
-			)
-			.run();
-	}
+	// `db.batch` runs as a single SQLite transaction — if any DELETE or
+	// INSERT fails, the entire import is rolled back and the user keeps
+	// their previous data.
+	await db.batch(stmts);
 
 	return c.json({
-		projectsCount: data.projects.length,
-		timesheetsCount: data.timesheets.length,
-		entriesCount: data.timesheetEntries.length,
-		transactionsCount: data.transactions.length,
-		customersCount: data.customers?.length ?? 0,
-		invoicesCount: data.invoices?.length ?? 0,
+		projectsCount: parsed.data.projects.length,
+		timesheetsCount: parsed.data.timesheets.length,
+		entriesCount: parsed.data.timesheetEntries.length,
+		transactionsCount: parsed.data.transactions.length,
+		customersCount: parsed.data.customers?.length ?? 0,
+		invoicesCount: parsed.data.invoices?.length ?? 0,
 	});
 });
 
 // POST /api/import/zip - import a ZIP backup (data.json + files/)
 app.post("/zip", async (c) => {
+	const confirm = requireConfirm(c);
+	if (!confirm.ok) return confirm.response;
+
 	const arrayBuffer = await c.req.arrayBuffer();
 	if (!arrayBuffer || arrayBuffer.byteLength === 0) {
 		return c.json({ error: "No ZIP file provided" }, 400);
@@ -513,268 +650,56 @@ app.post("/zip", async (c) => {
 		return c.json({ error: "ZIP does not contain data.json" }, 400);
 	}
 
-	let data: ExportData;
+	let raw: unknown;
 	try {
-		data = JSON.parse(new TextDecoder().decode(dataJsonBytes));
+		raw = JSON.parse(new TextDecoder().decode(dataJsonBytes));
 	} catch {
 		return c.json({ error: "data.json is not valid JSON" }, 400);
 	}
 
-	if (
-		!data.version ||
-		!data.exportDate ||
-		!Array.isArray(data.projects) ||
-		!Array.isArray(data.timesheets) ||
-		!Array.isArray(data.timesheetEntries) ||
-		!Array.isArray(data.transactions)
-	) {
-		return c.json({ error: "Invalid backup file format" }, 400);
+	const parsed = exportDataSchema.safeParse(raw);
+	if (!parsed.success) {
+		return c.json(
+			{ error: "Invalid backup file format", issues: parsed.error.issues },
+			400,
+		);
 	}
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-
-	// Delete existing data in reverse dependency order
-	await db.prepare("DELETE FROM invoice_events WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM invoices WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM customer_events WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM customers WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM timesheet_entries WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM transactions WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM timesheets WHERE userId = ?").bind(userId).run();
-	await db.prepare("DELETE FROM projects WHERE userId = ?").bind(userId).run();
-
+	const data = parsed.data;
 	const isDataEncrypted = data.encrypted === true;
 
-	if (data.customers) {
-		for (const customer of data.customers) {
-			const name = isDataEncrypted ? customer.name : await encrypt(customer.name, c.env);
-			const email = isDataEncrypted ? customer.email : await encrypt(customer.email, c.env);
-			const address = customer.address
-				? isDataEncrypted
-					? customer.address
-					: await encrypt(customer.address, c.env)
-				: null;
-
-			await db
-				.prepare(
-					`INSERT INTO customers (id, userId, name, email, address,
-					        consentToEmailInvoices, consentedAt, consentRequestedAt,
-					        createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				)
-				.bind(
-					customer.id,
-					userId,
-					name,
-					email,
-					address,
-					customer.consentToEmailInvoices ? 1 : 0,
-					customer.consentedAt,
-					customer.consentRequestedAt,
-					customer.createdAt,
-					customer.updatedAt,
-				)
-				.run();
-		}
-	}
-
-	for (const project of data.projects) {
-		const rate_in_cents = isDataEncrypted
-			? project.rate_in_cents
-			: await encrypt(String(project.rate_in_cents), c.env);
-		const description = isDataEncrypted
-			? project.description
-			: await encrypt(project.description ?? "", c.env);
-
-		await db
-			.prepare(
-				`INSERT INTO projects (id, name, active, customerId, rate_in_cents, description, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				project.id,
-				project.name,
-				project.active ? 1 : 0,
-				project.customerId ?? null,
-				rate_in_cents,
-				description,
-				project.createdAt,
-				project.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	for (const ts of data.timesheets) {
-		const description = isDataEncrypted
-			? ts.description
-			: ts.description
-				? await encrypt(ts.description, c.env)
-				: null;
-
-		await db
-			.prepare(
-				`INSERT INTO timesheets (id, projectId, name, description, active, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				ts.id,
-				ts.projectId,
-				ts.name,
-				description,
-				ts.active ? 1 : 0,
-				ts.createdAt,
-				ts.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	for (const entry of data.timesheetEntries) {
-		const description = isDataEncrypted
-			? entry.description
-			: await encrypt(entry.description, c.env);
-		const amount = isDataEncrypted
-			? entry.amount
-			: await encrypt(String(entry.amount), c.env);
-
-		await db
-			.prepare(
-				`INSERT INTO timesheet_entries (id, timesheetId, date, minutes, description, amount, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				entry.id,
-				entry.timesheetId,
-				entry.date,
-				entry.minutes,
-				description,
-				amount,
-				entry.createdAt,
-				entry.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	for (const tx of data.transactions) {
-		const description = isDataEncrypted
-			? tx.description
-			: await encrypt(tx.description, c.env);
-		const amount = isDataEncrypted
-			? tx.amount
-			: await encrypt(String(tx.amount), c.env);
-
-		await db
-			.prepare(
-				`INSERT INTO transactions (id, projectId, date, description, amount, filePath, createdAt, updatedAt, userId)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.bind(
-				tx.id,
-				tx.projectId,
-				tx.date,
-				description,
-				amount,
-				tx.filePath,
-				tx.createdAt,
-				tx.updatedAt,
-				userId,
-			)
-			.run();
-	}
-
-	if (data.invoices) {
-		for (const inv of data.invoices) {
-			const amount_cents = isDataEncrypted
-				? inv.amount_cents
-				: await encrypt(String(inv.amount_cents), c.env);
-			const description = inv.description
-				? isDataEncrypted
-					? inv.description
-					: await encrypt(inv.description, c.env)
-				: null;
-
-			await db
-				.prepare(
-					`INSERT INTO invoices
-					   (id, userId, customerId, timesheetId, number, status,
-					    amount_cents, description, issuedAt, dueDate,
-					    sentAt, paidAt, voidedAt, archivedAt, createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				)
-				.bind(
-					inv.id,
-					userId,
-					inv.customerId,
-					inv.timesheetId,
-					inv.number,
-					inv.status,
-					amount_cents,
-					description,
-					inv.issuedAt,
-					inv.dueDate,
-					inv.sentAt,
-					inv.paidAt,
-					inv.voidedAt,
-					inv.archivedAt,
-					inv.createdAt,
-					inv.updatedAt,
-				)
-				.run();
-		}
-	}
-
-	if (data.userProfile) {
-		const p = data.userProfile;
-		const encOrNull = async (v: string | null | undefined) =>
-			v == null ? null : isDataEncrypted ? v : await encrypt(v, c.env);
-		await db
-			.prepare(
-				`UPDATE users
-				 SET displayName = ?, email = ?,
-				     venmoHandle = ?, paypalHandle = ?,
-				     businessName = ?, businessAddress = ?
-				 WHERE id = ?`,
-			)
-			.bind(
-				p.displayName,
-				p.email,
-				await encOrNull(p.venmoHandle),
-				await encOrNull(p.paypalHandle),
-				await encOrNull(p.businessName),
-				await encOrNull(p.businessAddress),
-				userId,
-			)
-			.run();
-	}
-
-	// Restore R2 files from the ZIP's files/ directory, assigning fresh UUIDs
+	// Build the old-key → new-UUID remap before constructing the batch so the
+	// transaction inserts transactions with their final filePaths and we don't
+	// have to issue a second UPDATE after the batch.
 	const fileEntries = Object.entries(entries).filter(([path]) =>
-		path.startsWith("files/"),
+		path.startsWith("files/") && path.length > "files/".length,
 	);
-
-	// Build old key → new UUID remap before inserting transactions
 	const fileKeyRemap = new Map<string, string>();
 	for (const [path] of fileEntries) {
 		const oldKey = path.slice("files/".length);
-		if (!oldKey) continue;
 		fileKeyRemap.set(oldKey, crypto.randomUUID());
 	}
 
-	// Update filePaths in already-inserted transactions to use new UUIDs
-	for (const [oldKey, newKey] of fileKeyRemap) {
-		await db
-			.prepare("UPDATE transactions SET filePath = ? WHERE filePath = ? AND userId = ?")
-			.bind(newKey, oldKey, userId)
-			.run();
-	}
+	// Patch transaction rows in the validated data to use the new R2 keys.
+	data.transactions = data.transactions.map((tx) => {
+		if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
+			return { ...tx, filePath: fileKeyRemap.get(tx.filePath) };
+		}
+		return tx;
+	});
 
+	const stmts = await buildImportBatch(db, data, userId, c.env);
+	await db.batch(stmts);
+
+	// R2 writes happen after the DB batch lands. If R2 fails the DB rows are
+	// the source of truth — orphaned uploads only happen the other way (an
+	// R2 object whose transaction got rolled back), which can't occur because
+	// uploads come last.
 	await Promise.all(
 		fileEntries.map(async ([path, bytes]) => {
 			const oldKey = path.slice("files/".length);
-			if (!oldKey) return;
 			const newKey = fileKeyRemap.get(oldKey);
 			if (!newKey) return;
 			// Encrypted backups store files already encrypted — upload as-is.

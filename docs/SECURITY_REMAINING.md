@@ -22,14 +22,23 @@ the review, plus the easy **Medium** items. Quick recap:
 | §9 | Medium | Zod schemas + FK ownership checks on transactions / projects / timesheets / timesheet entries | ✅ Shipped |
 | §10 | Medium | File upload size (10 MB) + content-type allowlist | ✅ Shipped |
 | §11 | Low | Constant-time invoice token comparison | ✅ Shipped |
+| §12 | Low | UNIQUE indexes on `customers.revokeToken` + `invoices.accessToken` | ✅ Shipped |
+| §13 | Low | Drop `tokenLast4` from audit-log payloads | ✅ Shipped |
+| §14 | Low | HMAC-SHA-256 keyed by `ENCRYPTION_KEY` for IP/UA pseudonymisation | ✅ Shipped |
+| §15 | Low | Atomic `/import/data` + `/import/zip` via `db.batch()` + `?confirm=true` | ✅ Shipped |
+| §16 | Low | Pin `xlsx` to 0.18.5 + document write-only risk model | ✅ Shipped |
 
 ---
 
 ## 🟡 Remaining items
 
-### §12 (Low) — Add `UNIQUE` constraint on `revokeToken` and `accessToken`
+_All severity-tagged review findings have been addressed on this branch.
+The items below are discussion-required follow-ups that need product input
+before any code change._
 
-**Where:** `api/db/migrations/0001_initial_schema.sql`
+### §12 (Low) — Add `UNIQUE` constraint on `revokeToken` and `accessToken` ✅ Shipped
+
+**Where:** `api/db/migrations/0001_initial_schema.sql`, shipped as `0002_unique_token_indexes.sql`
 
 `customers.consentToken` is `UNIQUE`. `customers.revokeToken` and
 `invoices.accessToken` are not. Collisions are cryptographically improbable
@@ -51,7 +60,7 @@ instead of erroring out.
 
 ---
 
-### §13 (Low) — Drop `tokenLast4` from audit-log payloads
+### §13 (Low) — Drop `tokenLast4` from audit-log payloads ✅ Shipped
 
 **Where:** `api/src/routes/consent.ts` (3 sites), `api/src/routes/customers.ts` (1 site)
 
@@ -65,9 +74,13 @@ useless to us in practice — there's no support flow that consumes it.
 
 ---
 
-### §14 (Low) — Use HMAC-SHA-256 instead of `H(salt || msg)` for IP/UA pseudonymisation
+### §14 (Low) — Use HMAC-SHA-256 instead of `H(salt || msg)` for IP/UA pseudonymisation ✅ Shipped
 
 **Where:** `api/src/lib/hash.ts`
+
+`hmacSha256Hex` is now the primary primitive; `sha256Hex` is kept exported only
+so historical v1 rows can still be recomputed if needed. New audit-log
+payloads carry `{ "v": 2, ... }` to mark the format.
 
 `sha256Hex(input)` computes `SHA-256(ENCRYPTION_KEY || input)`. That's the
 prefix-MAC construction, which is fine for SHA-256 but not the standard
@@ -106,9 +119,14 @@ payload) and dual-write briefly.
 
 ---
 
-### §15 (Low) — Make `/import/data` and `/import/zip` atomic
+### §15 (Low) — Make `/import/data` and `/import/zip` atomic ✅ Shipped
 
-**Where:** `api/src/routes/exportImport.ts:210-256`, `:498-545`
+**Where:** `api/src/routes/exportImport.ts`
+
+Both endpoints now Zod-validate the entire payload, pre-encrypt every cell,
+and submit the DELETEs+INSERTs as a single `db.batch()` so any failure
+rolls the whole import back. Both also require `?confirm=true` so a stray
+POST can't wipe data.
 
 The import endpoints DELETE eight tables and then re-INSERT in eight more
 loops. There's no atomic rollback — a malformed `data.json` that passes
@@ -152,9 +170,14 @@ prep pass that maps the rows through an async helper.
 
 ---
 
-### §16 (Low) — Audit the `xlsx` dependency
+### §16 (Low) — Audit the `xlsx` dependency ✅ Shipped
 
-**Where:** `package.json` (`xlsx ^0.18.5`)
+**Where:** `package.json` (now pinned to `xlsx 0.18.5` — no caret)
+
+The dependency is pinned to an exact version so a patch release can't
+silently land. The single use site (`api/src/routes/transactions.ts`)
+carries a comment recording the write-only risk model: re-evaluate before
+adding any code path that calls `XLSX.read*` on untrusted bytes.
 
 SheetJS has had a track record of parse-time advisories. We only *write*
 xlsx (in `api/src/routes/transactions.ts` and frontend exports), never
@@ -202,13 +225,6 @@ These are not findings from the review but obvious next steps:
 
 ## How to work through this list
 
-Each section is independently shippable. Suggested order:
-
-1. **§12** (UNIQUE indexes) — 10 minutes, no behaviour change.
-2. **§13** (drop `tokenLast4`) — 5 minutes, no behaviour change.
-3. **CSP header** (defense-in-depth) — 15 minutes, low risk.
-4. **§16** (xlsx audit) — depends on what you find.
-5. **§15** (atomic import) — half a day, worth it before the import flow
-   sees real production traffic.
-6. **§14** (HMAC) — needs the dual-write plan; tackle when you next
-   touch consent audit code.
+§12–§16 are all shipped on this branch. The defense-in-depth follow-ups
+above (CSP header, secret rotation runbook, backup encryption docs,
+disabling `workers.dev`) remain open and can be picked up independently.
