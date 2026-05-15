@@ -19,7 +19,7 @@ export type AuthVariables = {
  *
  * Clerk fronts the frontend. The browser exchanges credentials (GitHub
  * OAuth, or any other configured strategy) for a Clerk session, and
- * `@clerk/clerk-react` then attaches the short-lived session JWT to every
+ * `@clerk/react` then attaches the short-lived session JWT to every
  * API request via `Authorization: Bearer <token>`.
  *
  * Production:

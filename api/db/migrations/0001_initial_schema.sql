@@ -1,12 +1,12 @@
--- Migration 0001 — Initial schema
+-- Migration 0001 — Initial schema (squash of 0001 + 0002)
 --
 -- Single-source-of-truth for Paper Trail. All migrations have been
 -- squashed into this file before any production data existed.
 --
 -- Conventions:
--- * users.id stays INTEGER (autoincrement). Cloudflare Access auth
---   creates rows here via INSERT OR IGNORE; cross-device identity is
---   carried by the separate users.uuid column.
+-- * users.id stays INTEGER (autoincrement). clerkUserId is the stable
+--   Clerk `sub` claim used as the primary identity; cross-device identity
+--   is also carried by the separate users.uuid column.
 -- * Every other user-owned table uses TEXT UUID primary keys, generated
 --   in code with crypto.randomUUID() at INSERT time.
 -- * Sensitive fields are encrypted with AES-256-GCM (see api/src/lib/crypto.ts).
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   uuid TEXT NOT NULL UNIQUE,
   displayName TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL DEFAULT '',
+  clerkUserId TEXT,
   venmoHandle TEXT,           -- encrypted, nullable
   paypalHandle TEXT,          -- encrypted, nullable
   businessName TEXT,          -- encrypted, nullable but required to send
@@ -41,6 +42,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_clerkUserId
+  ON users(clerkUserId) WHERE clerkUserId IS NOT NULL;
 
 -- =====================
 -- schema_migrations  (legacy tracking table; kept for compatibility)

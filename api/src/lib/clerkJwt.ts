@@ -2,7 +2,7 @@
  * Clerk session JWT verification.
  *
  * Clerk issues an RS256-signed session JWT to authenticated clients. The
- * frontend (`@clerk/clerk-react`) attaches it via
+ * frontend (`@clerk/react`) attaches it via
  * `Authorization: Bearer <token>` on every API request. We verify the
  * signature against Clerk's JWKS before trusting the `sub` claim that
  * identifies the user.
