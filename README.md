@@ -12,7 +12,7 @@ A web-based timesheet and invoicing application that integrates with Stripe for 
 - **Backend**: Cloudflare Workers with Hono
 - **Database**: Cloudflare D1 (SQLite at the edge)
 - **Storage**: Cloudflare R2 (file attachments)
-- **Auth**: Cloudflare Access (GitHub OAuth)
+- **Auth**: [Clerk](https://clerk.com) (GitHub OAuth + others)
 - **Payments**: Stripe API
 
 ## Setup
@@ -22,11 +22,13 @@ A web-based timesheet and invoicing application that integrates with Stripe for 
    pnpm install
    ```
 
-2. Create a `.dev.vars` file with the following variables:
-   ```
-   CF_ACCESS_BYPASS=true
-   CF_ACCESS_DEV_EMAIL=dev@localhost
+2. Create a `.dev.vars` file (Worker-side secrets) — see `.dev.vars.example`:
+   ```ini
    ENCRYPTION_KEY=<base64-encoded 32-byte key>
+   # Quickest local dev: bypass Clerk verification entirely
+   CLERK_BYPASS=true
+   CLERK_DEV_USER_ID=user_dev_localhost
+   CLERK_DEV_EMAIL=dev@localhost.dev
    ```
 
    Generate an encryption key:
@@ -34,31 +36,46 @@ A web-based timesheet and invoicing application that integrates with Stripe for 
    openssl rand -base64 32
    ```
 
-3. Create and seed the D1 database:
+3. Create `.env.local` (Vite frontend env) so the React app can boot:
+   ```ini
+   VITE_CLERK_PUBLISHABLE_KEY=pk_test_…
+   ```
+   Get the key from <https://dashboard.clerk.com> → API Keys. Required
+   even with `CLERK_BYPASS=true` — the Clerk React SDK still needs to
+   initialise.
+
+4. Apply D1 migrations:
    ```bash
-   pnpm run seed
+   pnpm run migrate
    ```
 
-4. Start the dev server:
+5. Start the dev server:
    ```bash
    pnpm run dev
    ```
    The app is served at `http://localhost:5173`.
 
-5. Store the Stripe secret key (for production):
+6. Store the Stripe secret key (for production):
    ```bash
    wrangler secret put STRIPE_SECRET_KEY
    ```
 
-6. Configure Cloudflare Access JWT verification (production only — required):
+7. Configure Clerk for production (required — see [docs/CLERK_AUTH.md](docs/CLERK_AUTH.md) for the full guide):
    ```bash
-   wrangler secret put CF_ACCESS_TEAM_DOMAIN   # e.g. acme.cloudflareaccess.com
-   wrangler secret put CF_ACCESS_AUD           # Access app Application Audience Tag
+   wrangler secret put CLERK_ISSUER          # e.g. https://clerk.example.com
+   wrangler secret put CLERK_SECRET_KEY      # sk_live_…
+   wrangler secret put CLERK_JWT_KEY         # optional, enables networkless verification
+   wrangler secret put CLERK_AUTHORIZED_PARTY  # optional, pin tokens to your frontend origin
    ```
-   The auth middleware verifies the `Cf-Access-Jwt-Assertion` header against
-   the team's JWKS on every request. Without these two secrets (and without
-   `CF_ACCESS_BYPASS=true` for dev), the API refuses to start — failing
-   closed instead of trusting the (spoofable) email header.
+   The Worker verifies the `Authorization: Bearer <token>` JWT on every
+   request. Without `CLERK_ISSUER` (and without `CLERK_BYPASS=true` for
+   dev) the API fails closed with HTTP 500 instead of trusting any
+   unauthenticated identity.
+
+   Enable GitHub OAuth in the Clerk dashboard under
+   **User & Authentication → Social Connections → GitHub**. Include the
+   `user:email` scope so the first-sign-in flow can resolve the user's
+   primary email.
 
 ## Security
 
@@ -78,8 +95,10 @@ Unencrypted values are handled gracefully on read, so enabling encryption on an 
 ### Other Security Measures
 
 - Stripe API keys stored as Wrangler secrets, never in code or localStorage
-- Authentication via Cloudflare Access (GitHub OAuth) — JWT signature is verified
-  against the team's JWKS on every request; the email header alone is not trusted
+- Authentication via Clerk — every API request carries a short-lived
+  session JWT, signature-verified against Clerk's JWKS (or a configured
+  PEM public key). The Clerk `sub` claim is the source of truth for
+  identity; no headers are trusted on their own
 - CORS restricted to `APP_BASE_URL` (no wildcard reflection of arbitrary origins)
 - R2 file routes (`/api/v1/files/*`) authorise each request against the
   caller's `transactions.filePath` ownership; UUIDs are validated before lookup
@@ -97,5 +116,5 @@ Unencrypted values are handled gracefully on read, so enabling encryption on an 
 | `pnpm run check` | TypeScript type checking + Biome linting/formatting |
 | `pnpm run test` | Run Vitest tests |
 | `pnpm run deploy` | Build and deploy to Cloudflare |
-| `pnpm run seed` | Seed local D1 database |
-| `pnpm run seed:remote` | Seed remote D1 database |
+| `pnpm run migrate` | Apply D1 migrations locally |
+| `pnpm run migrate:remote` | Apply D1 migrations to the remote D1 instance |

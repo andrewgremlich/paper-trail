@@ -1,0 +1,29 @@
+.gate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2rem;
+	min-height: 100vh;
+	padding: 2rem 1rem;
+}
+
+.intro {
+	text-align: center;
+	max-width: 32rem;
+}
+
+.title {
+	font-size: 2rem;
+	margin: 0 0 0.5rem;
+}
+
+.subtitle {
+	margin: 0;
+	color: var(--color-text-muted, #6b7280);
+}
+
+.signInRoot {
+	width: 100%;
+	max-width: 28rem;
+}

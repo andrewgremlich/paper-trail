@@ -13,7 +13,7 @@
  * mirror it in the hidden field.
  *
  * Mounted only on the public, unauthenticated consent routes — the
- * authenticated API uses Cloudflare Access JWT verification + an
+ * authenticated API uses Clerk session JWT verification + an
  * APP_BASE_URL-locked CORS policy instead.
  */
 import type { Context } from "hono";
