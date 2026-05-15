@@ -3,6 +3,8 @@
 A pragmatic migration plan for moving Paper Trail from a Vite SPA + standalone Hono Worker to [TanStack Start](https://tanstack.com/start) running on Cloudflare Workers.
 
 > **Status:** Exploratory sketch, not a committed plan. TanStack Start is pre-1.0 — APIs may shift.
+>
+> **Note:** This doc still references the legacy Cloudflare Access auth setup. Authentication has since moved to Clerk (see `docs/CLERK_AUTH.md`); when reading the auth sections below, mentally substitute "Clerk session JWT in `Authorization: Bearer`" for "Cloudflare Access email header".
 
 ## Why TanStack Start
 

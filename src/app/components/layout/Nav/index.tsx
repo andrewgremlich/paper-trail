@@ -1,3 +1,4 @@
+import { UserButton } from "@clerk/clerk-react";
 import {
 	FolderOpen,
 	HandCoins,
@@ -90,7 +91,7 @@ export const Nav = () => {
 					</Button>
 				</div>
 
-				<div>
+				<Flex gap="0.75rem" items="center">
 					<Button
 						className={cn(
 							styles.settings,
@@ -105,7 +106,10 @@ export const Nav = () => {
 					>
 						<Settings size={40} />
 					</Button>
-				</div>
+					<UserButton
+						appearance={{ elements: { avatarBox: styles.userAvatar } }}
+					/>
+				</Flex>
 			</Flex>
 		</div>
 	);

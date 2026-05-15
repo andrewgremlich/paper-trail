@@ -51,8 +51,10 @@ re-examined later without re-discovering them from code.
   app's customer-delete route blocks otherwise with `CUSTOMER_HAS_INVOICES`.
 - **User account delete** (Settings → Delete all data) wipes invoices,
   invoice_events, customers, customer_events, timesheets, transactions,
-  projects, and R2 files for that user, then keeps the bare `users` row so
-  Cloudflare Access can still resolve it on the next login.
+  projects, and R2 files for that user, then keeps the bare `users` row
+  (with `clerkUserId`) so Clerk can still resolve the user on the next
+  sign-in. To fully delete the identity, delete the user in the Clerk
+  dashboard and then `DELETE FROM users WHERE clerkUserId = ?` in D1.
 
 ## Customer rights
 
@@ -70,7 +72,11 @@ serviced by the operator manually:
 
 ## Sub-processors
 
-- **Cloudflare** — hosts the Worker, D1, R2 bucket, and Cloudflare Access.
+- **Cloudflare** — hosts the Worker, D1 database, and R2 bucket.
+- **Clerk** — handles authentication. Stores the user's primary email,
+  display name, and OAuth identity (e.g. GitHub user id). Clerk publishes
+  a DPA and is SOC 2 Type II. See `docs/CLERK_AUTH.md` for what data
+  flows through Clerk.
 - **Resend** — delivers the consent and invoice emails. Resend has a public
   DPA and is SOC 2 Type II. Email bodies contain customer-identifying data;
   the Resend account is the second place this data lives at rest.

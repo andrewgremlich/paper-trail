@@ -19,7 +19,7 @@
 --   and similar columns.
 
 -- =====================
--- users  (auto-created on first login by cfAccessAuth middleware)
+-- users  (auto-created on first login by clerkAuth middleware)
 -- =====================
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

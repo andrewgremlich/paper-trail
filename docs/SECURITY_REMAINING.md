@@ -12,7 +12,7 @@ the review, plus the easy **Medium** items. Quick recap:
 
 | # | Severity | Subject | Status |
 |---|----------|---------|--------|
-| §2 | Critical | Cloudflare Access JWT verification (JWKS + RS256 + iss/aud/exp) | ✅ Shipped |
+| §2 | Critical | Clerk session JWT verification (JWKS or PEM + RS256 + iss/azp/exp) | ✅ Shipped — auth migrated from Cloudflare Access to Clerk; see `docs/CLERK_AUTH.md` |
 | §3 | High | CORS locked to `APP_BASE_URL` | ✅ Shipped |
 | §4 | High | `/api/v1/files/*` ownership check (transactions FK + R2 metadata fallback) | ✅ Shipped |
 | §5 | High | SSRF removed from `/files/check-link` (no outbound URL probing) | ✅ Shipped |

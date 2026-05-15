@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./lib/types";
 import type { AuthVariables } from "./middleware/auth";
-import { cfAccessAuth } from "./middleware/auth";
+import { clerkAuth } from "./middleware/auth";
 import { attachmentRoutes } from "./routes/attachments";
 import { consentRoutes } from "./routes/consent";
 import { customerRoutes } from "./routes/customers";
@@ -41,8 +41,8 @@ app.route("/consent", consentRoutes);
 // v1 API routes
 const v1 = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// Apply Cloudflare Access auth to all v1 routes
-v1.use("/*", cfAccessAuth);
+// Apply Clerk auth to all v1 routes
+v1.use("/*", clerkAuth);
 
 v1.route("/projects", projectRoutes);
 v1.route("/timesheets", timesheetRoutes);

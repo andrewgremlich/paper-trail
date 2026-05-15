@@ -1,5 +1,26 @@
 RESEND_API_KEY=
-APP_BASE_URL=
+APP_BASE_URL=http://localhost:5173
 ENCRYPTION_KEY=
-CF_ACCESS_BYPASS=true
-CF_ACCESS_DEV_EMAIL=dev@localhost.dev
+
+# --- Clerk auth (production) ---
+# Frontend API URL — e.g. https://clerk.example.com or
+# https://<slug>.clerk.accounts.dev. Found in the Clerk dashboard under
+# "API Keys" → "Show JWT Public Key" (the JWKS URL minus /.well-known/jwks.json).
+CLERK_ISSUER=
+# Backend API secret (sk_live_... or sk_test_...). Only used during the
+# first sign-in to fetch the user's email + display name from Clerk.
+CLERK_SECRET_KEY=
+# (Optional) Public key PEM from the Clerk dashboard. When set, JWT
+# verification is networkless — no JWKS fetch on cold paths.
+CLERK_JWT_KEY=
+# (Optional) Pin the `azp` claim to your frontend origin for defence in
+# depth. Example: https://paper-trail.example.com
+CLERK_AUTHORIZED_PARTY=
+
+# --- Clerk dev bypass ---
+# Skip Clerk verification entirely. Useful when iterating on backend logic
+# without configuring a Clerk instance. Leave unset (or false) to require
+# real Clerk-issued tokens.
+CLERK_BYPASS=true
+CLERK_DEV_USER_ID=user_dev_localhost
+CLERK_DEV_EMAIL=dev@localhost.dev

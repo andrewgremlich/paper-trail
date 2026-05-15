@@ -21,14 +21,46 @@ export class ApiError extends Error {
 	}
 }
 
+/**
+ * Auth token provider. Set during app bootstrap from a `useAuth()` hook in
+ * the React tree so this non-React module can still attach a fresh
+ * `Authorization: Bearer <token>` header on every API call. We deliberately
+ * fetch the token at call time (not at module load) because Clerk session
+ * tokens are short-lived and rotate.
+ */
+type TokenProvider = () => Promise<string | null>;
+let getAuthToken: TokenProvider = async () => null;
+
+export const setAuthTokenProvider = (provider: TokenProvider) => {
+	getAuthToken = provider;
+};
+
+const authHeaders = async (
+	existing?: HeadersInit,
+): Promise<Record<string, string>> => {
+	const merged: Record<string, string> = {};
+	if (existing) {
+		const h = new Headers(existing);
+		h.forEach((value, key) => {
+			merged[key] = value;
+		});
+	}
+	const token = await getAuthToken();
+	if (token) {
+		merged.Authorization = `Bearer ${token}`;
+	}
+	return merged;
+};
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+	const headers = await authHeaders({
+		"Content-Type": "application/json",
+		...options?.headers,
+	});
 	const res = await fetch(`${API_BASE}${path}`, {
 		credentials: "include",
-		headers: {
-			"Content-Type": "application/json",
-			...options?.headers,
-		},
 		...options,
+		headers,
 	});
 
 	if (!res.ok) {
@@ -59,9 +91,13 @@ export const api = {
 		}),
 	delete: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
 	postFormData: async <T>(path: string, formData: FormData): Promise<T> => {
+		const headers = await authHeaders();
+		// Do NOT set Content-Type; the browser computes the multipart
+		// boundary automatically.
 		const res = await fetch(`${API_BASE}${path}`, {
 			method: "POST",
 			credentials: "include",
+			headers,
 			body: formData,
 		});
 		if (!res.ok) {
@@ -76,6 +112,11 @@ export const api = {
 		}
 		return res.json();
 	},
-	getRaw: (path: string) =>
-		fetch(`${API_BASE}${path}`, { credentials: "include" }),
+	getRaw: async (path: string) => {
+		const headers = await authHeaders();
+		return fetch(`${API_BASE}${path}`, {
+			credentials: "include",
+			headers,
+		});
+	},
 };

@@ -35,7 +35,7 @@ pnpm run migrate:remote
 ### Local Development Notes
 - `pnpm run dev` runs `vite dev` — the `@cloudflare/vite-plugin` runs the Workers runtime inside Vite's dev server
 - The app is served at `http://localhost:5173` (Vite serves both static assets and the API worker)
-- Dev environment variables come from `.dev.vars` — sets `CF_ACCESS_BYPASS=true` and `CF_ACCESS_DEV_EMAIL=dev@localhost` to bypass Cloudflare Access auth
+- Dev environment variables come from `.dev.vars` — sets `CLERK_BYPASS=true` and `CLERK_DEV_EMAIL=dev@localhost.dev` to bypass Clerk auth. The frontend still needs `VITE_CLERK_PUBLISHABLE_KEY` in `.env.local` so the Clerk React SDK initialises (see `docs/CLERK_AUTH.md`)
 - API routes (`/api/*`) are handled by the worker via `run_worker_first` in `wrangler.jsonc`
 - All other routes fall through to the SPA via `not_found_handling = "single-page-application"`
 
@@ -53,14 +53,14 @@ pnpm run migrate:remote
 - **Cloudflare Workers** with **Hono** web framework
 - **Cloudflare D1** (SQLite) database
 - **Cloudflare R2** for file storage (transaction attachments)
-- **Cloudflare Access** (GitHub OAuth) for authentication
+- **Clerk** (GitHub OAuth + other connectors) for authentication — see `docs/CLERK_AUTH.md`
 - **Stripe** API keys stored via Wrangler secrets
 - Database migrations in `api/db/migrations/`
 
 ### Key Data Flow
-1. Frontend calls API endpoints via `src/app/lib/db/client.ts` (thin fetch wrapper)
-2. Cloudflare Access authenticates user via GitHub OAuth, injects email header
-3. Auth middleware auto-creates user profile, sets userId in context
+1. Frontend calls API endpoints via `src/app/lib/db/client.ts` — attaches Clerk session JWT as `Authorization: Bearer <token>` via a token provider registered from `<SignInGate>`
+2. Clerk authenticates user via GitHub OAuth (or other connectors); the React SDK manages session state and token rotation
+3. Auth middleware verifies the bearer token against Clerk's JWKS (or PEM), reads `sub`, looks up or provisions the local `users` row by `clerkUserId`, and sets `userId` in context
 4. Route handlers in `api/src/routes/` perform D1 queries with userId isolation
 5. Stripe API calls via `api/src/routes/stripe.ts` using Wrangler secrets
 6. File uploads/downloads via R2 bucket through `api/src/routes/files.ts`
@@ -73,7 +73,10 @@ pnpm run migrate:remote
 - `api/src/index.ts` - Hono app entry point, route mounting, CORS
 - `api/src/lib/db.ts` - D1 database binding accessor
 - `api/src/lib/types.ts` - Backend type definitions (Env, entity types)
-- `api/src/middleware/auth.ts` - Cloudflare Access auth middleware
+- `api/src/middleware/auth.ts` - Clerk auth middleware (`clerkAuth`)
+- `api/src/lib/clerkJwt.ts` - Clerk JWT verification (RS256 against JWKS or PEM)
+- `api/src/lib/clerkApi.ts` - Minimal Clerk Backend API client (first-sign-in only)
+- `src/app/components/features/auth/SignInGate/` - Gates the app behind Clerk sign-in and bridges the session token into the API client
 - `api/src/routes/` - All API route handlers
 - `api/db/migrations/` - Database migrations (tables, indexes, triggers)
 - `wrangler.jsonc` - Cloudflare Workers configuration (D1, R2 bindings, static assets)
@@ -81,7 +84,7 @@ pnpm run migrate:remote
 
 ### Database Tables
 All tables include a `userId` column for multi-user data isolation:
-- `users` - User accounts (displayName, email, uuid) — auto-created on first login via Cloudflare Access
+- `users` - User accounts (displayName, email, uuid, clerkUserId) — auto-created on first sign-in by `clerkAuth` middleware. Identified by `clerkUserId` (stable Clerk `sub`)
 - `projects` - Clients with Stripe customer IDs and hourly rates
 - `timesheets` - Time tracking documents linked to projects
 - `timesheet_entries` - Individual work entries (date, minutes, description)
@@ -170,7 +173,7 @@ const lastId = result.meta.last_row_id;
 ## Security Considerations
 
 - Stripe API keys stored as Wrangler secrets, never in code or localStorage
-- Authentication via Cloudflare Access (GitHub OAuth)
+- Authentication via Clerk (GitHub OAuth + other connectors). Every API request carries a short-lived Clerk session JWT verified against Clerk's JWKS (or a configured PEM public key) before any DB query runs
 - All queries include `WHERE userId = ?` for multi-user data isolation
 - Use parameterized queries (D1 `.bind()`) to prevent SQL injection
 - Sanitize file names and paths for transaction attachments

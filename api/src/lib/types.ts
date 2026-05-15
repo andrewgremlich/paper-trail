@@ -1,14 +1,27 @@
 export interface Env {
 	DB: D1Database;
 	FILES_BUCKET: R2Bucket;
-	CF_ACCESS_BYPASS?: string;
-	CF_ACCESS_DEV_EMAIL?: string;
-	// Cloudflare Access JWT verification config. Both must be set in
-	// production; setting neither (and CF_ACCESS_BYPASS) is rejected by the
-	// auth middleware so we fail closed instead of trusting a spoofable
-	// header.
-	CF_ACCESS_TEAM_DOMAIN?: string;
-	CF_ACCESS_AUD?: string;
+	// Clerk auth. `CLERK_ISSUER` is the Frontend API URL
+	// (`https://clerk.<your-domain>.com` for production, or
+	// `https://<slug>.clerk.accounts.dev` for development). `CLERK_SECRET_KEY`
+	// is used during first sign-in only to fetch the email + display name
+	// from Clerk's Backend API; subsequent requests resolve everything
+	// locally from D1.
+	//
+	// `CLERK_JWT_KEY` is the PEM-formatted public key from the Clerk
+	// dashboard. When set, JWT verification is networkless (no JWKS fetch).
+	// `CLERK_AUTHORIZED_PARTY` optionally pins the `azp` claim to a known
+	// frontend origin for defence in depth.
+	//
+	// `CLERK_BYPASS=true` short-circuits verification for local dev,
+	// using `CLERK_DEV_USER_ID` + `CLERK_DEV_EMAIL`.
+	CLERK_ISSUER?: string;
+	CLERK_SECRET_KEY?: string;
+	CLERK_JWT_KEY?: string;
+	CLERK_AUTHORIZED_PARTY?: string;
+	CLERK_BYPASS?: string;
+	CLERK_DEV_USER_ID?: string;
+	CLERK_DEV_EMAIL?: string;
 	ENCRYPTION_KEY: string;
 	RESEND_API_KEY?: string;
 	RESEND_FROM_ADDRESS?: string;

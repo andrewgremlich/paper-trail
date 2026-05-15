@@ -68,8 +68,9 @@ RESEND_API_KEY=re_test_...
 RESEND_FROM_ADDRESS=Andrew <invoices@mail.example.com>
 APP_BASE_URL=http://localhost:5173
 ENCRYPTION_KEY=<base64 32-byte key from `pnpm enc:key`>
-CF_ACCESS_BYPASS=true
-CF_ACCESS_DEV_EMAIL=dev@localhost
+CLERK_BYPASS=true
+CLERK_DEV_USER_ID=user_dev_localhost
+CLERK_DEV_EMAIL=dev@localhost.dev
 ```
 
 In dev you can either use a real Resend test key (which actually delivers to
