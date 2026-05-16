@@ -519,61 +519,43 @@ documenting and (in some cases) tightening. None of these are
 exploitable vulnerabilities — they're design boundaries that should be
 deliberate.
 
-### INV1. `accessToken` has no expiry
+### INV1. ✅ FIXED — `accessToken` has no expiry
 
-**Location:** `api/src/routes/invoices.ts:596-662`, `publicInvoice.ts:81-91`
+Resolution: migration `0003_invoice_access_token_expiry.sql` adds a
+nullable `accessTokenExpiresAt` column. The `/send` handler stamps it
+at `sentAt + 90 days` every time an invoice is sent or resent, and the
+public hosted route 404s once the timestamp is in the past. Pre-
+existing sent invoices (NULL expiry) keep working until the operator
+resends, which mints a fresh token + window. See
+`api/src/routes/invoices.ts` + `publicInvoice.ts`.
 
-`accessToken` is set on `/send` (rotated on resend) and never expires.
-A paid invoice from two years ago is still openable by anyone the
-email got forwarded to. The hosted page exposes the full snapshot:
-seller PII, customer PII, line items, amount.
+### INV2. ✅ FIXED — Token in URL query string lands in logs
 
-**Recommendation:** add `accessTokenExpiresAt` (or compute it: e.g.
-`sentAt + 90 days`, or `paidAt + 30 days` once paid). The hosted route
-checks the expiry and 404s after it passes. Operator can re-issue by
-re-sending.
-
-**Effort:** ~1 hour (column + migration + check). **Severity:** Low.
-
-### INV2. Token in URL query string lands in logs
-
-Existing follow-up in `docs/SECURITY_REMAINING.md` ("§6 follow-up —
-Hosted invoice token in URL path vs query string"). Repeated here for
-completeness: the `?t=<token>` form means the token appears in proxy
-logs, CDN access logs, and browser history. Path-segment
-(`/invoice/<id>/<token>`) is marginal. The strongest fix is the
-signed-cookie + 302-to-bare-URL pattern: GET `/invoice/<id>?t=<token>`
-sets an HttpOnly cookie and 302s to `/invoice/<id>`; subsequent
-requests authenticate via the cookie. Adds complexity, doesn't break
-existing emailed links.
-
-**Effort:** ~half-day. **Severity:** Low.
+Resolution: the public route now implements the cookie + 302 pattern.
+GET `/invoice/<id>?t=<token>` validates the token, sets a path-scoped
+(`/invoice/<id>`) HttpOnly + Secure + SameSite=Lax cookie carrying the
+token, and 302s to `/invoice/<id>`. Subsequent requests authenticate
+via the cookie. The token therefore lives in the address bar for a
+single request — long enough to land in the customer's browser
+history once, but stripped before any in-page interaction or sub-
+resource fetch carries a Referer. Existing emailed links keep
+working; resending an invoice rotates the token + cookie atomically.
 
 ### INV3. Draft invoice preview has no token gate
 
 See L11 above. Cross-listed here because it's an invoice-flow gap.
 
-### INV4. Email prefetch poisons the `viewed` event signal
+### INV4. ✅ FIXED — Email prefetch poisons the `viewed` event signal
 
-**Location:** `api/src/routes/publicInvoice.ts:204-223`
-
-Gmail, Outlook, Apple Mail, and corporate URL scanners prefetch links
-in incoming email. Every prefetch is logged as a `viewed` event with
-a hashed IP. The operator-facing "your customer opened the invoice"
-signal therefore fires before the customer has actually seen it —
-sometimes long before, sometimes by a bot that never shows it to a
-human.
-
-**Recommendation:** move logging from the initial GET to a confirmation
-beacon. Either:
-- Render the page, include a tiny `<img>` to `/invoice/<id>/seen?t=…`
-  that the email-prefetcher won't fire (most prefetchers fetch the
-  primary URL only); log on the beacon.
-- Or: delay-log on the server side by 5-10s and de-duplicate
-  consecutive views from the same hashed IP within a window.
-
-**Effort:** ~1 hour. **Severity:** Informational (signal quality, not
-security).
+Resolution: viewed events are no longer logged on the primary GET. A
+1x1 transparent-GIF beacon (`/invoice/<id>/seen`) is injected into
+the rendered hosted page and authenticated via the same path-scoped
+cookie as the page itself. Email prefetchers and corporate URL
+scanners only fetch the primary URL, so the beacon fires when a real
+browser renders the page rather than when a Gmail / Outlook /
+scanner probes the link. The beacon endpoint returns the GIF
+unconditionally so it can't double as a "does this invoice exist"
+oracle when hit without a valid cookie.
 
 ### INV5. Hosted URL is freely shareable; trust model isn't documented
 

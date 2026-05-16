@@ -1,4 +1,6 @@
+import type { Context } from "hono";
 import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { decrypt, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
@@ -7,20 +9,26 @@ import type { Env, InvoiceSnapshot } from "../lib/types";
 
 /**
  * Public hosted invoice page. Mounted on the top-level `app`, not under
- * /api/v1, so it bypasses the Cloudflare Access middleware — the customer
+ * /api/v1, so it bypasses the Clerk auth middleware — the customer
  * is not authenticated.
  *
- * Renders the immutable snapshot if the invoice has been sent; otherwise
- * shows a draft preview built from current data with a warning banner.
+ * Only sent invoices (with a frozen `snapshot`) are served from here.
+ * Drafts 404 — preview them through the authed `/api/v1/invoices/:id/preview`.
  *
- * Sent invoices require a per-invoice access token in the query string
- * (`?t=<token>`) that matches `invoices.accessToken`. The token is
- * generated and rotated by the send handler in routes/invoices.ts, so
- * old emailed links stop working after a resend. Without the token, the
- * route returns 404 — never disclosing whether the invoice exists.
+ * Access control: a per-invoice access token (rotated on every send,
+ * stored at `invoices.accessToken`, bounded by `accessTokenExpiresAt`).
+ * On first hit the token is presented as `?t=<token>` in the URL. The
+ * route validates it, stores it in a HttpOnly cookie scoped to
+ * `/invoice/<id>`, and 302s to the token-less URL — that keeps the
+ * token out of browser history, proxy logs, and any URL the customer
+ * later screenshots or forwards (INV2). Subsequent requests in the
+ * same browser authenticate via the cookie.
  *
- * Drafts (no snapshot yet) are tokenless because they are only ever
- * opened from the authenticated app via "Preview".
+ * View events are not logged on this route. A 1x1 image beacon
+ * (`/invoice/<id>/seen`) injected into the rendered HTML logs them
+ * instead, so email prefetchers and corporate URL scanners (which only
+ * fetch the primary URL, not sub-resources) don't poison the "your
+ * customer opened the invoice" signal (INV4).
  */
 
 const app = new Hono<{ Bindings: Env }>();
@@ -36,50 +44,67 @@ app.use("/*", async (c, next) => {
 	return next();
 });
 
-// Headers applied to every public hosted page. `no-referrer` is the
-// critical one — the URL carries the per-invoice access token as
-// `?t=<token>`, and the hosted page links out to Venmo / PayPal. Without
-// this, those third parties (and any intermediate proxy) would receive
-// the token in the Referer header.
+// Headers applied to every public hosted page. `no-referrer` keeps the
+// hosted URL out of Venmo / PayPal Referer logs; the CSP locks the
+// renderer's surface down to the inline styles it actually needs.
 const PUBLIC_PAGE_HEADERS = {
 	"Cache-Control": "no-store",
 	"Referrer-Policy": "no-referrer",
 	"X-Content-Type-Options": "nosniff",
 	"X-Frame-Options": "DENY",
-	// CSP for the hosted invoice page. The renderer has no inline scripts
-	// (the print button was removed), so we can lock script execution down
-	// entirely. Inline styles in the renderer are unavoidable, so
-	// `style-src 'unsafe-inline'` is the price.
 	"Content-Security-Policy":
 		"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 } as const;
 
-app.get("/:id", async (c) => {
-	const id = c.req.param("id");
-	const db = getDb(c.env);
+const cookieName = (invoiceId: string): string => `pt_inv_${invoiceId}`;
+const cookiePath = (invoiceId: string): string => `/invoice/${invoiceId}`;
 
-	const row = await db
+type InvoiceRow = {
+	id: string;
+	userId: number;
+	customerId: string;
+	timesheetId: string | null;
+	number: string;
+	status: string;
+	amount_cents: string;
+	description: string | null;
+	issuedAt: string;
+	dueDate: string;
+	snapshot: string | null;
+	accessToken: string | null;
+	accessTokenExpiresAt: string | null;
+};
+
+const loadInvoice = (env: Env, id: string) =>
+	getDb(env)
 		.prepare(
 			`SELECT id, userId, customerId, timesheetId, number, status,
 			        amount_cents, description, issuedAt, dueDate, snapshot,
-			        accessToken
+			        accessToken, accessTokenExpiresAt
 			 FROM invoices WHERE id = ? AND archivedAt IS NULL`,
 		)
 		.bind(id)
-		.first<{
-			id: string;
-			userId: number;
-			customerId: string;
-			timesheetId: string | null;
-			number: string;
-			status: string;
-			amount_cents: string;
-			description: string | null;
-			issuedAt: string;
-			dueDate: string;
-			snapshot: string | null;
-			accessToken: string | null;
-		}>();
+		.first<InvoiceRow>();
+
+// 1x1 transparent GIF — used as the view-beacon response.
+const TRANSPARENT_GIF = Uint8Array.from([
+	0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00,
+	0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02,
+	0x44, 0x01, 0x00, 0x3b,
+]);
+
+const respondWithBeacon = (c: Context<{ Bindings: Env }>) =>
+	c.body(TRANSPARENT_GIF, 200, {
+		"Content-Type": "image/gif",
+		"Cache-Control": "no-store",
+		"Referrer-Policy": "no-referrer",
+		"X-Content-Type-Options": "nosniff",
+	});
+
+app.get("/:id", async (c) => {
+	const id = c.req.param("id");
+	const row = await loadInvoice(c.env, id);
 
 	const notFound = c.html(
 		"<!DOCTYPE html><html><body><h1>Invoice not found</h1></body></html>",
@@ -87,25 +112,52 @@ app.get("/:id", async (c) => {
 		PUBLIC_PAGE_HEADERS,
 	);
 
-	if (!row) {
+	if (!row || !row.snapshot || !row.accessToken) {
 		return notFound;
 	}
 
-	// Drafts are not served from the public route. Previewing an unsent
-	// invoice is an authenticated action — see
-	// /api/v1/invoices/:id/preview. The public route only serves sent
-	// invoices, gated by the per-invoice access token.
-	if (!row.snapshot) {
-		return notFound;
-	}
-	const providedToken = c.req.query("t");
-	const expected = row.accessToken;
+	// Stale tokens are treated as missing — past the expiry, the operator
+	// must resend to mint a new token + window.
 	if (
-		!expected ||
-		!providedToken ||
-		!constantTimeEqual(providedToken, expected)
+		row.accessTokenExpiresAt &&
+		new Date(row.accessTokenExpiresAt).getTime() <= Date.now()
 	) {
 		return notFound;
+	}
+
+	// Token resolution: prefer the query string (allows token rotation
+	// after a resend to "just work" — the new emailed link overwrites the
+	// stale cookie). Fall back to the cookie when the URL has been
+	// stripped of `?t=` by the 302 below.
+	const queryToken = c.req.query("t");
+	const cookieToken = getCookie(c, cookieName(id));
+	const providedToken = queryToken ?? cookieToken ?? null;
+
+	if (!providedToken || !constantTimeEqual(providedToken, row.accessToken)) {
+		return notFound;
+	}
+
+	// First hit via `?t=` — store the token in a path-scoped HttpOnly
+	// cookie and 302 to the bare URL. The redirect strips the token from
+	// the address bar, browser history, and any subsequent Referer
+	// header.
+	if (queryToken) {
+		const ttlSeconds = row.accessTokenExpiresAt
+			? Math.max(
+					0,
+					Math.floor(
+						(new Date(row.accessTokenExpiresAt).getTime() - Date.now()) / 1000,
+					),
+				)
+			: 90 * 24 * 60 * 60;
+		setCookie(c, cookieName(id), queryToken, {
+			path: cookiePath(id),
+			httpOnly: true,
+			sameSite: "Lax",
+			secure: true,
+			maxAge: ttlSeconds,
+		});
+		return c.redirect(cookiePath(id), 302);
 	}
 
 	let snapshot: InvoiceSnapshot | null = null;
@@ -118,29 +170,66 @@ app.get("/:id", async (c) => {
 		return notFound;
 	}
 
-	// Log a 'viewed' event with hashed IP+UA.
-	if (row.status === "sent" || row.status === "paid") {
-		const ip =
-			c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
-		const ua = c.req.header("User-Agent") ?? "";
-		const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
-		const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
-		await db
-			.prepare(
-				`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
-				 VALUES (?, ?, ?, 'viewed', ?)`,
-			)
-			.bind(
-				crypto.randomUUID(),
-				row.id,
-				row.userId,
-				await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), c.env),
-			)
-			.run();
+	const html = renderInvoiceHtml(snapshot, {
+		seenBeaconUrl: `/invoice/${id}/seen`,
+	});
+	return c.html(html, 200, PUBLIC_PAGE_HEADERS);
+});
+
+// View beacon (INV4). Fired by the `<img>` injected into the rendered
+// hosted page; logs a `viewed` event with hashed IP+UA. Email
+// prefetchers fetch the primary URL only, so any hit here reflects a
+// real browser render rather than a Gmail/Outlook/scanner probe.
+//
+// Auth is via the same path-scoped cookie set by GET /:id — a beacon
+// hit with no cookie or a stale cookie returns the same transparent
+// GIF without writing anything, so the endpoint doesn't double as a
+// "does this invoice exist" oracle.
+app.get("/:id/seen", async (c) => {
+	const id = c.req.param("id");
+	const cookieToken = getCookie(c, cookieName(id));
+	if (!cookieToken) {
+		return respondWithBeacon(c);
 	}
 
-	const html = renderInvoiceHtml(snapshot);
-	return c.html(html, 200, PUBLIC_PAGE_HEADERS);
+	const row = await loadInvoice(c.env, id);
+	if (!row || !row.accessToken || !row.snapshot) {
+		return respondWithBeacon(c);
+	}
+	if (
+		row.accessTokenExpiresAt &&
+		new Date(row.accessTokenExpiresAt).getTime() <= Date.now()
+	) {
+		return respondWithBeacon(c);
+	}
+	if (!constantTimeEqual(cookieToken, row.accessToken)) {
+		return respondWithBeacon(c);
+	}
+
+	if (row.status !== "sent" && row.status !== "paid") {
+		return respondWithBeacon(c);
+	}
+
+	const db = getDb(c.env);
+	const ip =
+		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
+	const ua = c.req.header("User-Agent") ?? "";
+	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
+	await db
+		.prepare(
+			`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
+			 VALUES (?, ?, ?, 'viewed', ?)`,
+		)
+		.bind(
+			crypto.randomUUID(),
+			row.id,
+			row.userId,
+			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), c.env),
+		)
+		.run();
+
+	return respondWithBeacon(c);
 });
 
 export { app as publicInvoiceRoutes };

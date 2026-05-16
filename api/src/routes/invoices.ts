@@ -22,6 +22,11 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 const DEFAULT_DAYS_UNTIL_DUE = 30;
 
+// INV1: per-invoice access tokens expire 90 days after each send. The
+// public route 404s past the expiry; the operator can re-send to mint a
+// fresh token + window.
+const ACCESS_TOKEN_TTL_DAYS = 90;
+
 const createInvoiceSchema = z
 	.object({
 		customerId: z.string().min(1),
@@ -696,16 +701,21 @@ app.post("/:id/send", async (c) => {
 	}
 
 	const now = new Date().toISOString();
+	const accessTokenExpiresAt = new Date(
+		Date.now() + ACCESS_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+	).toISOString();
 	await db
 		.prepare(
 			`UPDATE invoices
-			 SET status = 'sent', sentAt = ?, snapshot = ?, accessToken = ?
+			 SET status = 'sent', sentAt = ?, snapshot = ?,
+			     accessToken = ?, accessTokenExpiresAt = ?
 			 WHERE id = ? AND userId = ?`,
 		)
 		.bind(
 			now,
 			await encrypt(JSON.stringify(snapshot), c.env),
 			accessToken,
+			accessTokenExpiresAt,
 			id,
 			userId,
 		)

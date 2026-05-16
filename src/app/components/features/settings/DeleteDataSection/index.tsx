@@ -28,8 +28,8 @@ export const DeleteDataSection = () => {
 			<H3>Delete All Data</H3>
 			<P>
 				Permanently delete all your projects, timesheets, transactions,
-				customers, invoices, and uploaded files. Your login account will
-				remain. This cannot be undone.
+				customers, invoices, and uploaded files. Your login account will remain.
+				This cannot be undone.
 			</P>
 
 			<label htmlFor="delete-confirm-input" className={styles.confirmLabel}>
@@ -47,8 +47,8 @@ export const DeleteDataSection = () => {
 			/>
 			<P id="delete-confirm-hint" className={styles.hint}>
 				This will remove all projects, timesheets, timesheet entries,
-				transactions, customers, invoices, audit logs, and uploaded files
-				from your account.
+				transactions, customers, invoices, audit logs, and uploaded files from
+				your account.
 			</P>
 
 			<Button
