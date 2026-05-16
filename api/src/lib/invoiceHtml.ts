@@ -64,6 +64,14 @@ export type RenderOptions = {
 	revokeUrl?: string;
 	/** Show a banner indicating this is a draft preview (used on the hosted page only). */
 	isDraftPreview?: boolean;
+	/**
+	 * URL of a 1x1 image that confirms a real browser rendered the page
+	 * (INV4). Email prefetchers only fetch the primary URL, so a view
+	 * event logged from this beacon reflects an actual page render rather
+	 * than a Gmail/Outlook/scanner probe. Only set on the hosted page —
+	 * leave it unset in email bodies.
+	 */
+	seenBeaconUrl?: string;
 };
 
 export const renderInvoiceHtml = (
@@ -118,6 +126,10 @@ export const renderInvoiceHtml = (
 
 	const revokeLink = revokeUrl
 		? `<p class="revoke-link">Don't want to receive invoice emails? <a href="${escapeHtml(revokeUrl)}">Revoke consent</a></p>`
+		: "";
+
+	const seenBeacon = options.seenBeaconUrl
+		? `<img src="${escapeHtml(options.seenBeaconUrl)}" alt="" width="1" height="1" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />`
 		: "";
 
 	return `<!DOCTYPE html>
@@ -255,6 +267,7 @@ export const renderInvoiceHtml = (
     ${hostedLink}
     ${revokeLink}
   </div>
+  ${seenBeacon}
 </body>
 </html>`;
 };

@@ -205,18 +205,14 @@ apply. Still worth doing one of:
 
 ## 📋 Findings that need product input, not just code
 
-### §6 follow-up — Hosted invoice token in URL path vs query string
+### §6 follow-up — Hosted invoice token in URL path vs query string ✅ Shipped
 
-The current implementation puts the per-invoice access token in
-`?t=<token>`. Even with `Referrer-Policy: no-referrer` (already shipped),
-the token appears in proxy logs, server access logs, and browser history.
-Moving the token into a path segment (`/invoice/<id>/<token>`) doesn't
-change where it lands but at least keeps it out of the `?query=` field
-of any log parser. A signed-cookie variant (set cookie on first hit then
-302 to a token-less URL) would be the strongest fix but adds complexity.
-
-**Status:** discuss with operator before changing — the email links sent
-historically use the `?t=` form and would break on rotation.
+Resolution: the public route now implements the cookie + 302 pattern
+described as the "strongest fix". GET `/invoice/<id>?t=<token>` sets a
+path-scoped HttpOnly cookie and 302s to `/invoice/<id>`; subsequent
+requests authenticate via the cookie. Existing emailed `?t=` links
+keep working; the token lives in the address bar for a single
+request. Tracked as INV2 in `SECURITY_REVIEW_2026_05.md`.
 
 ---
 
