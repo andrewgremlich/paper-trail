@@ -27,9 +27,9 @@ export const DeleteDataSection = () => {
 		<div className={styles.container}>
 			<H3>Delete All Data</H3>
 			<P>
-				Permanently delete all your projects, timesheets, transactions, and
-				connected Stripe account. Your login account will remain. This cannot be
-				undone.
+				Permanently delete all your projects, timesheets, transactions,
+				customers, invoices, and uploaded files. Your login account will
+				remain. This cannot be undone.
 			</P>
 
 			<label htmlFor="delete-confirm-input" className={styles.confirmLabel}>
@@ -46,8 +46,9 @@ export const DeleteDataSection = () => {
 				autoComplete="off"
 			/>
 			<P id="delete-confirm-hint" className={styles.hint}>
-				This will remove all projects, timesheets, timesheet entries, and
-				transactions from your account.
+				This will remove all projects, timesheets, timesheet entries,
+				transactions, customers, invoices, audit logs, and uploaded files
+				from your account.
 			</P>
 
 			<Button
