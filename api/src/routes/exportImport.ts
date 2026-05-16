@@ -638,11 +638,42 @@ app.post("/zip", async (c) => {
 		return c.json({ error: "No ZIP file provided" }, 400);
 	}
 
+	// Decompression-bomb defenses. Workers caps isolates at 128 MB / ~30 s
+	// CPU; a small zip with a high compression ratio can crash the isolate.
+	const MAX_ZIP_BYTES = 50 * 1024 * 1024; // 50 MB compressed
+	const MAX_TOTAL_INFLATED = 200 * 1024 * 1024; // 200 MB uncompressed
+	const MAX_ENTRIES = 5000;
+
+	if (arrayBuffer.byteLength > MAX_ZIP_BYTES) {
+		return c.json(
+			{ error: "ZIP too large", code: "ZIP_TOO_LARGE" },
+			413,
+		);
+	}
+
 	let entries: Record<string, Uint8Array>;
 	try {
 		entries = unzipSync(new Uint8Array(arrayBuffer));
 	} catch {
 		return c.json({ error: "Invalid ZIP file" }, 400);
+	}
+
+	const entryList = Object.entries(entries);
+	if (entryList.length > MAX_ENTRIES) {
+		return c.json(
+			{ error: "ZIP has too many entries", code: "ZIP_TOO_MANY_ENTRIES" },
+			413,
+		);
+	}
+	let totalInflated = 0;
+	for (const [, bytes] of entryList) {
+		totalInflated += bytes.byteLength;
+		if (totalInflated > MAX_TOTAL_INFLATED) {
+			return c.json(
+				{ error: "ZIP expands too large", code: "ZIP_INFLATED_TOO_LARGE" },
+				413,
+			);
+		}
 	}
 
 	const dataJsonBytes = entries["data.json"];

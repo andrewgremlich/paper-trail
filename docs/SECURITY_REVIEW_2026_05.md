@@ -25,7 +25,12 @@ defense-in-depth follow-ups from the previous review still stand.
 
 ## 🔴 High — fail-open on misconfiguration
 
-### H1. `CLERK_BYPASS=true` deployed to production opens the whole app
+### H1. ✅ FIXED — `CLERK_BYPASS=true` deployed to production opens the whole app
+
+Resolution: `clerkAuth` now refuses the bypass unless `APP_BASE_URL`
+looks like a dev / preview origin (`localhost`, `127.0.0.1`, or
+`*.workers.dev`); any other origin returns 500. See
+`api/src/middleware/auth.ts:47-67`.
 
 **Location:** `api/src/middleware/auth.ts:47-50`
 
@@ -70,7 +75,13 @@ if (env.CLERK_BYPASS === "true") {
 
 ---
 
-### H2. Missing `ENCRYPTION_KEY` silently stores everything in plaintext
+### H2. ✅ FIXED — Missing `ENCRYPTION_KEY` silently stores everything in plaintext
+
+Resolution: `clerkAuth` returns 500 when `ENCRYPTION_KEY` is missing
+outside of bypass mode. Mirror middleware on the public mounts
+(`api/src/routes/publicInvoice.ts`, `api/src/routes/consent.ts`)
+applies the same guard so the unauthenticated surfaces also fail
+closed.
 
 **Location:** `api/src/lib/crypto.ts:15-20`
 
@@ -115,7 +126,11 @@ were encrypted).
 
 ## 🟡 Medium
 
-### M1. ZIP import has no decompression-bomb defenses
+### M1. ✅ FIXED — ZIP import has no decompression-bomb defenses
+
+Resolution: `/api/v1/import/zip` now enforces a 50 MB compressed cap,
+a 200 MB total-inflated cap, and a 5 000-entry cap, all returning 413
+before the import batch runs. See `api/src/routes/exportImport.ts`.
 
 **Location:** `api/src/routes/exportImport.ts:632-694`
 
@@ -160,7 +175,14 @@ for (const [, bytes] of entryList) {
 
 ---
 
-### M2. Per-recipient consent-email throttle is missing
+### M2. ✅ FIXED — Per-recipient consent-email throttle is missing
+
+Resolution: `send_rate_log` gained a `recipientHash` column
+(`0002_recipient_rate_log.sql`). `assertWithinSendLimit` now takes an
+optional recipient email, HMACs it with `ENCRYPTION_KEY`, and refuses
+the send if the user has already touched 50 distinct recipients in
+the rolling 24h window. Both `customers.ts` (consent request) and
+`invoices.ts` (invoice send) pass the recipient through.
 
 **Location:** `api/src/routes/customers.ts:200-307` + `api/src/lib/rateLimit.ts`
 
@@ -183,7 +205,12 @@ accounts, ramped up as their account ages). New table or
 
 ---
 
-### M3. Unused heavyweight dependencies still bundled
+### M3. ✅ FIXED — Unused heavyweight dependencies still bundled
+
+Resolution: `stripe`, `@tanstack/react-table`, `summit-kit`, and
+`class-variance-authority` removed from `package.json`. The stale
+"integrates with Stripe" package description was also updated. Run
+`pnpm install` to refresh the lockfile.
 
 **Location:** `package.json:22, 24, 28, 31`
 

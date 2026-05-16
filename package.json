@@ -1,6 +1,6 @@
 {
   "name": "paper-trail",
-  "description": "A Paper Trail that integrates with Stripe in order to send invoices.",
+  "description": "Self-hosted timesheet and invoicing app on Cloudflare Workers.",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -18,8 +18,6 @@
   "dependencies": {
     "@clerk/react": "^6.6.3",
     "@tanstack/react-query": "^5.100.10",
-    "@tanstack/react-table": "^8.21.3",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "fflate": "^0.8.2",
@@ -28,8 +26,6 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "sanitize-filename": "^1.6.4",
-    "stripe": "^22.1.1",
-    "summit-kit": "^3.5.2",
     "xlsx": "0.18.5",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"

@@ -573,8 +573,11 @@ app.post("/:id/send", async (c) => {
 		);
 	}
 
+	const customerEmail = await decrypt(cust.email, c.env);
+	const customerName = await decrypt(cust.name, c.env);
+
 	try {
-		await assertWithinSendLimit(userId, c.env);
+		await assertWithinSendLimit(userId, c.env, customerEmail);
 	} catch (err) {
 		if (err instanceof RateLimitError) {
 			return c.json(
@@ -602,9 +605,6 @@ app.post("/:id/send", async (c) => {
 		.bind(revokeToken, row.customerId, userId)
 		.run();
 	const revokeUrl = `${base}/consent/revoke/${revokeToken}`;
-
-	const customerEmail = await decrypt(cust.email, c.env);
-	const customerName = await decrypt(cust.name, c.env);
 
 	// BYO users get the full rich invoice email; shared-account users get
 	// the minimal link-only template so invoice details don't land in the

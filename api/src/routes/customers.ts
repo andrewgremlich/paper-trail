@@ -287,10 +287,17 @@ app.post("/:id/request-consent", async (c) => {
 		);
 	}
 
+	// Decrypted before the rate-limit check so the per-recipient
+	// throttle has the address to hash.
+	const customerName = await decrypt(customerRow.name, c.env);
+	const customerEmail = await decrypt(customerRow.email, c.env);
+
 	// Share the invoice-send rate limit budget: spam-protects the operator
-	// and keeps a single user from being used as an email cannon.
+	// and keeps a single user from being used as an email cannon. Passing
+	// the recipient address adds a per-recipient daily cap to protect the
+	// shared sending-domain reputation.
 	try {
-		await assertWithinSendLimit(userId, c.env);
+		await assertWithinSendLimit(userId, c.env, customerEmail);
 	} catch (err) {
 		if (err instanceof RateLimitError) {
 			return c.json(
@@ -319,8 +326,6 @@ app.post("/:id/request-consent", async (c) => {
 		.bind(token, now, id, userId)
 		.run();
 
-	const customerName = await decrypt(customerRow.name, c.env);
-	const customerEmail = await decrypt(customerRow.email, c.env);
 	const consentUrl = `${c.env.APP_BASE_URL.replace(/\/$/, "")}/consent/${token}`;
 
 	const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;line-height:1.5;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px">
