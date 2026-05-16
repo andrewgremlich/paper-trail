@@ -177,8 +177,8 @@ for (const [, bytes] of entryList) {
 
 ### M2. ✅ FIXED — Per-recipient consent-email throttle is missing
 
-Resolution: `send_rate_log` gained a `recipientHash` column
-(`0002_recipient_rate_log.sql`). `assertWithinSendLimit` now takes an
+Resolution: `send_rate_log` gained a `recipientHash` column (squashed
+into `0001_initial_schema.sql`). `assertWithinSendLimit` now takes an
 optional recipient email, HMACs it with `ENCRYPTION_KEY`, and refuses
 the send if the user has already touched 50 distinct recipients in
 the rolling 24h window. Both `customers.ts` (consent request) and
@@ -521,12 +521,12 @@ deliberate.
 
 ### INV1. ✅ FIXED — `accessToken` has no expiry
 
-Resolution: migration `0003_invoice_access_token_expiry.sql` adds a
-nullable `accessTokenExpiresAt` column. The `/send` handler stamps it
-at `sentAt + 90 days` every time an invoice is sent or resent, and the
-public hosted route 404s once the timestamp is in the past. Pre-
-existing sent invoices (NULL expiry) keep working until the operator
-resends, which mints a fresh token + window. See
+Resolution: a nullable `accessTokenExpiresAt` column (squashed into
+`0001_initial_schema.sql`) bounds the token lifetime. The `/send`
+handler stamps it at `sentAt + 90 days` every time an invoice is sent
+or resent, and the public hosted route 404s once the timestamp is in
+the past. Pre-existing sent invoices (NULL expiry) keep working until
+the operator resends, which mints a fresh token + window. See
 `api/src/routes/invoices.ts` + `publicInvoice.ts`.
 
 ### INV2. ✅ FIXED — Token in URL query string lands in logs

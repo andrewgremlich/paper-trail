@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS customers (
   consentRequestedAt TEXT,
   consentIpHash TEXT,         -- salted SHA-256 of confirmer IP
   consentUaHash TEXT,         -- salted SHA-256 of confirmer UA
-  -- Single-use token so customers can self-service revoke consent (migration 0002).
+  -- Single-use token so customers can self-service revoke consent.
   revokeToken TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -243,10 +243,15 @@ CREATE TABLE IF NOT EXISTS invoices (
   paidAt TEXT,
   voidedAt TEXT,
   archivedAt TEXT,                                             -- soft-delete; rows are never hard-deleted
-  -- Per-invoice access token (migration 0004). Required in the hosted URL
-  -- query string (?t=<token>) for sent invoices. Rotated on every send so
-  -- old emailed links stop working after a resend.
+  -- Per-invoice access token. Required in the hosted URL query string
+  -- (?t=<token>) for sent invoices. Rotated on every send so old
+  -- emailed links stop working after a resend.
   accessToken TEXT,
+  -- Bounded lifetime for `accessToken`. Stamped at `sentAt + 90 days`
+  -- on every send/resend; the public hosted route 404s once the
+  -- timestamp is in the past so a forwarded link can't render the
+  -- snapshot indefinitely.
+  accessTokenExpiresAt TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (userId, number)
@@ -276,14 +281,23 @@ CREATE INDEX IF NOT EXISTS idx_invoice_events_invoiceId ON invoice_events(invoic
 
 -- =====================
 -- send_rate_log  (30 sends/hour throttle, enforced in api/src/lib/rateLimit.ts)
+--
+-- recipientHash is the HMAC-SHA-256 of the recipient email keyed by
+-- ENCRYPTION_KEY, used by assertWithinSendLimit to also cap the number
+-- of unique recipients a single user can spray in a rolling window.
+-- Protects shared sending-domain reputation from a single bad-actor
+-- account.
 -- =====================
 CREATE TABLE IF NOT EXISTS send_rate_log (
   id TEXT PRIMARY KEY,
   userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  sentAt TEXT NOT NULL DEFAULT (datetime('now'))
+  sentAt TEXT NOT NULL DEFAULT (datetime('now')),
+  recipientHash TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_send_rate_log_userId_sentAt ON send_rate_log(userId, sentAt);
+CREATE INDEX IF NOT EXISTS idx_send_rate_log_userId_recipient_sentAt
+  ON send_rate_log(userId, recipientHash, sentAt);
 
 -- =====================
 -- updatedAt triggers
