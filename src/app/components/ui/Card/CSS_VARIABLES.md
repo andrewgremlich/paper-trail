@@ -23,7 +23,7 @@ The Card component uses the following CSS variables for styling:
 
 ## Usage
 
-These variables are automatically applied through the Card.module.css file:
+These variables are automatically applied through the `styles.module.css` file:
 
 ```css
 .card {

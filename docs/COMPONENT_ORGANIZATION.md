@@ -10,45 +10,75 @@ src/app/components/
 │   ├── Button/
 │   ├── Card/
 │   ├── Dialog/
+│   ├── Grid/
 │   ├── Input/
 │   ├── Select/
 │   ├── Spinner/
 │   ├── Table/
-│   └── Grid/
+│   └── Textarea/
 ├── layout/                      # Layout components
 │   ├── Flex/
+│   ├── HtmlElements/
 │   ├── Nav/
-│   ├── PageWrapper/
-│   └── HtmlElements/
+│   └── PageWrapper/
 ├── features/                    # Feature-specific components
+│   ├── auth/
+│   │   └── SignInGate/
+│   ├── customers/
+│   │   ├── AddressFields/
+│   │   ├── CreateCustomer/
+│   │   ├── CreateCustomerDialog/
+│   │   ├── CustomerDialog/
+│   │   ├── CustomerEditDialog/
+│   │   ├── CustomerEditRow/
+│   │   ├── CustomerViewRow/
+│   │   ├── addressHelpers.ts
+│   │   └── consentBadge.ts
+│   ├── invoices/
+│   │   ├── CreateInvoiceForm/
+│   │   ├── GenerateInvoice/
+│   │   ├── InvoiceDetails/
+│   │   ├── InvoiceModal/
+│   │   └── PayVoidButtons/
 │   ├── projects/
+│   │   ├── GenerateProject/
+│   │   ├── GenerateProjectDialog/
 │   │   ├── ProjectEditForm/
-│   │   ├── ProjectModal/
-│   │   └── GenerateProject/
+│   │   └── ProjectModal/
+│   ├── settings/
+│   │   ├── DeleteDataSection/
+│   │   ├── EmailDeliverySection/
+│   │   ├── ExportImportSection/
+│   │   ├── InvoiceProfileSection/
+│   │   └── ThemeSection/
 │   ├── timesheets/
+│   │   ├── CreateTimesheetRecord/
+│   │   ├── GenerateTimesheet/
 │   │   ├── TimesheetEditForm/
 │   │   ├── TimesheetModal/
-│   │   ├── TimesheetTable/
-│   │   ├── GenerateTimesheet/
-│   │   └── CreateTimesheetRecord/
-│   ├── transactions/
-│   │   ├── TransactionEditRow/
-│   │   └── TransactionViewRow/
-│   ├── invoices/
-│   │   ├── GenerateInvoice/
-│   │   └── PayVoidButtons/
-│   └── settings/
-│       ├── SettingsModal/
-│       ├── StripeSecretSection/
-│       ├── SyncSettings/
-│       └── ExportImportSection/
-├── shared/                      # Shared utility components
-│   ├── EditToggleButton/
-│   ├── DeleteItem/
-│   ├── CardPreview/
-│   └── ErrorBoundary/
-└── index.ts                     # Barrel export (optional)
+│   │   └── TimesheetTable/
+│   └── transactions/
+│       ├── TransactionDialog/
+│       ├── TransactionEditRow/
+│       ├── TransactionForm/
+│       ├── TransactionList/
+│       ├── TransactionTotalRow/
+│       └── TransactionViewRow/
+└── shared/                      # Shared utility components
+    ├── CardPreview/
+    ├── CloseModalButton/
+    ├── DeleteItem/
+    ├── EditToggleButton/
+    ├── ErrorBoundary.tsx        # NB: file, not folder
+    ├── ModalHeader/
+    └── ModalRenderer/
 ```
+
+> Most folders follow the `index.tsx` + `styles.module.css` + `*.test.tsx`
+> shape described below. `ErrorBoundary` is a single `.tsx` file because
+> it has no styles. Some feature folders include small sibling helpers
+> like `addressHelpers.ts` / `consentBadge.ts` — these are
+> non-component utilities scoped to a single feature.
 
 ## Category Descriptions
 
@@ -97,6 +127,15 @@ Business-logic-heavy components organized by feature domain. These components:
 
 #### Feature Subdirectories
 
+**`features/auth/`**
+- `SignInGate` — wraps the app in Clerk's `<SignedIn>` / `<SignedOut>`
+  components and bridges the live Clerk session token into the API
+  client via `setAuthTokenProvider`
+
+**`features/customers/`**
+- Customer CRUD, consent state badges, and the address form used by
+  both the customer dialog and the invoice profile
+
 **`features/projects/`**
 - Components related to project management
 - Includes project creation, editing, and viewing
@@ -108,14 +147,21 @@ Business-logic-heavy components organized by feature domain. These components:
 **`features/transactions/`**
 - Components for transaction management
 - Separate transaction viewing and editing concerns
+- File attachment hooks consume the `attachments` table (see
+  `docs/FILE_HANDLING.md`)
 
 **`features/invoices/`**
-- Components related to invoice generation and management
-- Integration with Stripe for payments
+- Self-hosted invoice generation, send/pay/void controls, and the
+  invoice details view. No external payment processor — invoices link
+  out to the user's Venmo / PayPal handles on the hosted page
 
 **`features/settings/`**
-- Application settings and configuration components
-- Includes Stripe configuration, sync settings, and data import/export
+- Application settings and configuration:
+  - `InvoiceProfileSection` — business name/address, Venmo, PayPal
+  - `EmailDeliverySection` — per-user Resend API key + from-address
+  - `ExportImportSection` — encrypted export + import bundles
+  - `ThemeSection` — light/dark/system toggle
+  - `DeleteDataSection` — wipe all data for the current user
 
 ### Shared Components (`shared/`)
 

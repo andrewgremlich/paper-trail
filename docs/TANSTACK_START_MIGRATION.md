@@ -4,7 +4,15 @@ A pragmatic migration plan for moving Paper Trail from a Vite SPA + standalone H
 
 > **Status:** Exploratory sketch, not a committed plan. TanStack Start is pre-1.0 — APIs may shift.
 >
-> **Note:** This doc still references the legacy Cloudflare Access auth setup. Authentication has since moved to Clerk (see `docs/CLERK_AUTH.md`); when reading the auth sections below, mentally substitute "Clerk session JWT in `Authorization: Bearer`" for "Cloudflare Access email header".
+> **Notes when reading this doc:**
+> - Auth has moved from Cloudflare Access (email header) to Clerk
+>   (`Authorization: Bearer <JWT>`). See `docs/CLERK_AUTH.md`.
+> - Stripe has been removed. Invoices are self-hosted, rendered from a
+>   frozen snapshot, and delivered via Resend; customers pay
+>   out-of-band via Venmo/PayPal deep links. Anywhere this doc mentions
+>   "Stripe webhooks" or `api/src/routes/stripe.ts`, substitute "the
+>   public hosted-invoice + consent routes" (`api/src/routes/publicInvoice.ts`,
+>   `api/src/routes/consent.ts`).
 
 ## Why TanStack Start
 

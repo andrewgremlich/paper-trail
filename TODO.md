@@ -1,4 +1,4 @@
-- [ ] Does delete transaction also delete the file from R2?
 - [ ] Drag and drop zone for file attachment.
 - [ ] If file doesn't exist, allow for reattach. (user clicks and file doesn't exist)
-- [ ] Stored file name should also be encrypted?
+- [x] Stored file name should also be encrypted? — `attachments.originalName` is now encrypted with AES-256-GCM (see `docs/FILE_HANDLING.md`).
+- [x] Does delete transaction also delete the file from R2? — `transactions ON DELETE SET NULL` orphans the attachment; the cron sweeper in `api/src/scheduled.ts` then removes both the DB row and the R2 object after `ORPHAN_GRACE_HOURS`.
