@@ -17,8 +17,8 @@ twice (see `docs/SECURITY_REVIEW_2026_05.md` and
 `docs/SECURITY_REMAINING.md`) and the high-severity items have been
 closed. AES-GCM encryption-at-rest, Clerk JWT verification, CSRF,
 rate limiting, per-user data isolation, atomic imports, and the
-attachments-table-as-authority pattern are all in place. 213 frontend
-tests pass; `tsc --noEmit` is clean.
+attachments-table-as-authority pattern are all in place. 356 tests pass
+across 36 files (frontend + full backend lib/route coverage); `tsc --noEmit` is clean.
 
 The blockers are operational, not architectural:
 
@@ -48,9 +48,9 @@ Sections below break this down by area. Severity tags use
 |-------|--------|-------|
 | `pnpm install` | ✅ | Clean install on a fresh checkout |
 | `tsc --noEmit` | ✅ | No type errors |
-| `pnpm run check` (Biome) | ❌ | 1 warning: comma-operator in `Timesheets.tsx:53` |
-| `pnpm run test` | ✅ | 213 tests pass across 27 files |
-| API test coverage | ❌ | Zero tests under `api/` — the entire backend is untested |
+| `pnpm run check` (Biome) | ✅ | |
+| `pnpm run test` | ✅ | 356 tests pass across 36 files (two vitest projects: `node` + `workers`) |
+| API test coverage | ✅ | 7 lib unit test files + 12 route E2E tests via `@cloudflare/vitest-pool-workers` |
 
 ### 1.1 Biome warning is a real bug — [Blocker]
 
@@ -82,24 +82,23 @@ evt.target.reset();
 
 Also debug code; can be removed.
 
-### 1.2 No backend tests — [High]
+### 1.2 No backend tests — ✅ RESOLVED
 
-27 test files exist, all under `src/app/components/` and `src/app/lib/`.
-Nothing under `api/`. The backend includes the auth middleware, JWT
-verification, AES-GCM encrypt/decrypt, CSRF, rate-limit, the invoice
-snapshot renderer, the cron sweeper, and ~12 route modules — none of
-it has any test coverage. The route logic is also the part of the
-codebase most exposed to security regression.
+Previously: 27 test files existed, all under `src/app/`; nothing under `api/`.
 
-Suggested floor for the next round of work:
-- `api/src/lib/crypto.test.ts` — round-trip encrypt/decrypt, IV
-  uniqueness, plaintext-passthrough on missing key.
-- `api/src/lib/clerkJwt.test.ts` — clock-skew, issuer mismatch, alg
-  pinning, malformed token rejection.
-- `api/src/lib/csrf.test.ts` — token validate/issue cycle.
-- `api/src/lib/rateLimit.test.ts` — per-recipient + per-user buckets.
-- One end-to-end happy-path test per route module, using `unstable_dev`
-  or a Hono test client.
+**Done (2026-05-16):** Full backend test suite added under `api/src/`:
+
+- `api/src/lib/crypto.test.ts` — round-trip encrypt/decrypt, IV uniqueness, buffer variants, wrong-key rejection, plaintext passthrough
+- `api/src/lib/hash.test.ts` — HMAC determinism + key isolation, legacy `sha256Hex` construction, `randomHexToken` length, `constantTimeEqual` safety
+- `api/src/lib/validators.test.ts` — all Zod primitives: uuid, isoDate, moneyCents, dollarAmount, description, shortName, address, filePath (rejects non-http schemes)
+- `api/src/lib/invoiceHtml.test.ts` — XSS escaping in snapshot fields, Venmo/PayPal URL shape, draft banner, seen-beacon img, robots noindex
+- `api/src/lib/resend.test.ts` — fetch mocked; success path, POST URL + auth header, error-code mappings, non-JSON error body
+- `api/src/lib/csrf.test.ts` — token issue/validate cycle, per-scope isolation, cookie attributes
+- `api/src/lib/rateLimit.test.ts` — per-recipient + per-user buckets, hourly cap, distinct-recipient cap, row pruning, `RateLimitError` class
+- `api/src/lib/clerkJwt.test.ts` — PEM mode (31 cases): alg pinning, clock skew, issuer mismatch, `azp`, malformed tokens; JWKS mode: verify + cache, `kid` rotation refresh, unknown kid, fetch failure, empty JWKS
+- `api/src/test/routes.workers.test.ts` — 12 E2E happy-path tests via `SELF` fetcher (`@cloudflare/vitest-pool-workers`): userProfile, customers, projects, timesheets, timesheetEntries, transactions, files+attachments, invoices, exportImport, HSTS/Cache-Control headers, consent page, publicInvoice 404
+
+Two vitest projects: `vitest.config.node.ts` (happy-dom, frontend + unit) and `vitest.workers.config.ts` (workerd via `@cloudflare/vitest-pool-workers`, backend E2E). Total: 356 tests across 36 files.
 
 ### 1.3 `pnpm run check` only lints `./src` — [Low]
 
@@ -429,7 +428,7 @@ review docs cover most of what an operator needs. Gaps:
 | 6 | Replace `window.alert` calls with toast / inline UI | Medium | 1 hour |
 | 7 | Add deploy workflow (`deploy.yml`) gated on `workflow_dispatch` | Medium | 1 hour |
 | 8 | Wire up Sentry (or equivalent) for frontend + worker | High | 2 hours |
-| 9 | Add at least crypto / clerkJwt / csrf / rateLimit tests under `api/` | High | half day |
+| 9 | ~~Add at least crypto / clerkJwt / csrf / rateLimit tests under `api/`~~ ✅ Done — 356 tests / 36 files (8 lib modules + 12 E2E route tests) | High | half day |
 | 10 | Cron failure alert via Resend | Medium | 30 min |
 | 11 | Set `workers_dev: false` + point a custom domain | Medium | 30 min + DNS |
 | 12 | Sanitise ErrorBoundary fallback (no stack in prod) | Medium | 15 min |
@@ -466,8 +465,10 @@ In the spirit of fairness — this codebase has a lot going for it:
 8. **Clerk JWT verification** with networkless PEM mode is a non-
    trivial primitive done well.
 9. **Atomic imports via `db.batch()` + `?confirm=true`.**
-10. **213 passing frontend tests across 27 files.** The UI primitives,
-    feature components, and form behaviors all have coverage.
+10. **356 passing tests across 36 files** — frontend UI primitives, feature
+    components, form behaviors, and full backend coverage (crypto, JWT,
+    CSRF, rate-limit, validators, invoice HTML, Resend, and 12 E2E route
+    tests running against a real workerd + D1 instance).
 11. **`tsc --noEmit` is clean** across both frontend and backend.
 12. **Component organisation** (`ui` / `layout` / `shared` / `features`)
     is consistent and the primitives are reusable.

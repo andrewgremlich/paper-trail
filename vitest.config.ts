@@ -1,17 +1,11 @@
-import { resolve } from "node:path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+// Root vitest config — composes two sub-projects:
+//   - vitest.config.node.ts: happy-dom for the React frontend + pure unit tests
+//   - vitest.workers.config.ts: workerd via @cloudflare/vitest-pool-workers
+//     for backend end-to-end tests that exercise the real Hono app + D1 + R2
 export default defineConfig({
-	plugins: [react()],
-	resolve: {
-		alias: {
-			"@/components": resolve(__dirname, "src/app/components"),
-			"@/lib": resolve(__dirname, "src/app/lib"),
-			"@": resolve(__dirname, "src/app"),
-		},
-	},
 	test: {
-		environment: "happy-dom",
+		projects: ["./vitest.config.node.ts", "./vitest.workers.config.ts"],
 	},
 });

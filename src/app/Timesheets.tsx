@@ -48,36 +48,30 @@ export const Timesheets = () => {
 				<>
 					<H1>Timesheets</H1>
 					{projects &&
-						timesheets.map(
-							(timesheet) => (
-								console.log(timesheet),
-								(
-									<CardPreview
-										key={timesheet.id}
-										name={`${timesheet.name} ${
-											projects.find((p) => p.id === timesheet.projectId)?.name
-												? `(${
-														projects.find((p) => p.id === timesheet.projectId)
-															?.name
-													})`
-												: ""
-										}`}
-										description={
-											timesheet.description
-												? timesheet.description
-												: "No description provided"
-										}
-										action={() => {
-											openModal({
-												type: "timesheet",
-												timesheetId: timesheet.id,
-											});
-										}}
-										ariaLabel={`Open timesheet ${timesheet.name}`}
-									/>
-								)
-							),
-						)}
+						timesheets.map((timesheet) => (
+							<CardPreview
+								key={timesheet.id}
+								name={`${timesheet.name} ${
+									projects.find((p) => p.id === timesheet.projectId)?.name
+										? `(${
+												projects.find((p) => p.id === timesheet.projectId)?.name
+											})`
+										: ""
+								}`}
+								description={
+									timesheet.description
+										? timesheet.description
+										: "No description provided"
+								}
+								action={() => {
+									openModal({
+										type: "timesheet",
+										timesheetId: timesheet.id,
+									});
+								}}
+								ariaLabel={`Open timesheet ${timesheet.name}`}
+							/>
+						))}
 				</>
 			)}
 

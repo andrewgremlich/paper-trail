@@ -22,7 +22,7 @@ this file is the actionable checklist.
 - [ ] **M2. Per-recipient consent-email throttle.** Add a second
   `(userId, lower(email))` daily budget so 30 sends/hour can't be
   sprayed across 30 different addresses. ~1 hour.
-- [ ] **M3. Remove unused deps.** `pnpm remove stripe @tanstack/react-table summit-kit class-variance-authority` and run `pnpm knip`. ~5 min.
+- [X] **M3. Remove unused deps.** `pnpm remove stripe @tanstack/react-table summit-kit class-variance-authority` and run `pnpm knip`. ~5 min.
 
 ## Security — Low (defense in depth)
 
@@ -112,11 +112,11 @@ fixing right now. Re-evaluate if the product shape changes.
 
 ## Done
 
-- [x] Encrypt `attachments.originalName` — see `docs/FILE_HANDLING.md`.
-- [x] R2 cleanup on transaction delete — `ON DELETE SET NULL` orphans
+- [X] Encrypt `attachments.originalName` — see `docs/FILE_HANDLING.md`.
+- [X] R2 cleanup on transaction delete — `ON DELETE SET NULL` orphans
   the attachment; cron sweep removes the R2 object + row after
   `ORPHAN_GRACE_HOURS`.
-- [x] Drop the stale "connected Stripe account" copy from the Delete
+- [X] Drop the stale "connected Stripe account" copy from the Delete
   All Data confirmation.
-- [x] May 2026 doc sweep — README, CLAUDE.md, COMPONENT_ORGANIZATION,
+- [X] May 2026 doc sweep — README, CLAUDE.md, COMPONENT_ORGANIZATION,
   TANSTACK_START_MIGRATION, db-table skill, code-reviewer agent.
