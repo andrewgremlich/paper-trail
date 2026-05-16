@@ -20,19 +20,30 @@ import type { Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { constantTimeEqual, randomHexToken } from "./hash";
 
-export const CSRF_COOKIE = "pt_consent_csrf";
 export const CSRF_FIELD = "csrf";
+
+// Scope cookies per flow so opening both a consent page and a revoke
+// page in the same browser doesn't have the later GET clobber the
+// earlier nonce and 403 the older form on submit.
+export type CsrfScope = "consent" | "revoke";
+
+const cookieName = (scope: CsrfScope): string =>
+	scope === "revoke" ? "pt_revoke_csrf" : "pt_consent_csrf";
+
+const cookiePath = (scope: CsrfScope): string =>
+	scope === "revoke" ? "/consent/revoke" : "/consent";
 
 const CSRF_TTL_SECONDS = 30 * 60; // 30 minutes — long enough to read + submit
 
 /**
- * Issues a fresh CSRF nonce, sets it as a same-site cookie, and returns
- * the nonce so the caller can render it into the form as a hidden field.
+ * Issues a fresh CSRF nonce, sets it as a same-site cookie scoped to
+ * `scope`, and returns the nonce so the caller can render it into the
+ * form as a hidden field.
  */
-export const issueCsrfToken = (c: Context): string => {
+export const issueCsrfToken = (c: Context, scope: CsrfScope): string => {
 	const nonce = randomHexToken(32);
-	setCookie(c, CSRF_COOKIE, nonce, {
-		path: "/consent",
+	setCookie(c, cookieName(scope), nonce, {
+		path: cookiePath(scope),
 		httpOnly: true,
 		sameSite: "Strict",
 		secure: true,
@@ -50,14 +61,16 @@ export const csrfFormField = (nonce: string): string =>
 	`<input type="hidden" name="${CSRF_FIELD}" value="${nonce}" />`;
 
 /**
- * Validates the CSRF nonce on a POST. Returns true if the cookie matches
- * the form-submitted value. Callers should respond 403 on failure.
+ * Validates the CSRF nonce on a POST. Returns true if the cookie for
+ * `scope` matches the form-submitted value. Callers should respond 403
+ * on failure.
  */
 export const validateCsrfToken = (
 	c: Context,
+	scope: CsrfScope,
 	formValue: unknown,
 ): boolean => {
-	const cookieValue = getCookie(c, CSRF_COOKIE);
+	const cookieValue = getCookie(c, cookieName(scope));
 	if (typeof cookieValue !== "string" || cookieValue.length === 0) return false;
 	if (typeof formValue !== "string" || formValue.length === 0) return false;
 	return constantTimeEqual(cookieValue, formValue);

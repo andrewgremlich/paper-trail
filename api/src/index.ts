@@ -41,6 +41,21 @@ app.route("/consent", consentRoutes);
 // v1 API routes
 const v1 = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
+// Default-secure response headers for every authenticated response.
+// `Cache-Control: no-store` keeps PII out of shared caches even if a
+// route forgets to set it explicitly; HSTS reinforces the edge-managed
+// header so misrouted traffic still gets it.
+v1.use("/*", async (c, next) => {
+	await next();
+	if (!c.res.headers.has("Cache-Control")) {
+		c.header("Cache-Control", "no-store");
+	}
+	c.header(
+		"Strict-Transport-Security",
+		"max-age=63072000; includeSubDomains",
+	);
+});
+
 // Apply Clerk auth to all v1 routes
 v1.use("/*", clerkAuth);
 

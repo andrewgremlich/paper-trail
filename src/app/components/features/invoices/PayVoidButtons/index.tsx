@@ -5,7 +5,12 @@ import { Flex } from "@/components/layout/Flex";
 import { P } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/db/client";
-import { markInvoicePaid, sendInvoice, voidInvoice } from "@/lib/db/invoices";
+import {
+	markInvoicePaid,
+	openInvoicePreview,
+	sendInvoice,
+	voidInvoice,
+} from "@/lib/db/invoices";
 import type { Invoice } from "@/lib/db/types";
 import styles from "./styles.module.css";
 
@@ -110,7 +115,11 @@ export const PayVoidButtons = ({ invoice }: { invoice: Invoice }) => {
 				<Button
 					size="sm"
 					variant="secondary"
-					onClick={() => window.open(hostedUrl, "_blank")}
+					onClick={() => {
+						openInvoicePreview(invoice.id).catch(() => {
+							window.open(hostedUrl, "_blank");
+						});
+					}}
 					leftIcon={<ExternalLink size={16} />}
 				>
 					Open invoice page

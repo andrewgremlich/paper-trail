@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import { decrypt, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
@@ -46,6 +46,12 @@ const PUBLIC_PAGE_HEADERS = {
 	"Referrer-Policy": "no-referrer",
 	"X-Content-Type-Options": "nosniff",
 	"X-Frame-Options": "DENY",
+	// CSP for the hosted invoice page. The renderer has no inline scripts
+	// (the print button was removed), so we can lock script execution down
+	// entirely. Inline styles in the renderer are unavoidable, so
+	// `style-src 'unsafe-inline'` is the price.
+	"Content-Security-Policy":
+		"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 } as const;
 
 app.get("/:id", async (c) => {
@@ -85,134 +91,34 @@ app.get("/:id", async (c) => {
 		return notFound;
 	}
 
-	// Sent invoices require the per-invoice access token. Drafts are
-	// tokenless (only viewed from the authenticated app). Comparison is
-	// constant-time so this route does not leak whether the prefix
-	// matched via response timing.
-	if (row.snapshot) {
-		const providedToken = c.req.query("t");
-		const expected = row.accessToken;
-		if (
-			!expected ||
-			!providedToken ||
-			!constantTimeEqual(providedToken, expected)
-		) {
-			return notFound;
-		}
+	// Drafts are not served from the public route. Previewing an unsent
+	// invoice is an authenticated action — see
+	// /api/v1/invoices/:id/preview. The public route only serves sent
+	// invoices, gated by the per-invoice access token.
+	if (!row.snapshot) {
+		return notFound;
+	}
+	const providedToken = c.req.query("t");
+	const expected = row.accessToken;
+	if (
+		!expected ||
+		!providedToken ||
+		!constantTimeEqual(providedToken, expected)
+	) {
+		return notFound;
 	}
 
 	let snapshot: InvoiceSnapshot | null = null;
-	if (row.snapshot) {
-		try {
-			snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
-		} catch {
-			snapshot = null;
-		}
+	try {
+		snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
+	} catch {
+		snapshot = null;
 	}
-
-	const isDraftPreview = !snapshot;
-
 	if (!snapshot) {
-		// Draft preview — rebuild from live state.
-		const user = await db
-			.prepare(
-				`SELECT email, venmoHandle, paypalHandle, businessName, businessAddress
-				 FROM users WHERE id = ?`,
-			)
-			.bind(row.userId)
-			.first<{
-				email: string;
-				venmoHandle: string | null;
-				paypalHandle: string | null;
-				businessName: string | null;
-				businessAddress: string | null;
-			}>();
-		const customer = await db
-			.prepare("SELECT name, email, address FROM customers WHERE id = ?")
-			.bind(row.customerId)
-			.first<{ name: string; email: string; address: string | null }>();
-		if (!user || !customer) {
-			return c.html(
-				"<!DOCTYPE html><html><body><h1>Invoice not available</h1></body></html>",
-				404,
-				PUBLIC_PAGE_HEADERS,
-			);
-		}
-
-		const lineItems: InvoiceSnapshot["lineItems"] = [];
-		if (row.timesheetId) {
-			const ts = await db
-				.prepare(
-					`SELECT p.rate_in_cents AS projectRate
-					 FROM timesheets t JOIN projects p ON p.id = t.projectId
-					 WHERE t.id = ?`,
-				)
-				.bind(row.timesheetId)
-				.first<{ projectRate: string | number | null }>();
-			const rate = ts
-				? isEncryptionEnabled(c.env)
-					? Number(await decrypt(String(ts.projectRate), c.env))
-					: Number(ts.projectRate ?? 0)
-				: 0;
-			const { results: entries } = await db
-				.prepare(
-					`SELECT date, minutes, description FROM timesheet_entries
-					 WHERE timesheetId = ? ORDER BY date ASC`,
-				)
-				.bind(row.timesheetId)
-				.all<{ date: string; minutes: number; description: string }>();
-			for (const e of entries) {
-				lineItems.push({
-					date: e.date,
-					description: await decrypt(e.description, c.env),
-					minutes: e.minutes,
-					amountCents: rate ? Math.round((e.minutes * rate) / 60) : 0,
-				});
-			}
-		}
-
-		const amountCents = isEncryptionEnabled(c.env)
-			? Number(await decrypt(row.amount_cents, c.env))
-			: Number(row.amount_cents);
-
-		snapshot = {
-			seller: {
-				businessName: user.businessName
-					? await decrypt(user.businessName, c.env)
-					: "",
-				businessAddress: user.businessAddress
-					? await decrypt(user.businessAddress, c.env)
-					: "",
-				email: user.email,
-				venmoHandle: user.venmoHandle
-					? await decrypt(user.venmoHandle, c.env)
-					: null,
-				paypalHandle: user.paypalHandle
-					? await decrypt(user.paypalHandle, c.env)
-					: null,
-			},
-			buyer: {
-				name: await decrypt(customer.name, c.env),
-				email: await decrypt(customer.email, c.env),
-				address: customer.address
-					? await decrypt(customer.address, c.env)
-					: null,
-			},
-			invoice: {
-				number: row.number,
-				id,
-				issuedAt: row.issuedAt,
-				dueDate: row.dueDate,
-				description: row.description
-					? await decrypt(row.description, c.env)
-					: null,
-				amountCents,
-			},
-			lineItems,
-		};
+		return notFound;
 	}
 
-	// Log a 'viewed' event with hashed IP+UA (only for sent invoices to avoid noise from drafts).
+	// Log a 'viewed' event with hashed IP+UA.
 	if (row.status === "sent" || row.status === "paid") {
 		const ip =
 			c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
@@ -233,10 +139,7 @@ app.get("/:id", async (c) => {
 			.run();
 	}
 
-	const html = renderInvoiceHtml(snapshot, {
-		isDraftPreview,
-		includePrintButton: true,
-	});
+	const html = renderInvoiceHtml(snapshot);
 	return c.html(html, 200, PUBLIC_PAGE_HEADERS);
 });
 

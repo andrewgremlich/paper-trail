@@ -252,6 +252,56 @@ app.get("/:id/events", async (c) => {
 });
 
 // ============================================================
+// GET /api/v1/invoices/:id/preview — authed HTML preview
+//
+// Returns the rendered invoice HTML for the authenticated owner. Used by
+// the app's "Open invoice page" / "Preview" actions. Drafts render from
+// live data; sent invoices render from the frozen snapshot. Either way
+// this route is the only path that exposes draft state — the public
+// /invoice/:id route returns 404 on drafts.
+// ============================================================
+app.get("/:id/preview", async (c) => {
+	const id = c.req.param("id");
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const row = await db
+		.prepare(
+			`SELECT id, userId, customerId, timesheetId, number, status,
+			        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
+			        voidedAt, archivedAt, createdAt, updatedAt, snapshot
+			 FROM invoices WHERE id = ? AND userId = ? AND archivedAt IS NULL`,
+		)
+		.bind(id, userId)
+		.first<DbInvoiceRow & { snapshot: string | null }>();
+	if (!row) return c.json({ error: "Invoice not found" }, 404);
+
+	let snapshot: InvoiceSnapshot | null = null;
+	if (row.snapshot) {
+		try {
+			snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
+		} catch {
+			snapshot = null;
+		}
+	}
+	if (!snapshot) {
+		snapshot = await buildSnapshot(row, c.env);
+	}
+
+	const html = renderInvoiceHtml(snapshot, {
+		isDraftPreview: !row.snapshot,
+	});
+	return c.html(html, 200, {
+		"Cache-Control": "no-store",
+		"Referrer-Policy": "no-referrer",
+		"X-Content-Type-Options": "nosniff",
+		"X-Frame-Options": "DENY",
+		"Content-Security-Policy":
+			"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+	});
+});
+
+// ============================================================
 // POST /api/v1/invoices — create draft
 // ============================================================
 app.post("/", async (c) => {
@@ -514,9 +564,9 @@ app.post("/:id/send", async (c) => {
 	// Preconditions: customer consent + seller business identity + config.
 	const cust = await db
 		.prepare(
-			"SELECT name, email, consentToEmailInvoices FROM customers WHERE id = ?",
+			"SELECT name, email, consentToEmailInvoices FROM customers WHERE id = ? AND userId = ?",
 		)
-		.bind(row.customerId)
+		.bind(row.customerId, userId)
 		.first<{ name: string; email: string; consentToEmailInvoices: number }>();
 	if (!cust) return c.json({ error: "Customer not found" }, 404);
 	if (!cust.consentToEmailInvoices) {
@@ -717,8 +767,8 @@ app.post("/:id/pay", async (c) => {
 	let projectId: string | null = null;
 	if (row.timesheetId) {
 		const ts = await db
-			.prepare("SELECT projectId FROM timesheets WHERE id = ?")
-			.bind(row.timesheetId)
+			.prepare("SELECT projectId FROM timesheets WHERE id = ? AND userId = ?")
+			.bind(row.timesheetId, userId)
 			.first<{ projectId: string }>();
 		projectId = ts?.projectId ?? null;
 	}

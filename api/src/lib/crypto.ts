@@ -2,14 +2,25 @@ import type { Env } from "./types";
 
 const ENCRYPTED_PREFIX = "enc:";
 
+// Per-isolate cache for the imported AES-GCM key. `importKey` is
+// measurable on list endpoints that decrypt N rows; the imported
+// CryptoKey is non-extractable so caching it is safe. Re-imports on
+// key rotation (`material` mismatch).
+let cachedKey: { material: string; key: CryptoKey } | null = null;
+
 async function getKey(env: Env): Promise<CryptoKey> {
+	if (cachedKey && cachedKey.material === env.ENCRYPTION_KEY) {
+		return cachedKey.key;
+	}
 	const rawKey = Uint8Array.from(atob(env.ENCRYPTION_KEY), (c) =>
 		c.charCodeAt(0),
 	);
-	return crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, [
+	const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, [
 		"encrypt",
 		"decrypt",
 	]);
+	cachedKey = { material: env.ENCRYPTION_KEY, key };
+	return key;
 }
 
 export function isEncryptionEnabled(env: Env): boolean {

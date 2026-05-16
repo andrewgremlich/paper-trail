@@ -37,6 +37,27 @@ export const sendInvoice = (
 ): Promise<{ success: true; hostedUrl: string }> =>
 	api.post(`/invoices/${id}/send`);
 
+/**
+ * Fetches the authed HTML preview for an invoice and opens it in a new
+ * tab via a blob URL. Used in place of `window.open('/invoice/<id>')`
+ * for drafts — the public hosted route only serves sent invoices.
+ */
+export const openInvoicePreview = async (id: string): Promise<void> => {
+	const res = await api.getRaw(`/invoices/${id}/preview`);
+	if (!res.ok) {
+		throw new Error(`Failed to load invoice preview (${res.status})`);
+	}
+	const html = await res.text();
+	const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+	const url = URL.createObjectURL(blob);
+	const win = window.open(url, "_blank");
+	// Release the object URL once the new tab has had a chance to load it.
+	setTimeout(() => URL.revokeObjectURL(url), 60_000);
+	if (!win) {
+		throw new Error("Browser blocked the preview window");
+	}
+};
+
 export const markInvoicePaid = (id: string): Promise<{ success: true }> => {
 	const today = new Date();
 	const paidDate = [

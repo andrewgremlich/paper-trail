@@ -42,15 +42,24 @@ const projectImportSchema = z.object({
 	updatedAt: z.string(),
 });
 
-const timesheetImportSchema = z.object({
-	id: z.string().min(1),
-	projectId: z.string().min(1),
-	name: z.string(),
-	description: stringOrNullish,
-	active: boolOrNumber,
-	createdAt: z.string(),
-	updatedAt: z.string(),
-});
+const timesheetImportSchema = z
+	.object({
+		id: z.string().min(1),
+		projectId: z.string().min(1),
+		name: z.string(),
+		description: stringOrNullish,
+		// Accept both `closed` (current) and `active` (legacy) for
+		// backwards compatibility with older backups. The export side
+		// emits `closed`; the import side honours whichever shows up.
+		closed: boolOrNumber.optional(),
+		active: boolOrNumber.optional(),
+		createdAt: z.string(),
+		updatedAt: z.string(),
+	})
+	.transform((ts) => ({
+		...ts,
+		closed: ts.closed ?? ts.active ?? false,
+	}));
 
 const timesheetEntryImportSchema = z.object({
 	id: z.string().min(1),
@@ -791,12 +800,19 @@ app.get("/transactions", async (c) => {
 	const projectName = c.req.query("projectName") ?? "unknown";
 	const format = c.req.query("format") ?? "csv";
 
+	if (!projectId) {
+		return c.json({ error: "projectId is required" }, 400);
+	}
+
+	// projectId is a UUID — bind as-is. (Prior code coerced via Number(),
+	// stale from before the integer → UUID migration; it bound NaN and
+	// matched no rows.)
 	const { results } = await db
 		.prepare(
 			`SELECT id, userId, projectId, date, description, amount, filePath, createdAt, updatedAt
 			FROM transactions WHERE projectId = ? AND userId = ? ORDER BY date ASC, createdAt ASC`,
 		)
-		.bind(Number(projectId), userId)
+		.bind(projectId, userId)
 		.all();
 
 	const transactions = await Promise.all(

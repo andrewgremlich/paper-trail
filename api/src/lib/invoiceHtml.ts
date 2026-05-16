@@ -64,8 +64,6 @@ export type RenderOptions = {
 	revokeUrl?: string;
 	/** Show a banner indicating this is a draft preview (used on the hosted page only). */
 	isDraftPreview?: boolean;
-	/** Show the Print button on the hosted page. */
-	includePrintButton?: boolean;
 };
 
 export const renderInvoiceHtml = (
@@ -120,10 +118,6 @@ export const renderInvoiceHtml = (
 
 	const revokeLink = revokeUrl
 		? `<p class="revoke-link">Don't want to receive invoice emails? <a href="${escapeHtml(revokeUrl)}">Revoke consent</a></p>`
-		: "";
-
-	const printButton = options.includePrintButton
-		? `<button type="button" class="print-btn" onclick="window.print()">Print / Save as PDF</button>`
 		: "";
 
 	return `<!DOCTYPE html>
@@ -190,23 +184,13 @@ export const renderInvoiceHtml = (
   .pay-check { margin-top: 16px; font-size: 14px; }
   .pay-check-label { color: #666; margin-bottom: 6px; }
   .pay-check-addr { line-height: 1.5; }
-  .print-btn {
-    background: #1a1a1a;
-    color: #fff;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
   .hosted-link { font-size: 14px; color: #666; }
   .revoke-link { font-size: 12px; color: #999; margin-top: 8px; }
   .desc { margin-bottom: 24px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
   @media print {
     body { background: #fff; padding: 0; }
     .sheet { box-shadow: none; padding: 0; max-width: none; }
-    .print-btn, .pay-btn, .draft-banner, .hosted-link { display: none !important; }
+    .pay-btn, .draft-banner, .hosted-link { display: none !important; }
     .pay-section { background: #fff; }
   }
 </style>
@@ -214,7 +198,6 @@ export const renderInvoiceHtml = (
 <body>
   <div class="sheet">
     ${draftBanner}
-    ${printButton}
     <div class="header">
       <div>
         <h1>INVOICE</h1>

@@ -43,14 +43,21 @@ export class ClerkApiError extends Error {
 	}
 }
 
+const isVerified = (e: ClerkEmailAddress): boolean =>
+	e.verification?.status === "verified";
+
 const pickPrimaryEmail = (user: ClerkUserResponse): string | null => {
 	if (!user.email_addresses?.length) return null;
 	const primary = user.email_addresses.find(
 		(e) => e.id === user.primary_email_address_id,
 	);
-	const candidate =
-		primary ?? user.email_addresses.find((e) => e.verification?.status === "verified");
-	return candidate?.email_address ?? user.email_addresses[0].email_address;
+	// Only trust a primary address if Clerk has actually verified it.
+	// An unverified primary could be set by a user-controlled flow and would
+	// then end up cached on `users.email`, used as `replyTo` on outbound
+	// mail, and embedded in invoice snapshot "From" blocks.
+	if (primary && isVerified(primary)) return primary.email_address;
+	const verified = user.email_addresses.find(isVerified);
+	return verified?.email_address ?? null;
 };
 
 const buildDisplayName = (user: ClerkUserResponse, email: string): string => {
@@ -97,7 +104,7 @@ export const fetchClerkUser = async (
 	if (!email) {
 		throw new ClerkApiError(
 			500,
-			"Clerk user has no email address — GitHub OAuth must include the email scope",
+			"Clerk user has no verified email address — sign-in connectors must return a verified email",
 		);
 	}
 	return {

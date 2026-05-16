@@ -45,6 +45,11 @@ const PUBLIC_PAGE_HEADERS = {
 	"Referrer-Policy": "no-referrer",
 	"X-Content-Type-Options": "nosniff",
 	"X-Frame-Options": "DENY",
+	// CSP for the consent pages. No inline or external scripts — the form
+	// is a plain POST. Inline styles are unavoidable in the small page
+	// template, so `style-src 'unsafe-inline'` is the price.
+	"Content-Security-Policy":
+		"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 } as const;
 
 const escape = (value: string | null | undefined): string => {
@@ -133,7 +138,7 @@ app.get("/:token", async (c) => {
 
 	const customerEmail = await decrypt(row.email, c.env);
 
-	const csrf = issueCsrfToken(c);
+	const csrf = issueCsrfToken(c, "consent");
 	return c.html(
 		page(
 			"Consent to electronic invoicing",
@@ -169,7 +174,7 @@ app.post("/:token", async (c) => {
 	}
 
 	const form = await c.req.parseBody();
-	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+	if (!validateCsrfToken(c, "consent", form[CSRF_FIELD])) {
 		return c.html(
 			page(
 				"Session expired",
@@ -311,7 +316,7 @@ app.get("/revoke/:token", async (c) => {
 	}
 
 	const customerEmail = await decrypt(row.email, c.env);
-	const csrf = issueCsrfToken(c);
+	const csrf = issueCsrfToken(c, "revoke");
 
 	return c.html(
 		page(
@@ -347,7 +352,7 @@ app.post("/revoke/:token", async (c) => {
 	}
 
 	const form = await c.req.parseBody();
-	if (!validateCsrfToken(c, form[CSRF_FIELD])) {
+	if (!validateCsrfToken(c, "revoke", form[CSRF_FIELD])) {
 		return c.html(
 			page(
 				"Session expired",

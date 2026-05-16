@@ -202,16 +202,23 @@ export const verifyClerkJwt = async (
 
 	const [headerB64, payloadB64, signatureB64] = parts;
 
-	let header: { alg?: string; kid?: string };
+	let header: { alg?: string; kid?: string; typ?: string };
 	let payload: VerifiedClerkClaims;
 	try {
-		header = decodeJson<{ alg?: string; kid?: string }>(headerB64);
+		header = decodeJson<{ alg?: string; kid?: string; typ?: string }>(
+			headerB64,
+		);
 		payload = decodeJson<VerifiedClerkClaims>(payloadB64);
 	} catch {
 		throw new ClerkJwtError("malformed");
 	}
 
 	if (header.alg !== "RS256") {
+		throw new ClerkJwtError("malformed");
+	}
+	// Pin `typ` when present. Clerk emits `typ=JWT`; rejecting other
+	// values defends against token-confusion across Clerk product surfaces.
+	if (header.typ && header.typ !== "JWT") {
 		throw new ClerkJwtError("malformed");
 	}
 
@@ -235,11 +242,18 @@ export const verifyClerkJwt = async (
 	if (!valid) throw new ClerkJwtError("bad_signature");
 
 	const nowSec = Math.floor(Date.now() / 1000);
-	if (typeof payload.exp !== "number" || payload.exp < nowSec) {
+	// Allow 60 s of clock skew on `exp` so a slow Worker clock doesn't
+	// reject freshly-issued tokens that just crossed the expiry boundary.
+	// Matches the existing 60 s tolerance on `nbf`.
+	if (typeof payload.exp !== "number" || payload.exp + 60 < nowSec) {
 		throw new ClerkJwtError("expired");
 	}
 	if (typeof payload.nbf === "number" && payload.nbf > nowSec + 60) {
 		throw new ClerkJwtError("not_yet_valid");
+	}
+	// `iat` in the far future means a forged or badly-clock-skewed token.
+	if (typeof payload.iat === "number" && payload.iat > nowSec + 60) {
+		throw new ClerkJwtError("malformed");
 	}
 
 	const expectedIssuer = config.issuer.replace(/\/$/, "");

@@ -240,7 +240,11 @@ pnpm knip   # confirm nothing else is orphaned
 
 ## 🟢 Low — defense in depth
 
-### L1. JWT verification is missing `iat` and `typ` checks
+### L1. ✅ FIXED — JWT verification is missing `iat` and `typ` checks
+
+Resolution: `verifyClerkJwt` now rejects `header.typ` other than `JWT`
+when present, and rejects `payload.iat` more than 60 s in the future.
+See `api/src/lib/clerkJwt.ts`.
 
 **Location:** `api/src/lib/clerkJwt.ts:237-256`
 
@@ -256,7 +260,10 @@ if (typeof payload.iat === "number" && payload.iat > nowSec + 60) {
 }
 ```
 
-### L2. `nbf` accepts 60 s of future skew, `exp` accepts zero
+### L2. ✅ FIXED — `nbf` accepts 60 s of future skew, `exp` accepts zero
+
+Resolution: `exp` now allows the same 60 s skew as `nbf`
+(`payload.exp + 60 < nowSec`).
 
 **Location:** `api/src/lib/clerkJwt.ts:238, 241`
 
@@ -278,7 +285,12 @@ if (typeof payload.exp !== "number" || payload.exp + 60 < nowSec) {
 }
 ```
 
-### L3. `pickPrimaryEmail` can fall back to an unverified email
+### L3. ✅ FIXED — `pickPrimaryEmail` can fall back to an unverified email
+
+Resolution: `pickPrimaryEmail` now only returns an email that is
+verified — primary if verified, otherwise the first verified address.
+Returns `null` if none are verified, which `fetchClerkUser` maps to a
+500 with a clear error.
 
 **Location:** `api/src/lib/clerkApi.ts:46-54`
 
@@ -297,7 +309,12 @@ in invoice snapshot "From" blocks.
 **Recommendation:** require a verified email; throw a 500 with a clear
 error if none exists.
 
-### L4. No Content-Security-Policy on public pages
+### L4. ✅ FIXED — No Content-Security-Policy on public pages
+
+Resolution: the print button (the inline `onclick` blocker) was
+removed from `invoiceHtml.ts` — browsers offer Ctrl/Cmd-P natively.
+Both `publicInvoice.ts` and `consent.ts` now send
+`Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`.
 
 **Locations:** `api/src/routes/publicInvoice.ts:33-38`, `consent.ts:31-36`
 
@@ -322,7 +339,11 @@ Content-Security-Policy: default-src 'none';
                          frame-ancestors 'none'
 ```
 
-### L5. `timesheetImportSchema` uses `active`, but the column is `closed`
+### L5. ✅ FIXED — `timesheetImportSchema` uses `active`, but the column is `closed`
+
+Resolution: schema accepts both `closed` (preferred) and `active`
+(legacy) and resolves to `closed` via `transform`. Round-trip
+preserves closed state; older backups still import.
 
 **Location:** `api/src/routes/exportImport.ts:45-53` vs `:312`
 
@@ -343,7 +364,10 @@ state on every timesheet.
 **Recommendation:** rename the schema field to `closed`. Accept both
 spellings during a transition window so older backups still import.
 
-### L6. `/api/v1/export/transactions` coerces a UUID `projectId` to `Number`
+### L6. ✅ FIXED — `/api/v1/export/transactions` coerces a UUID `projectId` to `Number`
+
+Resolution: removed the `Number(projectId)` coercion (UUIDs bind
+as-is) and added a 400 when `projectId` is missing.
 
 **Location:** `api/src/routes/exportImport.ts:768`
 
@@ -356,7 +380,12 @@ rows. Stale code from before the integer-id → UUID migration. Not a
 security issue; the endpoint is effectively dead. Either fix or
 delete.
 
-### L7. Chained-FK queries don't re-scope to `userId`
+### L7. ✅ FIXED — Chained-FK queries don't re-scope to `userId`
+
+Resolution: invoice send (`customers WHERE id`) and pay
+(`timesheets WHERE id`) now include `AND userId = ?`. The draft-render
+path in `publicInvoice.ts` is no longer reachable (L11), so its
+chained-FK lookups were deleted entirely.
 
 **Representative locations:**
 
@@ -370,7 +399,12 @@ Safe today because the inbound FK was already validated under `userId`
 on an upstream insert. Adding `AND userId = ?` to every join is cheap
 insurance against a future refactor that breaks an upstream check.
 
-### L8. No explicit HSTS or `Cache-Control` on authenticated responses
+### L8. ✅ FIXED — No explicit HSTS or `Cache-Control` on authenticated responses
+
+Resolution: a v1-wide middleware in `api/src/index.ts` sets
+`Strict-Transport-Security: max-age=63072000; includeSubDomains` on
+every response and defaults `Cache-Control: no-store` when a handler
+hasn't set its own.
 
 **Location:** `api/src/index.ts`
 
@@ -389,7 +423,10 @@ v1.use("/*", async (c, next) => {
 });
 ```
 
-### L9. `getKey()` re-imports the AES key on every call
+### L9. ✅ FIXED — `getKey()` re-imports the AES key on every call
+
+Resolution: `getKey` now memoises the imported `CryptoKey` per
+isolate, keyed by `env.ENCRYPTION_KEY` so rotations re-import.
 
 **Location:** `api/src/lib/crypto.ts:5-13`
 
@@ -411,7 +448,12 @@ async function getKey(env: Env): Promise<CryptoKey> {
 }
 ```
 
-### L10. CSRF cookie is shared between consent and revoke flows
+### L10. ✅ FIXED — CSRF cookie is shared between consent and revoke flows
+
+Resolution: `csrf.ts` now scopes the cookie name and path per flow
+(`pt_consent_csrf` at `/consent` vs `pt_revoke_csrf` at
+`/consent/revoke`). Opening both pages no longer clobbers either
+nonce.
 
 **Location:** `api/src/lib/csrf.ts:23, 32-42`
 
@@ -422,7 +464,16 @@ older page's POST 403s. Usability glitch, not a vulnerability. Either
 scope cookies separately (`pt_consent_csrf` vs `pt_revoke_csrf`) or
 accept the trade-off.
 
-### L11. Draft invoice preview has no token gate
+### L11. ✅ FIXED — Draft invoice preview has no token gate
+
+Resolution: the public `/invoice/:id` route now returns 404 on any
+invoice with `snapshot IS NULL` — the draft-rebuild fallback was
+deleted. A new authed `GET /api/v1/invoices/:id/preview` returns
+rendered HTML (snapshot if present, otherwise built via
+`buildSnapshot` from live data). The frontend's "Open invoice page"
+button calls the authed preview through `getRaw` and opens the
+returned HTML via a `Blob` URL, so the bearer token never leaks into
+a tab URL.
 
 **Location:** `api/src/routes/publicInvoice.ts:81-91`
 
