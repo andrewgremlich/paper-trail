@@ -5,6 +5,14 @@ were **not** fixed in the two security-fix commits on
 `claude/security-review-invoices-IyvHR`. Items are ordered by severity,
 then by implementation cost.
 
+> A second, broader review covering the post-Clerk / post-Stripe-removal
+> codebase lives in
+> [`docs/SECURITY_REVIEW_2026_05.md`](./SECURITY_REVIEW_2026_05.md). New
+> findings (most notably H1 `CLERK_BYPASS` fail-open and H2 missing-
+> `ENCRYPTION_KEY` fail-open) are tracked there. The defense-in-depth
+> follow-ups at the bottom of this file (CSP header, secret rotation
+> runbook, backup encryption, `workers.dev`) are still open.
+
 ## ✅ Already shipped on this branch
 
 The two security commits closed everything **Critical** and **High** from

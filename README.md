@@ -139,4 +139,5 @@ Unencrypted values are handled gracefully on read, so enabling encryption on an 
 | [docs/FILE_HANDLING.md](docs/FILE_HANDLING.md) | Attachments table lifecycle + cron sweeper |
 | [docs/PRIVACY.md](docs/PRIVACY.md) | What customer data we store and why |
 | [docs/COMPONENT_ORGANIZATION.md](docs/COMPONENT_ORGANIZATION.md) | Frontend component layout |
-| [docs/SECURITY_REMAINING.md](docs/SECURITY_REMAINING.md) | Security review follow-ups |
+| [docs/SECURITY_REVIEW_2026_05.md](docs/SECURITY_REVIEW_2026_05.md) | May 2026 security review (current open items) |
+| [docs/SECURITY_REMAINING.md](docs/SECURITY_REMAINING.md) | Older security review follow-ups |
