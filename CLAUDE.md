@@ -210,6 +210,40 @@ either the user's own Resend key (stored encrypted on
 `users.resendApiKey`) or the shared `RESEND_API_KEY` env var as a
 fallback.
 
+### Snapshot is immutable, status is sidecar
+
+The frozen `invoices.snapshot` is byte-stable from send time onward —
+it's the tamper-evident record of *what was billed*. Lifecycle state
+(`status`, `paidAt`, `voidedAt`) is **mutable sidecar** read at render
+time and overlaid on the snapshot (e.g. a PAID banner when
+`status === 'paid'`). Snapshot fields and sidecar fields are
+deliberately split: the snapshot proves what the customer agreed to
+pay; the sidecar reflects what's actually happened since.
+
+### Shareable hosted URL + manual reconciliation
+
+The hosted invoice URL (`/invoice/<id>?t=<token>`) is **freely
+shareable**. A customer can forward the email to a bookkeeper, partner,
+or anyone else; everyone with the URL can hit the Venmo / PayPal links.
+This is intentional — the alternative (binding access to a single
+customer identity) destroys the frictionless-one-click payment UX.
+
+The trust model that comes with it:
+
+- **The operator reconciles payment out-of-band.** Venmo and PayPal let
+  the payer edit the amount before confirming, so the operator must
+  verify the actual amount cleared in Venmo/PayPal before marking the
+  invoice paid.
+- **Marking paid is idempotent at the API.** A second `/pay` returns
+  409, so double-marking is prevented even if two flows try.
+- **There is no automatic webhook.** No external system tells us the
+  payment cleared; the operator is the source of truth.
+
+If multi-party payment ever needs to be prevented (e.g. preventing
+double-pay on a forwarded link), the path is binding access to the
+customer's email via a magic-link login on `/invoice/*`. That's a much
+larger change to the trust model.
+
 ## Cloudflare D1 Database
 
 The app uses **Cloudflare D1** (SQLite at the edge) as its primary database:

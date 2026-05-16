@@ -395,6 +395,125 @@ older page's POST 403s. Usability glitch, not a vulnerability. Either
 scope cookies separately (`pt_consent_csrf` vs `pt_revoke_csrf`) or
 accept the trade-off.
 
+### L11. Draft invoice preview has no token gate
+
+**Location:** `api/src/routes/publicInvoice.ts:81-91`
+
+```ts
+if (row.snapshot) {
+  const providedToken = c.req.query("t");
+  const expected = row.accessToken;
+  if (!expected || !providedToken || !constantTimeEqual(providedToken, expected)) {
+    return notFound;
+  }
+}
+// …falls through to draft rebuild path when snapshot is null
+```
+
+The token check is inside `if (row.snapshot)`. Draft invoices have a
+NULL snapshot, so they bypass the token check entirely. The comment
+on the route says "drafts are tokenless because they are only ever
+opened from the authenticated app via Preview" — but the route is
+mounted on the public `app`, not under `/api/v1`, so it doesn't run
+through `clerkAuth`. Anyone with the invoice UUID can fetch a draft
+preview rebuilt from live data: seller's business name + address +
+email + Venmo + PayPal handles, customer's name + email + address,
+line-item descriptions, invoice number, amount, due date.
+
+The invoice UUID is 256-bit-random and unguessable, but it ends up in
+the operator's clipboard, browser history, screen shares, and
+screenshots. Security-through-obscurity.
+
+**Recommendation:** serve drafts only from an authenticated route
+(`GET /api/v1/invoices/:id/preview` behind `clerkAuth`) and reserve
+the public `/invoice/:id` for sent invoices that require a token.
+The hosted route would 404 on any invoice with `snapshot IS NULL`.
+
+**Effort:** ~30 minutes (new authed route + frontend pointer change).
+**Severity:** Low (gate via obscurity, not a vulnerability per se).
+
+---
+
+## 📨 Invoice-specific hardening
+
+The hosted invoice flow has its own cluster of trust assumptions worth
+documenting and (in some cases) tightening. None of these are
+exploitable vulnerabilities — they're design boundaries that should be
+deliberate.
+
+### INV1. `accessToken` has no expiry
+
+**Location:** `api/src/routes/invoices.ts:596-662`, `publicInvoice.ts:81-91`
+
+`accessToken` is set on `/send` (rotated on resend) and never expires.
+A paid invoice from two years ago is still openable by anyone the
+email got forwarded to. The hosted page exposes the full snapshot:
+seller PII, customer PII, line items, amount.
+
+**Recommendation:** add `accessTokenExpiresAt` (or compute it: e.g.
+`sentAt + 90 days`, or `paidAt + 30 days` once paid). The hosted route
+checks the expiry and 404s after it passes. Operator can re-issue by
+re-sending.
+
+**Effort:** ~1 hour (column + migration + check). **Severity:** Low.
+
+### INV2. Token in URL query string lands in logs
+
+Existing follow-up in `docs/SECURITY_REMAINING.md` ("§6 follow-up —
+Hosted invoice token in URL path vs query string"). Repeated here for
+completeness: the `?t=<token>` form means the token appears in proxy
+logs, CDN access logs, and browser history. Path-segment
+(`/invoice/<id>/<token>`) is marginal. The strongest fix is the
+signed-cookie + 302-to-bare-URL pattern: GET `/invoice/<id>?t=<token>`
+sets an HttpOnly cookie and 302s to `/invoice/<id>`; subsequent
+requests authenticate via the cookie. Adds complexity, doesn't break
+existing emailed links.
+
+**Effort:** ~half-day. **Severity:** Low.
+
+### INV3. Draft invoice preview has no token gate
+
+See L11 above. Cross-listed here because it's an invoice-flow gap.
+
+### INV4. Email prefetch poisons the `viewed` event signal
+
+**Location:** `api/src/routes/publicInvoice.ts:204-223`
+
+Gmail, Outlook, Apple Mail, and corporate URL scanners prefetch links
+in incoming email. Every prefetch is logged as a `viewed` event with
+a hashed IP. The operator-facing "your customer opened the invoice"
+signal therefore fires before the customer has actually seen it —
+sometimes long before, sometimes by a bot that never shows it to a
+human.
+
+**Recommendation:** move logging from the initial GET to a confirmation
+beacon. Either:
+- Render the page, include a tiny `<img>` to `/invoice/<id>/seen?t=…`
+  that the email-prefetcher won't fire (most prefetchers fetch the
+  primary URL only); log on the beacon.
+- Or: delay-log on the server side by 5-10s and de-duplicate
+  consecutive views from the same hashed IP within a window.
+
+**Effort:** ~1 hour. **Severity:** Informational (signal quality, not
+security).
+
+### INV5. Hosted URL is freely shareable; trust model isn't documented
+
+The customer can forward the invoice email to anyone, and the
+forwarded recipient can hit Venmo/PayPal links to pay the user. Two
+parties could each click "Pay" and the user gets double-paid (or under-
+paid, since Venmo/PayPal let the payer edit the amount on their side
+before confirming).
+
+This is intentional for the "send the same link to a customer + their
+bookkeeper" workflow, but it's an implicit trust assumption: the
+operator manually verifies the actual amount cleared before marking
+paid. Not exploitable, but worth documenting in `CLAUDE.md` next to
+the "Invoices & Email Delivery" section so it doesn't surprise a
+future operator.
+
+**Effort:** ~5 minutes (docs only). **Severity:** Informational.
+
 ---
 
 ## ⚪ Informational
@@ -467,11 +586,16 @@ accept the trade-off.
 | 2 | H1 — `CLERK_BYPASS` guard | ~10 min | High | One-line gate; eliminates fail-open auth |
 | 3 | L4 + CSP rollout (drop or nonce the inline `onclick`) | ~1 hour | Low | Big defence-in-depth lift; long-tracked |
 | 4 | M1 — ZIP-bomb caps | ~30 min | Medium | Cheap and self-contained |
-| 5 | L5 — timesheet `active` / `closed` mismatch | ~10 min | Low | Silent correctness bug; ship while you're already in `exportImport.ts` |
-| 6 | M3 — unused-deps removal | ~5 min | Medium | Pure cleanup; shrinks supply-chain surface |
-| 7 | L1 / L2 / L3 / L7 — JWT + ownership DiD | ~30 min | Low | Bundle into one PR |
-| 8 | M2 — per-recipient consent throttle | ~1 hour | Medium | Protects sending-domain reputation |
-| 9 | L8 / L9 / L10 — headers, key cache, CSRF cookies | ~30 min | Low | Polish |
+| 5 | L11 — gate draft invoice preview behind `clerkAuth` | ~30 min | Low | Removes a security-through-obscurity gate on PII |
+| 6 | L5 — timesheet `active` / `closed` mismatch | ~10 min | Low | Silent correctness bug; ship while you're already in `exportImport.ts` |
+| 7 | M3 — unused-deps removal | ~5 min | Medium | Pure cleanup; shrinks supply-chain surface |
+| 8 | INV1 — `accessToken` expiry | ~1 hour | Low | Bounds the leak window on forwarded invoice emails |
+| 9 | L1 / L2 / L3 / L7 — JWT + ownership DiD | ~30 min | Low | Bundle into one PR |
+| 10 | INV5 — document shareable-URL trust model in `CLAUDE.md` | ~5 min | Informational | Done in the May 2026 doc sweep |
+| 11 | M2 — per-recipient consent throttle | ~1 hour | Medium | Protects sending-domain reputation |
+| 12 | INV4 — beacon-based `viewed` event logging | ~1 hour | Informational | Signal quality, not security |
+| 13 | INV2 — token off the query string | ~half-day | Low | Long-tracked; needs care to keep existing emailed links working |
+| 14 | L8 / L9 / L10 — headers, key cache, CSRF cookies | ~30 min | Low | Polish |
 
 H1 + H2 are roughly five lines of code combined and would be a sensible
 immediate commit. Everything below the line is non-blocking.
