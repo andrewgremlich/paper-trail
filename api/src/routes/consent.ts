@@ -23,6 +23,18 @@ import type { Env } from "../lib/types";
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Mirror of the encryption-key guard in clerkAuth. These routes
+// decrypt() customer rows + audit-log payloads; without a key, a
+// misdeployed Worker would serve plaintext rows as if they were
+// encrypted.
+app.use("/*", async (c, next) => {
+	if (c.env.CLERK_BYPASS !== "true" && !c.env.ENCRYPTION_KEY) {
+		console.error("ENCRYPTION_KEY missing in production deploy");
+		return c.json({ error: "Server is misconfigured" }, 500);
+	}
+	return next();
+});
+
 const CONSENT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // Headers applied to every public consent page. `no-referrer` keeps the

@@ -25,6 +25,17 @@ import type { Env, InvoiceSnapshot } from "../lib/types";
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Mirror of the encryption-key guard in clerkAuth. The public routes
+// decrypt() snapshot + customer rows; without a key, a misdeployed
+// Worker would serve plaintext rows as if they were encrypted.
+app.use("/*", async (c, next) => {
+	if (c.env.CLERK_BYPASS !== "true" && !c.env.ENCRYPTION_KEY) {
+		console.error("ENCRYPTION_KEY missing in production deploy");
+		return c.json({ error: "Server is misconfigured" }, 500);
+	}
+	return next();
+});
+
 // Headers applied to every public hosted page. `no-referrer` is the
 // critical one — the URL carries the per-invoice access token as
 // `?t=<token>`, and the hosted page links out to Venmo / PayPal. Without

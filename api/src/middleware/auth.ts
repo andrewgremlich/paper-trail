@@ -45,10 +45,31 @@ export async function clerkAuth(
 	let bypassDisplayName: string | null = null;
 
 	if (env.CLERK_BYPASS === "true") {
+		// Refuse to engage the bypass on anything that doesn't look like a
+		// dev / preview origin. Prevents `.dev.vars` settings from opening
+		// production auth if they ever leak into a `wrangler deploy`.
+		const base = env.APP_BASE_URL ?? "";
+		const looksDev =
+			base.startsWith("http://localhost") ||
+			base.startsWith("http://127.0.0.1") ||
+			base.includes(".workers.dev");
+		if (!looksDev) {
+			console.error("CLERK_BYPASS=true rejected — not a dev origin", {
+				base,
+			});
+			return c.json({ error: "Authentication is misconfigured" }, 500);
+		}
 		clerkUserId = env.CLERK_DEV_USER_ID || "user_dev_localhost";
 		bypassEmail = env.CLERK_DEV_EMAIL || "dev@localhost";
 		bypassDisplayName = "Dev User";
 	} else {
+		// Outside of bypass mode, missing ENCRYPTION_KEY would silently
+		// store every sensitive column and R2 file body in plaintext.
+		// Fail closed: a missing key is a deployment bug.
+		if (!env.ENCRYPTION_KEY) {
+			console.error("ENCRYPTION_KEY missing in production deploy");
+			return c.json({ error: "Server is misconfigured" }, 500);
+		}
 		let config: ReturnType<typeof getClerkConfig>;
 		try {
 			config = getClerkConfig(env);
