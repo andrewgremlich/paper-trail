@@ -5,6 +5,7 @@ import {
 	getClerkConfig,
 	verifyClerkJwt,
 } from "../lib/clerkJwt";
+import { loadUserDek, provisionUserDek } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 
@@ -12,6 +13,11 @@ export type AuthVariables = {
 	userId: number;
 	userEmail: string;
 	clerkUserId: string;
+	// Set when the user has a DEK provisioned. `null` while the
+	// per-user-DEK rollout is gated off or before the user has been
+	// backfilled — handlers fall through to the legacy single-key
+	// `encrypt(x, env)` path in that case.
+	dek: CryptoKey | null;
 };
 
 /**
@@ -185,5 +191,36 @@ export async function clerkAuth(
 	c.set("userId", user.id);
 	c.set("userEmail", user.email);
 	c.set("clerkUserId", clerkUserId);
+
+	// Per-user DEK resolution. Gated by DEK_MIGRATION_ENABLED so the
+	// rollout is incremental: with the flag off, every user appears
+	// un-migrated and handlers use the legacy single-key path. With
+	// the flag on, missing DEKs are minted lazily — but row
+	// ciphertext is *not* rewritten here; that happens via the
+	// dedicated migration worker so request latency stays bounded.
+	let dek: CryptoKey | null = null;
+	try {
+		if (env.DEK_MIGRATION_ENABLED === "true") {
+			dek = await loadUserDek(user.id, env);
+			if (!dek) {
+				dek = await provisionUserDek(user.id, env);
+				if (!dek) {
+					// Lost the provisioning race with a concurrent request;
+					// fetch the value the winner persisted.
+					dek = await loadUserDek(user.id, env);
+				}
+			}
+		} else {
+			dek = await loadUserDek(user.id, env);
+		}
+	} catch (err) {
+		// DEK resolution failure must not 500 the request — fall back
+		// to legacy single-key path. We still log so a misconfigured
+		// KEK rotation is visible.
+		console.error("DEK resolution failed", err);
+		dek = null;
+	}
+	c.set("dek", dek);
+
 	return next();
 }

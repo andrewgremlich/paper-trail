@@ -1,3 +1,4 @@
+import { getDb } from "./db";
 import type { Env } from "./types";
 
 const ENCRYPTED_PREFIX = "enc:";
@@ -235,4 +236,87 @@ export const unwrapDek = async (
 		ciphertext,
 	);
 	return importAesGcmKey(new Uint8Array(dekBytes));
+};
+
+// Per-isolate LRU cache for unwrapped DEKs. The CryptoKey is
+// non-extractable, so caching it is safe. Bounded so a hot worker
+// serving many tenants doesn't grow unbounded.
+const DEK_CACHE_MAX = 64;
+const dekCache = new Map<string, CryptoKey>();
+
+const cacheKey = (userId: number, kekVersion: number, wrapped: string): string =>
+	`${userId}:${kekVersion}:${wrapped}`;
+
+const rememberDek = (key: string, dek: CryptoKey): void => {
+	dekCache.delete(key);
+	dekCache.set(key, dek);
+	if (dekCache.size > DEK_CACHE_MAX) {
+		const oldest = dekCache.keys().next().value;
+		if (oldest !== undefined) dekCache.delete(oldest);
+	}
+};
+
+/**
+ * Resolve the DEK for a given user, or `null` when the user has not
+ * been migrated yet. Callers that hit `null` should fall through to
+ * the legacy single-key path via `encrypt`/`decrypt(value, env)`.
+ *
+ * This is the single funnel for DEK retrieval — both the authed
+ * `clerkAuth` middleware and the unauthenticated public routes
+ * (`/invoice/*`, `/consent/*`) use it after they resolve the owning
+ * user id from a row.
+ */
+export const loadUserDek = async (
+	userId: number,
+	env: Env,
+): Promise<CryptoKey | null> => {
+	const db = getDb(env);
+	const row = await db
+		.prepare("SELECT wrappedDek, kekVersion FROM users WHERE id = ?")
+		.bind(userId)
+		.first<{ wrappedDek: string | null; kekVersion: number | null }>();
+	if (!row || !row.wrappedDek || row.kekVersion == null) {
+		return null;
+	}
+	const key = cacheKey(userId, row.kekVersion, row.wrappedDek);
+	const cached = dekCache.get(key);
+	if (cached) {
+		dekCache.delete(key);
+		dekCache.set(key, cached);
+		return cached;
+	}
+	const dek = await unwrapDek(row.wrappedDek, row.kekVersion, env);
+	rememberDek(key, dek);
+	return dek;
+};
+
+/**
+ * Mint and persist a new DEK for `userId` if one is not already set.
+ * Idempotent at the DB level via `WHERE wrappedDek IS NULL`. Returns
+ * the freshly imported `CryptoKey`, or `null` when the user already
+ * had a DEK (caller can re-fetch via `loadUserDek`).
+ *
+ * Only called by the auth middleware when `DEK_MIGRATION_ENABLED=true`.
+ */
+export const provisionUserDek = async (
+	userId: number,
+	env: Env,
+): Promise<CryptoKey | null> => {
+	const dekBytes = generateDek();
+	const { wrapped, version } = await wrapDek(dekBytes, env);
+	const db = getDb(env);
+	const result = await db
+		.prepare(
+			`UPDATE users
+			   SET wrappedDek = ?, kekVersion = ?, dekCreatedAt = datetime('now')
+			 WHERE id = ? AND wrappedDek IS NULL`,
+		)
+		.bind(wrapped, version, userId)
+		.run();
+	if (!result.meta.changes) {
+		return null;
+	}
+	const key = await importAesGcmKey(dekBytes);
+	rememberDek(cacheKey(userId, version, wrapped), key);
+	return key;
 };

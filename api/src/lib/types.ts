@@ -22,7 +22,18 @@ export interface Env {
 	CLERK_BYPASS?: string;
 	CLERK_DEV_USER_ID?: string;
 	CLERK_DEV_EMAIL?: string;
+	// `ENCRYPTION_KEY` is the legacy single-key alias for `KEK_V1`. New
+	// deployments may set `KEK_V1`/`KEK_V2`/… directly; existing deployments
+	// keep working unchanged.
 	ENCRYPTION_KEY: string;
+	KEK_V1?: string;
+	KEK_V2?: string;
+	KEK_V3?: string;
+	// When `"true"`, the auth middleware lazily provisions a per-user DEK
+	// (Data Encryption Key) on each request and the backfill worker is
+	// allowed to re-encrypt that user's existing ciphertext under the new
+	// DEK. Default off so PR rollout is incremental.
+	DEK_MIGRATION_ENABLED?: string;
 	RESEND_API_KEY?: string;
 	RESEND_FROM_ADDRESS?: string;
 	APP_BASE_URL?: string;
