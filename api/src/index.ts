@@ -6,6 +6,7 @@ import { clerkAuth } from "./middleware/auth";
 import { attachmentRoutes } from "./routes/attachments";
 import { consentRoutes } from "./routes/consent";
 import { customerRoutes } from "./routes/customers";
+import { dekMigrationRoutes } from "./routes/dekMigration";
 import { exportImportRoutes } from "./routes/exportImport";
 import { fileRoutes } from "./routes/files";
 import { runAttachmentSweep } from "./scheduled";
@@ -70,6 +71,7 @@ v1.route("/files", fileRoutes);
 v1.route("/attachments", attachmentRoutes);
 v1.route("/export", exportImportRoutes);
 v1.route("/import", exportImportRoutes);
+v1.route("/migrate-dek", dekMigrationRoutes);
 v1.get("/health", (c) => c.json({ status: "ok", version: "v1" }));
 
 app.route("/api/v1", v1);
