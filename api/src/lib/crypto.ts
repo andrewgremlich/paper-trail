@@ -302,6 +302,13 @@ export const loadUserDek = async (
 	userId: number,
 	env: Env,
 ): Promise<CryptoKey | null> => {
+	// Gate: if DEK_MIGRATION_ENABLED is not "true", treat every user as
+	// un-migrated so all handlers fall through to the legacy single-key
+	// path. Without this guard, a user who had a DEK provisioned during
+	// testing would cause decryption failures on existing ciphertext.
+	if (env.DEK_MIGRATION_ENABLED !== "true") {
+		return null;
+	}
 	const db = getDb(env);
 	const row = await db
 		.prepare("SELECT wrappedDek, kekVersion FROM users WHERE id = ?")

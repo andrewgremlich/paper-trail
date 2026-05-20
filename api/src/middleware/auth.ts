@@ -210,9 +210,9 @@ export async function clerkAuth(
 					dek = await loadUserDek(user.id, env);
 				}
 			}
-		} else {
-			dek = await loadUserDek(user.id, env);
 		}
+		// When DEK_MIGRATION_ENABLED is false, dek stays null — all handlers
+		// fall through to the legacy single-key path via `c.get("dek") ?? c.env`.
 	} catch (err) {
 		// DEK resolution failure must not 500 the request — fall back
 		// to legacy single-key path. We still log so a misconfigured
