@@ -157,34 +157,66 @@ const decryptBufferWithKey = async (
 	return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 };
 
-export async function encrypt(plaintext: string, env: Env): Promise<string> {
-	if (!isEncryptionEnabled(env)) return plaintext;
-	const key = await getLegacyKey(env);
+/**
+ * The second arg to `encrypt`/`decrypt`/`encryptBuffer`/`decryptBuffer`
+ * is either:
+ *   - a per-user DEK (`CryptoKey`) — used when the request has a
+ *     migrated user (auth middleware set `c.get("dek")`);
+ *   - the worker `Env` — falls back to the legacy single-key path
+ *     against KEK_V1, preserving today's behaviour for un-migrated
+ *     users and for the test/bypass paths.
+ *   - `null` — equivalent to "no DEK available, use legacy". Lets
+ *     handlers write `encrypt(x, c.get("dek") ?? c.env)` without an
+ *     extra branch.
+ */
+export type EncryptionContext = CryptoKey | Env | null;
+
+const isCryptoKey = (value: EncryptionContext): value is CryptoKey =>
+	value !== null && typeof (value as CryptoKey).algorithm === "object";
+
+const resolveEncryptKey = async (
+	ctx: EncryptionContext,
+): Promise<CryptoKey | null> => {
+	if (ctx === null) return null;
+	if (isCryptoKey(ctx)) return ctx;
+	if (!isEncryptionEnabled(ctx)) return null;
+	return getLegacyKey(ctx);
+};
+
+export async function encrypt(
+	plaintext: string,
+	ctx: EncryptionContext,
+): Promise<string> {
+	const key = await resolveEncryptKey(ctx);
+	if (!key) return plaintext;
 	return encryptWithKey(plaintext, key);
 }
 
-export async function decrypt(value: string, env: Env): Promise<string> {
+export async function decrypt(
+	value: string,
+	ctx: EncryptionContext,
+): Promise<string> {
 	if (!value.startsWith(ENCRYPTED_PREFIX)) return value;
-	if (!isEncryptionEnabled(env)) return value;
-	const key = await getLegacyKey(env);
+	const key = await resolveEncryptKey(ctx);
+	if (!key) return value;
 	return decryptWithKey(value, key);
 }
 
 export async function encryptBuffer(
 	data: ArrayBuffer,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<ArrayBuffer> {
-	if (!isEncryptionEnabled(env)) return data;
-	const key = await getLegacyKey(env);
+	const key = await resolveEncryptKey(ctx);
+	if (!key) return data;
 	return encryptBufferWithKey(data, key);
 }
 
 export async function decryptBuffer(
 	data: ArrayBuffer,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<ArrayBuffer> {
-	if (!isEncryptionEnabled(env)) return data;
-	const key = await getLegacyKey(env);
+	const key = await resolveEncryptKey(ctx);
+	if (!key) return data;
 	return decryptBufferWithKey(data, key);
 }
 

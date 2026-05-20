@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, encrypt } from "../lib/crypto";
+import { decrypt, type EncryptionContext, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { resolveEmailDelivery } from "../lib/emailDelivery";
 import { randomHexToken } from "../lib/hash";
@@ -38,13 +38,13 @@ type DbCustomerRow = {
 
 const decryptCustomer = async (
 	row: DbCustomerRow,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<Customer> => ({
 	id: row.id,
 	userId: row.userId,
-	name: await decrypt(row.name, env),
-	email: await decrypt(row.email, env),
-	address: row.address ? await decrypt(row.address, env) : null,
+	name: await decrypt(row.name, ctx),
+	email: await decrypt(row.email, ctx),
+	address: row.address ? await decrypt(row.address, ctx) : null,
 	consentToEmailInvoices: !!row.consentToEmailInvoices,
 	consentedAt: row.consentedAt,
 	consentRequestedAt: row.consentRequestedAt,
@@ -56,6 +56,7 @@ const decryptCustomer = async (
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const { results } = await db
 		.prepare(
@@ -67,7 +68,7 @@ app.get("/", async (c) => {
 		.all<DbCustomerRow>();
 
 	const decrypted = await Promise.all(
-		results.map((row) => decryptCustomer(row, c.env)),
+		results.map((row) => decryptCustomer(row, enc)),
 	);
 	return c.json(decrypted);
 });
@@ -76,6 +77,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const id = c.req.param("id");
 
 	const row = await db
@@ -88,7 +90,7 @@ app.get("/:id", async (c) => {
 		.first<DbCustomerRow>();
 
 	if (!row) return c.json({ error: "Customer not found" }, 404);
-	return c.json(await decryptCustomer(row, c.env));
+	return c.json(await decryptCustomer(row, enc));
 });
 
 // POST /api/v1/customers
@@ -103,6 +105,7 @@ app.post("/", async (c) => {
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const id = crypto.randomUUID();
 
 	await db
@@ -113,9 +116,9 @@ app.post("/", async (c) => {
 		.bind(
 			id,
 			userId,
-			await encrypt(name, c.env),
-			await encrypt(email, c.env),
-			address ? await encrypt(address, c.env) : null,
+			await encrypt(name, enc),
+			await encrypt(email, enc),
+			address ? await encrypt(address, enc) : null,
 		)
 		.run();
 
@@ -135,6 +138,7 @@ app.put("/:id", async (c) => {
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	await db
 		.prepare(
@@ -142,9 +146,9 @@ app.put("/:id", async (c) => {
 			 WHERE id = ? AND userId = ?`,
 		)
 		.bind(
-			await encrypt(name, c.env),
-			await encrypt(email, c.env),
-			address ? await encrypt(address, c.env) : null,
+			await encrypt(name, enc),
+			await encrypt(email, enc),
+			address ? await encrypt(address, enc) : null,
 			id,
 			userId,
 		)
@@ -201,6 +205,7 @@ app.post("/:id/request-consent", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const customerRow = await db
 		.prepare(
@@ -254,7 +259,7 @@ app.post("/:id/request-consent", async (c) => {
 	if (!userRow) return c.json({ error: "User not found" }, 500);
 
 	const businessName = userRow.businessName
-		? await decrypt(userRow.businessName, c.env)
+		? await decrypt(userRow.businessName, enc)
 		: null;
 	if (!businessName) {
 		return c.json(
@@ -289,8 +294,8 @@ app.post("/:id/request-consent", async (c) => {
 
 	// Decrypted before the rate-limit check so the per-recipient
 	// throttle has the address to hash.
-	const customerName = await decrypt(customerRow.name, c.env);
-	const customerEmail = await decrypt(customerRow.email, c.env);
+	const customerName = await decrypt(customerRow.name, enc);
+	const customerEmail = await decrypt(customerRow.email, enc);
 
 	// Share the invoice-send rate limit budget: spam-protects the operator
 	// and keeps a single user from being used as an email cannon. Passing
@@ -380,7 +385,7 @@ app.post("/:id/request-consent", async (c) => {
 			userId,
 			// No payload fields — the bare 'consent_requested' row is the audit signal.
 			// We intentionally do not store any token bytes here (§13).
-			await encrypt(JSON.stringify({}), c.env),
+			await encrypt(JSON.stringify({}), enc),
 		)
 		.run();
 
@@ -393,6 +398,7 @@ app.post("/:id/revoke-consent", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const row = await db
 		.prepare("SELECT id, userId FROM customers WHERE id = ? AND userId = ?")
@@ -421,7 +427,7 @@ app.post("/:id/revoke-consent", async (c) => {
 			crypto.randomUUID(),
 			id,
 			userId,
-			await encrypt(JSON.stringify({ revokedBy: "seller", at: now }), c.env),
+			await encrypt(JSON.stringify({ revokedBy: "seller", at: now }), enc),
 		)
 		.run();
 

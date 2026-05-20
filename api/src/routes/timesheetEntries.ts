@@ -41,13 +41,14 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (!(await userOwnsTimesheet(c.env, body.timesheetId, userId))) {
 		return c.json({ error: "Timesheet not found" }, 404);
 	}
 
-	const encDescription = await encrypt(body.description, c.env);
-	const encAmount = await encrypt(String(body.amount), c.env);
+	const encDescription = await encrypt(body.description, enc);
+	const encAmount = await encrypt(String(body.amount), enc);
 	const id = crypto.randomUUID();
 
 	await db
@@ -82,9 +83,10 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
-	const encDescription = await encrypt(body.description, c.env);
-	const encAmount = await encrypt(String(body.amount), c.env);
+	const encDescription = await encrypt(body.description, enc);
+	const encAmount = await encrypt(String(body.amount), enc);
 
 	await db
 		.prepare(

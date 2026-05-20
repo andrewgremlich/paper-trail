@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { decrypt } from "../lib/crypto";
+import { decrypt, type EncryptionContext } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Attachment, AttachmentStatus, Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -26,10 +26,10 @@ const statusFor = (row: AttachmentRow): AttachmentStatus => {
 
 const decryptRow = async (
 	row: AttachmentRow,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<Attachment> => ({
 	...row,
-	originalName: await decrypt(row.originalName, env),
+	originalName: await decrypt(row.originalName, ctx),
 	status: statusFor(row),
 });
 
@@ -43,6 +43,7 @@ const decryptRow = async (
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	// Hide very-fresh pending uploads — see comment above.
 	const FRESH_PENDING_CUTOFF_MIN = 10;
@@ -62,7 +63,7 @@ app.get("/", async (c) => {
 		.all<AttachmentRow>();
 
 	const attachments = await Promise.all(
-		results.map((r: AttachmentRow) => decryptRow(r, c.env)),
+		results.map((r: AttachmentRow) => decryptRow(r, enc)),
 	);
 	return c.json(attachments);
 });

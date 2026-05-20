@@ -71,6 +71,7 @@ const contentDispositionFor = (originalName: string): string => {
 // attachments row. The row is the source of truth from this point on.
 app.post("/upload", async (c) => {
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const formData = await c.req.formData();
 	const file = formData.get("file") as File | null;
 
@@ -102,7 +103,7 @@ app.post("/upload", async (c) => {
 
 	const key = crypto.randomUUID();
 	const fileBytes = await file.arrayBuffer();
-	const encrypted = await encryptBuffer(fileBytes, c.env);
+	const encrypted = await encryptBuffer(fileBytes, enc);
 	const sanitizedName = sanitize(file.name) || "upload";
 
 	// Insert the DB row FIRST. If the R2 put fails after this, the cron
@@ -119,7 +120,7 @@ app.post("/upload", async (c) => {
 		.bind(
 			key,
 			userId,
-			await encrypt(sanitizedName, c.env),
+			await encrypt(sanitizedName, enc),
 			contentType,
 			file.size,
 		)
@@ -168,6 +169,7 @@ app.get("/check-link", async (c) => {
 // filename in Content-Disposition.
 app.get("/:key{.+}", async (c) => {
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const key = c.req.param("key");
 
 	if (!isValidKey(key)) {
@@ -196,7 +198,7 @@ app.get("/:key{.+}", async (c) => {
 		return c.json({ error: "File not found" }, 404);
 	}
 
-	const originalName = await decrypt(row.originalName, c.env);
+	const originalName = await decrypt(row.originalName, enc);
 
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);
@@ -209,7 +211,7 @@ app.get("/:key{.+}", async (c) => {
 	headers.set("X-Content-Type-Options", "nosniff");
 
 	const encryptedBytes = await object.arrayBuffer();
-	const decrypted = await decryptBuffer(encryptedBytes, c.env);
+	const decrypted = await decryptBuffer(encryptedBytes, enc);
 
 	return new Response(decrypted, { headers });
 });

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { decrypt, encrypt } from "../lib/crypto";
+import { decrypt, encrypt, loadUserDek } from "../lib/crypto";
 import {
 	CSRF_FIELD,
 	csrfFormField,
@@ -127,16 +127,18 @@ app.get("/:token", async (c) => {
 		);
 	}
 
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
 	const db = getDb(c.env);
 	const userRow = await db
 		.prepare("SELECT businessName FROM users WHERE id = ?")
 		.bind(row.userId)
 		.first<{ businessName: string | null }>();
 	const businessName = userRow?.businessName
-		? await decrypt(userRow.businessName, c.env)
+		? await decrypt(userRow.businessName, enc)
 		: "The sender";
 
-	const customerEmail = await decrypt(row.email, c.env);
+	const customerEmail = await decrypt(row.email, enc);
 
 	const csrf = issueCsrfToken(c, "consent");
 	return c.html(
@@ -187,6 +189,8 @@ app.post("/:token", async (c) => {
 	}
 	const decision = form.decision === "agree" ? "agree" : "decline";
 
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
@@ -224,7 +228,7 @@ app.post("/:token", async (c) => {
 						ipHash,
 						uaHash,
 					}),
-					c.env,
+					enc,
 				),
 			)
 			.run();
@@ -259,7 +263,7 @@ app.post("/:token", async (c) => {
 			row.userId,
 			await encrypt(
 				JSON.stringify({ v: 2, ipHash, uaHash }),
-				c.env,
+				enc,
 			),
 		)
 		.run();
@@ -315,7 +319,9 @@ app.get("/revoke/:token", async (c) => {
 		);
 	}
 
-	const customerEmail = await decrypt(row.email, c.env);
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
+	const customerEmail = await decrypt(row.email, enc);
 	const csrf = issueCsrfToken(c, "revoke");
 
 	return c.html(
@@ -364,6 +370,8 @@ app.post("/revoke/:token", async (c) => {
 		);
 	}
 
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
@@ -395,7 +403,7 @@ app.post("/revoke/:token", async (c) => {
 			row.userId,
 			await encrypt(
 				JSON.stringify({ v: 2, ipHash, uaHash, at: now }),
-				c.env,
+				enc,
 			),
 		)
 		.run();

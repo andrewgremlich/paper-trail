@@ -7,7 +7,12 @@ import { z } from "zod";
 // those CVEs don't currently apply. Re-evaluate before adding a parse
 // path — see docs/SECURITY_REMAINING.md §16.
 import * as XLSX from "xlsx";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import {
+	decrypt,
+	type EncryptionContext,
+	encrypt,
+	isEncryptionEnabled,
+} from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import {
@@ -32,11 +37,12 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 async function decryptTransaction(
 	row: Record<string, unknown>,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<Record<string, unknown>> {
-	const description = await decrypt(row.description as string, env);
+	const description = await decrypt(row.description as string, ctx);
 	const amount = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount as string, env))
+		? Number(await decrypt(row.amount as string, ctx))
 		: (row.amount as number);
 
 	return { ...row, description, amount: amount / 100 };
@@ -46,6 +52,7 @@ async function decryptTransaction(
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const projectId = c.req.query("projectId");
 
 	let results: Record<string, unknown>[];
@@ -71,7 +78,7 @@ app.get("/", async (c) => {
 	}
 
 	const decrypted = await Promise.all(
-		results.map((r) => decryptTransaction(r, c.env)),
+		results.map((r) => decryptTransaction(r, enc, c.env)),
 	);
 
 	return c.json(decrypted);
@@ -81,6 +88,7 @@ app.get("/", async (c) => {
 app.get("/xlsx", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const { results } = await db
 		.prepare(
@@ -95,9 +103,9 @@ app.get("/xlsx", async (c) => {
 
 	const rows = await Promise.all(
 		results.map(async (r: Record<string, unknown>) => {
-			const description = await decrypt(r.description as string, c.env);
+			const description = await decrypt(r.description as string, enc);
 			const amount = isEncryptionEnabled(c.env)
-				? Number(await decrypt(r.amount as string, c.env))
+				? Number(await decrypt(r.amount as string, enc))
 				: (r.amount as number);
 
 			return {
@@ -129,6 +137,7 @@ app.get("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const row = await db
 		.prepare(
@@ -144,6 +153,7 @@ app.get("/:id", async (c) => {
 
 	const decrypted = await decryptTransaction(
 		row as Record<string, unknown>,
+		enc,
 		c.env,
 	);
 	return c.json(decrypted);
@@ -161,6 +171,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
@@ -191,8 +202,8 @@ app.post("/", async (c) => {
 	const amountInCents = Math.round(body.amount * 100);
 	const id = crypto.randomUUID();
 
-	const encDescription = await encrypt(body.description, c.env);
-	const encAmount = await encrypt(String(amountInCents), c.env);
+	const encDescription = await encrypt(body.description, enc);
+	const encAmount = await encrypt(String(amountInCents), enc);
 
 	await db
 		.prepare(
@@ -239,6 +250,7 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
@@ -279,8 +291,8 @@ app.put("/:id", async (c) => {
 
 	const amountInCents = Math.round(body.amount * 100);
 
-	const encDescription = await encrypt(body.description, c.env);
-	const encAmount = await encrypt(String(amountInCents), c.env);
+	const encDescription = await encrypt(body.description, enc);
+	const encAmount = await encrypt(String(amountInCents), enc);
 
 	await db
 		.prepare(

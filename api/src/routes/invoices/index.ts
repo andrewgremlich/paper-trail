@@ -35,6 +35,7 @@ const ACCESS_TOKEN_TTL_DAYS = 90;
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const customerId = c.req.query("customerId");
 	const status = c.req.query("status") as InvoiceStatus | undefined;
 	const year = c.req.query("year");
@@ -66,7 +67,7 @@ app.get("/", async (c) => {
 		.all<DbInvoiceRow>();
 
 	const decrypted = await Promise.all(
-		results.map((row) => decryptInvoice(row, c.env)),
+		results.map((row) => decryptInvoice(row, enc, c.env)),
 	);
 	return c.json(decrypted);
 });
@@ -78,6 +79,7 @@ app.get("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const row = await db
 		.prepare(
 			`SELECT id, userId, customerId, timesheetId, number, status,
@@ -88,7 +90,7 @@ app.get("/:id", async (c) => {
 		.bind(id, userId)
 		.first<DbInvoiceRow>();
 	if (!row) return c.json({ error: "Invoice not found" }, 404);
-	return c.json(await decryptInvoice(row, c.env));
+	return c.json(await decryptInvoice(row, enc, c.env));
 });
 
 // ============================================================
@@ -98,6 +100,7 @@ app.get("/:id/events", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const invoice = await db
 		.prepare("SELECT id FROM invoices WHERE id = ? AND userId = ?")
@@ -123,7 +126,7 @@ app.get("/:id/events", async (c) => {
 	const decrypted = await Promise.all(
 		results.map(async (row) => ({
 			...row,
-			payload: row.payload ? await decrypt(row.payload, c.env) : null,
+			payload: row.payload ? await decrypt(row.payload, enc) : null,
 		})),
 	);
 	return c.json(decrypted);
@@ -142,6 +145,7 @@ app.get("/:id/preview", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const row = await db
 		.prepare(
@@ -157,13 +161,13 @@ app.get("/:id/preview", async (c) => {
 	let snapshot = null;
 	if (row.snapshot) {
 		try {
-			snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
+			snapshot = JSON.parse(await decrypt(row.snapshot, enc));
 		} catch {
 			snapshot = null;
 		}
 	}
 	if (!snapshot) {
-		snapshot = await buildSnapshot(row, c.env);
+		snapshot = await buildSnapshot(row, enc, c.env);
 	}
 
 	const html = renderInvoiceHtml(snapshot, {
@@ -193,6 +197,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const cust = await db
 		.prepare("SELECT id FROM customers WHERE id = ? AND userId = ?")
@@ -229,7 +234,7 @@ app.post("/", async (c) => {
 		if (ts.closed) return c.json({ error: "Timesheet already closed" }, 400);
 
 		const projectRate = isEncryptionEnabled(c.env)
-			? Number(await decrypt(String(ts.projectRate), c.env))
+			? Number(await decrypt(String(ts.projectRate), enc))
 			: Number(ts.projectRate ?? 0);
 
 		const { results: entries } = await db
@@ -250,7 +255,7 @@ app.post("/", async (c) => {
 		}
 
 		const tsDescription = ts.description
-			? await decrypt(ts.description, c.env)
+			? await decrypt(ts.description, enc)
 			: "";
 		const header = `Rate: $${(projectRate / 100).toFixed(2)}/hour | Total hours: ${(totalMinutes / 60).toFixed(2)}`;
 		invoiceDescription = [header, tsDescription, body.description]
@@ -281,14 +286,14 @@ app.post("/", async (c) => {
 			body.customerId,
 			body.timesheetId ?? null,
 			number,
-			await encrypt(String(totalCents), c.env),
-			invoiceDescription ? await encrypt(invoiceDescription, c.env) : null,
+			await encrypt(String(totalCents), enc),
+			invoiceDescription ? await encrypt(invoiceDescription, enc) : null,
 			issuedAt,
 			dueDate,
 		)
 		.run();
 
-	await logEvent(invoiceId, userId, "created", { number }, c.env);
+	await logEvent(invoiceId, userId, "created", { number }, enc, c.env);
 
 	if (body.timesheetId) {
 		await db
@@ -310,6 +315,7 @@ app.post("/:id/send", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const row = await db
 		.prepare(
@@ -389,8 +395,8 @@ app.post("/:id/send", async (c) => {
 		);
 	}
 
-	const customerEmail = await decrypt(cust.email, c.env);
-	const customerName = await decrypt(cust.name, c.env);
+	const customerEmail = await decrypt(cust.email, enc);
+	const customerName = await decrypt(cust.name, enc);
 
 	try {
 		await assertWithinSendLimit(userId, c.env, customerEmail);
@@ -409,7 +415,7 @@ app.post("/:id/send", async (c) => {
 		throw err;
 	}
 
-	const snapshot = await buildSnapshot(row, c.env);
+	const snapshot = await buildSnapshot(row, enc, c.env);
 	const base = c.env.APP_BASE_URL.replace(/\/$/, "");
 
 	const accessToken = randomHexToken(32);
@@ -474,14 +480,14 @@ app.post("/:id/send", async (c) => {
 		)
 		.bind(
 			now,
-			await encrypt(JSON.stringify(snapshot), c.env),
+			await encrypt(JSON.stringify(snapshot), enc),
 			accessToken,
 			accessTokenExpiresAt,
 			id,
 			userId,
 		)
 		.run();
-	await logEvent(id, userId, "sent", { hostedUrl }, c.env);
+	await logEvent(id, userId, "sent", { hostedUrl }, enc, c.env);
 
 	return c.json({ success: true, hostedUrl });
 });
@@ -493,6 +499,7 @@ app.post("/:id/pay", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	let paidDate: string | null = null;
 	try {
@@ -532,7 +539,7 @@ app.post("/:id/pay", async (c) => {
 		)
 		.bind(now, id, userId)
 		.run();
-	await logEvent(id, userId, "paid", null, c.env);
+	await logEvent(id, userId, "paid", null, enc, c.env);
 
 	let projectId: string | null = null;
 	if (row.timesheetId) {
@@ -554,7 +561,7 @@ app.post("/:id/pay", async (c) => {
 
 	if (projectId) {
 		const amountCents = isEncryptionEnabled(c.env)
-			? Number(await decrypt(row.amount_cents, c.env))
+			? Number(await decrypt(row.amount_cents, enc))
 			: Number(row.amount_cents);
 		await db
 			.prepare(
@@ -566,8 +573,8 @@ app.post("/:id/pay", async (c) => {
 				crypto.randomUUID(),
 				projectId,
 				paidDate ?? now.slice(0, 10),
-				await encrypt(`Invoice ${row.number} marked as paid`, c.env),
-				await encrypt(String(amountCents), c.env),
+				await encrypt(`Invoice ${row.number} marked as paid`, enc),
+				await encrypt(String(amountCents), enc),
 				userId,
 			)
 			.run();
@@ -583,6 +590,7 @@ app.post("/:id/void", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const row = await db
 		.prepare("SELECT status FROM invoices WHERE id = ? AND userId = ?")
 		.bind(id, userId)
@@ -602,7 +610,7 @@ app.post("/:id/void", async (c) => {
 		)
 		.bind(now, id, userId)
 		.run();
-	await logEvent(id, userId, "voided", null, c.env);
+	await logEvent(id, userId, "voided", null, enc, c.env);
 	return c.json({ success: true });
 });
 

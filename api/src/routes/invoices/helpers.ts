@@ -1,17 +1,23 @@
-import { decrypt, encrypt, isEncryptionEnabled } from "../../lib/crypto";
+import {
+	decrypt,
+	type EncryptionContext,
+	encrypt,
+	isEncryptionEnabled,
+} from "../../lib/crypto";
 import { getDb } from "../../lib/db";
 import type { Env, Invoice, InvoiceSnapshot } from "../../lib/types";
 import type { DbInvoiceRow } from "./types";
 
 export const decryptInvoice = async (
 	row: DbInvoiceRow,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<Invoice> => {
 	const amount = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount_cents, env))
+		? Number(await decrypt(row.amount_cents, ctx))
 		: Number(row.amount_cents);
 	const description = row.description
-		? await decrypt(row.description, env)
+		? await decrypt(row.description, ctx)
 		: null;
 	return {
 		id: row.id,
@@ -70,11 +76,12 @@ export const logEvent = async (
 	userId: number,
 	type: "created" | "sent" | "paid" | "voided" | "viewed",
 	payload: Record<string, unknown> | null,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<void> => {
 	const db = getDb(env);
 	const encPayload = payload
-		? await encrypt(JSON.stringify(payload), env)
+		? await encrypt(JSON.stringify(payload), ctx)
 		: null;
 	await db
 		.prepare(
@@ -87,6 +94,7 @@ export const logEvent = async (
 
 export const buildSnapshot = async (
 	row: DbInvoiceRow,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<InvoiceSnapshot> => {
 	const db = getDb(env);
@@ -115,16 +123,16 @@ export const buildSnapshot = async (
 	if (!customer) throw new Error("Customer not found");
 
 	const businessName = user.businessName
-		? await decrypt(user.businessName, env)
+		? await decrypt(user.businessName, ctx)
 		: "";
 	const businessAddress = user.businessAddress
-		? await decrypt(user.businessAddress, env)
+		? await decrypt(user.businessAddress, ctx)
 		: "";
 	const venmoHandle = user.venmoHandle
-		? await decrypt(user.venmoHandle, env)
+		? await decrypt(user.venmoHandle, ctx)
 		: null;
 	const paypalHandle = user.paypalHandle
-		? await decrypt(user.paypalHandle, env)
+		? await decrypt(user.paypalHandle, ctx)
 		: null;
 
 	const lineItems: InvoiceSnapshot["lineItems"] = [];
@@ -140,7 +148,7 @@ export const buildSnapshot = async (
 			.first<{ projectRate: string | number | null }>();
 		const rate = ts
 			? isEncryptionEnabled(env)
-				? Number(await decrypt(String(ts.projectRate), env))
+				? Number(await decrypt(String(ts.projectRate), ctx))
 				: Number(ts.projectRate ?? 0)
 			: 0;
 		const { results: entries } = await db
@@ -153,7 +161,7 @@ export const buildSnapshot = async (
 		for (const e of entries) {
 			lineItems.push({
 				date: e.date,
-				description: await decrypt(e.description, env),
+				description: await decrypt(e.description, ctx),
 				minutes: e.minutes,
 				amountCents: rate ? Math.round((e.minutes * rate) / 60) : 0,
 			});
@@ -161,10 +169,10 @@ export const buildSnapshot = async (
 	}
 
 	const amountCents = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount_cents, env))
+		? Number(await decrypt(row.amount_cents, ctx))
 		: Number(row.amount_cents);
 	const description = row.description
-		? await decrypt(row.description, env)
+		? await decrypt(row.description, ctx)
 		: null;
 
 	return {
@@ -176,9 +184,9 @@ export const buildSnapshot = async (
 			paypalHandle,
 		},
 		buyer: {
-			name: await decrypt(customer.name, env),
-			email: await decrypt(customer.email, env),
-			address: customer.address ? await decrypt(customer.address, env) : null,
+			name: await decrypt(customer.name, ctx),
+			email: await decrypt(customer.email, ctx),
+			address: customer.address ? await decrypt(customer.address, ctx) : null,
 		},
 		invoice: {
 			number: row.number,

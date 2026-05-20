@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import {
+	decrypt,
+	type EncryptionContext,
+	encrypt,
+	isEncryptionEnabled,
+} from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import {
@@ -25,10 +30,10 @@ const timesheetUpdateSchema = z.object({
 
 async function decryptTimesheetRow(
 	row: Record<string, unknown>,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<Record<string, unknown>> {
 	const description = row.description
-		? await decrypt(row.description as string, env)
+		? await decrypt(row.description as string, ctx)
 		: row.description;
 
 	return { ...row, description };
@@ -40,6 +45,7 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const { results } = await db
 		.prepare(
 			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
@@ -49,7 +55,7 @@ app.get("/", async (c) => {
 		.all();
 	const rows = await Promise.all(
 		results.map(async (r: Record<string, unknown>) => ({
-			...(await decryptTimesheetRow(r, c.env)),
+			...(await decryptTimesheetRow(r, enc)),
 			closed: !!r.closed,
 		})),
 	);
@@ -61,6 +67,7 @@ app.get("/", async (c) => {
 app.get("/by-invoice/:invoiceId", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const invoiceId = c.req.param("invoiceId");
 
 	const invoiceLookup = await db
@@ -87,10 +94,10 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 
 	const decrypted = await decryptTimesheetRow(
 		row as Record<string, unknown>,
-		c.env,
+		enc,
 	);
 	const projectRate = isEncryptionEnabled(c.env)
-		? Number(await decrypt(decrypted.projectRate as string, c.env))
+		? Number(await decrypt(decrypted.projectRate as string, enc))
 		: Number(decrypted.projectRate ?? 0);
 
 	return c.json({
@@ -104,6 +111,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const timesheetId = c.req.param("id");
 
 	const header = await db
@@ -123,12 +131,12 @@ app.get("/:id", async (c) => {
 
 	const decryptedHeader = await decryptTimesheetRow(
 		header as Record<string, unknown>,
-		c.env,
+		enc,
 	);
 
 	// customerId is a plain TEXT FK — no decrypt.
 	const projectRate = isEncryptionEnabled(c.env)
-		? Number(await decrypt(decryptedHeader.projectRate as string, c.env))
+		? Number(await decrypt(decryptedHeader.projectRate as string, enc))
 		: Number(decryptedHeader.projectRate ?? 0);
 
 	const { results: entriesRows } = await db
@@ -142,9 +150,9 @@ app.get("/:id", async (c) => {
 	// Decrypt entries and convert amount from integer cents to dollars for UI
 	const entries = await Promise.all(
 		entriesRows.map(async (e: Record<string, unknown>) => {
-			const description = await decrypt(e.description as string, c.env);
+			const description = await decrypt(e.description as string, enc);
 			const amount = isEncryptionEnabled(c.env)
-				? Number(await decrypt(e.amount as string, c.env))
+				? Number(await decrypt(e.amount as string, enc))
 				: Number(e.amount ?? 0);
 			return { ...e, description, amount: amount / 100 };
 		}),
@@ -170,13 +178,14 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
 	}
 
 	const encDescription = body.description
-		? await encrypt(body.description, c.env)
+		? await encrypt(body.description, enc)
 		: null;
 	const id = crypto.randomUUID();
 
@@ -202,7 +211,7 @@ app.post("/", async (c) => {
 
 	const decryptedRow = await decryptTimesheetRow(
 		row as Record<string, unknown>,
-		c.env,
+		enc,
 	);
 	return c.json({ ...decryptedRow, closed: !!row.closed }, 201);
 });
@@ -220,9 +229,10 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const encDescription = body.description
-		? await encrypt(body.description, c.env)
+		? await encrypt(body.description, enc)
 		: null;
 
 	await db
@@ -248,7 +258,7 @@ app.put("/:id", async (c) => {
 
 	const decryptedUpdated = await decryptTimesheetRow(
 		updated as Record<string, unknown>,
-		c.env,
+		enc,
 	);
 	return c.json({ ...decryptedUpdated, closed: !!updated.closed });
 });

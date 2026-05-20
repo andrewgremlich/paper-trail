@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import { decrypt, encrypt } from "../lib/crypto";
+import { decrypt, encrypt, loadUserDek } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
@@ -160,9 +160,12 @@ app.get("/:id", async (c) => {
 		return c.redirect(cookiePath(id), 302);
 	}
 
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
+
 	let snapshot: InvoiceSnapshot | null = null;
 	try {
-		snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
+		snapshot = JSON.parse(await decrypt(row.snapshot, enc));
 	} catch {
 		snapshot = null;
 	}
@@ -211,6 +214,8 @@ app.get("/:id/seen", async (c) => {
 	}
 
 	const db = getDb(c.env);
+	const dek = await loadUserDek(row.userId, c.env);
+	const enc = dek ?? c.env;
 	const ip =
 		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 	const ua = c.req.header("User-Agent") ?? "";
@@ -225,7 +230,7 @@ app.get("/:id/seen", async (c) => {
 			crypto.randomUUID(),
 			row.id,
 			row.userId,
-			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), c.env),
+			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), enc),
 		)
 		.run();
 

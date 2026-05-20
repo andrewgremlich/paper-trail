@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
+import {
+	decrypt,
+	type EncryptionContext,
+	encrypt,
+	isEncryptionEnabled,
+} from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import {
@@ -25,11 +30,12 @@ const projectUpdateSchema = projectCreateSchema.extend({
 
 async function decryptProjectRow(
 	row: Record<string, unknown>,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<Record<string, unknown>> {
-	const description = await decrypt((row.description as string) ?? "", env);
+	const description = await decrypt((row.description as string) ?? "", ctx);
 	const rate_in_cents = isEncryptionEnabled(env)
-		? Number(await decrypt(row.rate_in_cents as string, env))
+		? Number(await decrypt(row.rate_in_cents as string, ctx))
 		: Number(row.rate_in_cents ?? 0);
 
 	return { ...row, description, rate_in_cents };
@@ -41,6 +47,7 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const { results } = await db
 		.prepare(
 			`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
@@ -50,7 +57,7 @@ app.get("/", async (c) => {
 		.all();
 	const rows = await Promise.all(
 		results.map(async (r: Record<string, unknown>) => ({
-			...(await decryptProjectRow(r, c.env)),
+			...(await decryptProjectRow(r, enc, c.env)),
 			active: !!r.active,
 		})),
 	);
@@ -61,6 +68,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const projectId = c.req.param("id");
 
 	const project = await db
@@ -77,6 +85,7 @@ app.get("/:id", async (c) => {
 
 	const decryptedProject = await decryptProjectRow(
 		project as Record<string, unknown>,
+		enc,
 		c.env,
 	);
 
@@ -95,7 +104,7 @@ app.get("/:id", async (c) => {
 			timesheets.map(async (t: Record<string, unknown>) => ({
 				...t,
 				description: t.description
-					? await decrypt(t.description as string, c.env)
+					? await decrypt(t.description as string, enc)
 					: t.description,
 				closed: !!t.closed,
 			})),
@@ -115,13 +124,14 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
 		return c.json({ error: "Customer not found" }, 404);
 	}
 
-	const encRate = await encrypt(String(body.rate_in_cents), c.env);
-	const encDescription = await encrypt(body.description, c.env);
+	const encRate = await encrypt(String(body.rate_in_cents), enc);
+	const encDescription = await encrypt(body.description, enc);
 	const projectId = crypto.randomUUID();
 
 	await db
@@ -153,6 +163,7 @@ app.post("/", async (c) => {
 
 	const decrypted = await decryptProjectRow(
 		project as Record<string, unknown>,
+		enc,
 		c.env,
 	);
 	const projectRow = { ...decrypted, active: !!project.active };
@@ -174,7 +185,7 @@ app.post("/", async (c) => {
 			timesheetId,
 			projectId,
 			timesheetName,
-			await encrypt("Initial timesheet", c.env),
+			await encrypt("Initial timesheet", enc),
 			0,
 			userId,
 		)
@@ -198,7 +209,7 @@ app.post("/", async (c) => {
 			timesheet: {
 				...tsRow,
 				description: tsRow.description
-					? await decrypt(tsRow.description as string, c.env)
+					? await decrypt(tsRow.description as string, enc)
 					: tsRow.description,
 				closed: !!tsRow.closed,
 			},
@@ -220,13 +231,14 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
 		return c.json({ error: "Customer not found" }, 404);
 	}
 
-	const encRate = await encrypt(String(body.rate_in_cents), c.env);
-	const encDescription = await encrypt(body.description, c.env);
+	const encRate = await encrypt(String(body.rate_in_cents), enc);
+	const encDescription = await encrypt(body.description, enc);
 
 	await db
 		.prepare(
@@ -259,6 +271,7 @@ app.put("/:id", async (c) => {
 
 	const decryptedUpdated = await decryptProjectRow(
 		updated as Record<string, unknown>,
+		enc,
 		c.env,
 	);
 	return c.json({ ...decryptedUpdated, active: !!updated.active });

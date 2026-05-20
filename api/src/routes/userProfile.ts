@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, encrypt } from "../lib/crypto";
+import { decrypt, type EncryptionContext, encrypt } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, UserProfile } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -39,21 +39,21 @@ type DbUserRow = {
 
 const decryptProfile = async (
 	row: DbUserRow,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<UserProfile> => ({
 	id: row.id,
 	uuid: row.uuid,
 	displayName: row.displayName,
 	email: row.email,
-	venmoHandle: row.venmoHandle ? await decrypt(row.venmoHandle, env) : null,
-	paypalHandle: row.paypalHandle ? await decrypt(row.paypalHandle, env) : null,
-	businessName: row.businessName ? await decrypt(row.businessName, env) : null,
+	venmoHandle: row.venmoHandle ? await decrypt(row.venmoHandle, ctx) : null,
+	paypalHandle: row.paypalHandle ? await decrypt(row.paypalHandle, ctx) : null,
+	businessName: row.businessName ? await decrypt(row.businessName, ctx) : null,
 	businessAddress: row.businessAddress
-		? await decrypt(row.businessAddress, env)
+		? await decrypt(row.businessAddress, ctx)
 		: null,
 	hasResendApiKey: row.resendApiKey != null,
 	resendFromAddress: row.resendFromAddress
-		? await decrypt(row.resendFromAddress, env)
+		? await decrypt(row.resendFromAddress, ctx)
 		: null,
 	createdAt: row.createdAt,
 	updatedAt: row.updatedAt,
@@ -68,6 +68,7 @@ const USER_SELECT = `SELECT id, uuid, displayName, email, venmoHandle, paypalHan
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const row = await db.prepare(USER_SELECT).bind(userId).first<DbUserRow>();
 
@@ -75,7 +76,7 @@ app.get("/", async (c) => {
 		return c.json({ error: "User not found" }, 404);
 	}
 
-	return c.json(await decryptProfile(row, c.env));
+	return c.json(await decryptProfile(row, enc));
 });
 
 // PUT /api/v1/user-profile
@@ -90,9 +91,10 @@ app.put("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
 	const encOrNull = async (v: string | null | undefined) =>
-		v && v.length > 0 ? await encrypt(v, c.env) : null;
+		v && v.length > 0 ? await encrypt(v, enc) : null;
 
 	await db
 		.prepare(
@@ -126,7 +128,7 @@ app.put("/", async (c) => {
 
 	const updated = await db.prepare(USER_SELECT).bind(userId).first<DbUserRow>();
 	if (!updated) return c.json({ error: "User not found" }, 404);
-	return c.json(await decryptProfile(updated, c.env));
+	return c.json(await decryptProfile(updated, enc));
 });
 
 // DELETE /api/v1/user-profile — wipe all user-generated data (keeps account)
@@ -175,6 +177,19 @@ app.delete("/", async (c) => {
 
 	await db
 		.prepare("DELETE FROM send_rate_log WHERE userId = ?")
+		.bind(userId)
+		.run();
+
+	// Clear profile fields on the users row — keeps the account but resets
+	// all user-entered invoice profile and payment handle data.
+	await db
+		.prepare(
+			`UPDATE users
+			 SET venmoHandle = NULL, paypalHandle = NULL,
+			     businessName = NULL, businessAddress = NULL,
+			     resendApiKey = NULL, resendFromAddress = NULL
+			 WHERE id = ?`,
+		)
 		.bind(userId)
 		.run();
 

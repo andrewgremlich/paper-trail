@@ -1,7 +1,7 @@
 import { unzipSync, zipSync } from "fflate";
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, decryptBuffer, encrypt, encryptBuffer, isEncryptionEnabled } from "../lib/crypto";
+import { decrypt, decryptBuffer, encrypt, encryptBuffer, isEncryptionEnabled, type EncryptionContext } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -157,11 +157,12 @@ function sanitizeFilename(name: string): string {
 
 async function decryptTransactionRow(
 	row: Record<string, unknown>,
+	ctx: EncryptionContext,
 	env: Env,
 ): Promise<Record<string, unknown>> {
-	const description = await decrypt(row.description as string, env);
+	const description = await decrypt(row.description as string, ctx);
 	const amount = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount as string, env))
+		? Number(await decrypt(row.amount as string, ctx))
 		: (row.amount as number);
 
 	return { ...row, description, amount };
@@ -179,19 +180,19 @@ async function buildImportBatch(
 	db: D1Database,
 	data: ValidatedImport,
 	userId: number,
-	env: Env,
+	ctx: EncryptionContext,
 ): Promise<D1PreparedStatement[]> {
 	const isDataEncrypted = data.encrypted === true;
-	const enc = (v: string) => (isDataEncrypted ? v : encrypt(v, env));
+	const maybeEncrypt = async (v: string) => (isDataEncrypted ? v : encrypt(v, ctx));
 	const encOrNull = async (v: string | null | undefined): Promise<string | null> =>
-		v == null ? null : await enc(v);
+		v == null ? null : await maybeEncrypt(v);
 
 	// Pre-encrypt all the values we'll need before constructing any statements.
 	const customers = await Promise.all(
 		(data.customers ?? []).map(async (customer) => ({
 			...customer,
-			name: await enc(customer.name),
-			email: await enc(customer.email),
+			name: await maybeEncrypt(customer.name),
+			email: await maybeEncrypt(customer.email),
 			address: await encOrNull(customer.address ?? null),
 		})),
 	);
@@ -199,8 +200,8 @@ async function buildImportBatch(
 	const projects = await Promise.all(
 		data.projects.map(async (project) => ({
 			...project,
-			rate_in_cents: await enc(String(project.rate_in_cents)),
-			description: await enc(project.description ?? ""),
+			rate_in_cents: await maybeEncrypt(String(project.rate_in_cents)),
+			description: await maybeEncrypt(project.description ?? ""),
 		})),
 	);
 
@@ -214,23 +215,23 @@ async function buildImportBatch(
 	const entries = await Promise.all(
 		data.timesheetEntries.map(async (entry) => ({
 			...entry,
-			description: await enc(entry.description),
-			amount: await enc(String(entry.amount)),
+			description: await maybeEncrypt(entry.description),
+			amount: await maybeEncrypt(String(entry.amount)),
 		})),
 	);
 
 	const transactions = await Promise.all(
 		data.transactions.map(async (tx) => ({
 			...tx,
-			description: await enc(tx.description),
-			amount: await enc(String(tx.amount)),
+			description: await maybeEncrypt(tx.description),
+			amount: await maybeEncrypt(String(tx.amount)),
 		})),
 	);
 
 	const invoices = await Promise.all(
 		(data.invoices ?? []).map(async (inv) => ({
 			...inv,
-			amount_cents: await enc(String(inv.amount_cents)),
+			amount_cents: await maybeEncrypt(String(inv.amount_cents)),
 			description: await encOrNull(inv.description ?? null),
 		})),
 	);
@@ -448,6 +449,7 @@ function requireConfirm(c: { req: { query: (k: string) => string | undefined } }
 app.get("/data", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [
@@ -524,14 +526,14 @@ app.get("/data", async (c) => {
 
 	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
-			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
+			transactionResults.map((r) => decryptTransactionRow(r, enc, c.env)),
 		);
 		projectResults = await Promise.all(
 			projectResults.map(async (r) => ({
 				...r,
-				description: await decrypt((r.description as string) ?? "", c.env),
+				description: await decrypt((r.description as string) ?? "", enc),
 				rate_in_cents: Number(
-					await decrypt(r.rate_in_cents as string, c.env),
+					await decrypt(r.rate_in_cents as string, enc),
 				),
 			})),
 		);
@@ -539,31 +541,31 @@ app.get("/data", async (c) => {
 			timesheetResults.map(async (r) => ({
 				...r,
 				description: r.description
-					? await decrypt(r.description as string, c.env)
+					? await decrypt(r.description as string, enc)
 					: r.description,
 			})),
 		);
 		entryResults = await Promise.all(
 			entryResults.map(async (r) => ({
 				...r,
-				description: await decrypt(r.description as string, c.env),
-				amount: Number(await decrypt(r.amount as string, c.env)),
+				description: await decrypt(r.description as string, enc),
+				amount: Number(await decrypt(r.amount as string, enc)),
 			})),
 		);
 		customerResults = await Promise.all(
 			customerResults.map(async (r) => ({
 				...r,
-				name: await decrypt(r.name as string, c.env),
-				email: await decrypt(r.email as string, c.env),
-				address: r.address ? await decrypt(r.address as string, c.env) : null,
+				name: await decrypt(r.name as string, enc),
+				email: await decrypt(r.email as string, enc),
+				address: r.address ? await decrypt(r.address as string, enc) : null,
 			})),
 		);
 		invoiceResults = await Promise.all(
 			invoiceResults.map(async (r) => ({
 				...r,
-				amount_cents: Number(await decrypt(r.amount_cents as string, c.env)),
+				amount_cents: Number(await decrypt(r.amount_cents as string, enc)),
 				description: r.description
-					? await decrypt(r.description as string, c.env)
+					? await decrypt(r.description as string, enc)
 					: null,
 			})),
 		);
@@ -571,16 +573,16 @@ app.get("/data", async (c) => {
 			profileResult = {
 				...profileResult,
 				venmoHandle: profileResult.venmoHandle
-					? await decrypt(profileResult.venmoHandle as string, c.env)
+					? await decrypt(profileResult.venmoHandle as string, enc)
 					: null,
 				paypalHandle: profileResult.paypalHandle
-					? await decrypt(profileResult.paypalHandle as string, c.env)
+					? await decrypt(profileResult.paypalHandle as string, enc)
 					: null,
 				businessName: profileResult.businessName
-					? await decrypt(profileResult.businessName as string, c.env)
+					? await decrypt(profileResult.businessName as string, enc)
 					: null,
 				businessAddress: profileResult.businessAddress
-					? await decrypt(profileResult.businessAddress as string, c.env)
+					? await decrypt(profileResult.businessAddress as string, enc)
 					: null,
 			};
 		}
@@ -619,8 +621,9 @@ app.post("/data", async (c) => {
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 
-	const stmts = await buildImportBatch(db, parsed.data, userId, c.env);
+	const stmts = await buildImportBatch(db, parsed.data, userId, enc);
 
 	// `db.batch` runs as a single SQLite transaction — if any DELETE or
 	// INSERT fails, the entire import is rolled back and the user keeps
@@ -707,6 +710,7 @@ app.post("/zip", async (c) => {
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const data = parsed.data;
 	const isDataEncrypted = data.encrypted === true;
 
@@ -730,7 +734,7 @@ app.post("/zip", async (c) => {
 		return tx;
 	});
 
-	const stmts = await buildImportBatch(db, data, userId, c.env);
+	const stmts = await buildImportBatch(db, data, userId, enc);
 	await db.batch(stmts);
 
 	// R2 writes happen after the DB batch lands. If R2 fails the DB rows are
@@ -753,7 +757,7 @@ app.post("/zip", async (c) => {
 			// Plaintext backups store raw file bytes — encrypt before storing.
 			const toStore = isDataEncrypted
 				? bytes.buffer as ArrayBuffer
-				: await encryptBuffer(bytes.buffer as ArrayBuffer, c.env);
+				: await encryptBuffer(bytes.buffer as ArrayBuffer, enc);
 			await c.env.FILES_BUCKET.put(newKey, toStore, {
 				customMetadata: {
 					originalName: oldKey,
@@ -774,7 +778,7 @@ app.post("/zip", async (c) => {
 				.bind(
 					newKey,
 					userId,
-					await encrypt(oldKey, c.env),
+					await encrypt(oldKey, enc),
 					"application/octet-stream",
 					bytes.byteLength,
 					linkedTxId,
@@ -796,6 +800,7 @@ app.post("/zip", async (c) => {
 app.get("/transactions", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const projectId = c.req.query("projectId");
 	const projectName = c.req.query("projectName") ?? "unknown";
 	const format = c.req.query("format") ?? "csv";
@@ -817,9 +822,9 @@ app.get("/transactions", async (c) => {
 
 	const transactions = await Promise.all(
 		results.map(async (r: Record<string, unknown>) => {
-			const description = await decrypt(r.description as string, c.env);
+			const description = await decrypt(r.description as string, enc);
 			const rawAmount = isEncryptionEnabled(c.env)
-				? Number(await decrypt(r.amount as string, c.env))
+				? Number(await decrypt(r.amount as string, enc))
 				: (r.amount as number);
 
 			return { ...r, description, amount: rawAmount / 100 };
@@ -869,6 +874,7 @@ app.get("/transactions", async (c) => {
 app.get("/zip", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
+	const enc = c.get("dek") ?? c.env;
 	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [
@@ -945,44 +951,44 @@ app.get("/zip", async (c) => {
 
 	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
-			transactionResults.map((r) => decryptTransactionRow(r, c.env)),
+			transactionResults.map((r) => decryptTransactionRow(r, enc, c.env)),
 		);
 		projectResults = await Promise.all(
 			projectResults.map(async (r) => ({
 				...r,
-				description: await decrypt((r.description as string) ?? "", c.env),
-				rate_in_cents: Number(await decrypt(r.rate_in_cents as string, c.env)),
+				description: await decrypt((r.description as string) ?? "", enc),
+				rate_in_cents: Number(await decrypt(r.rate_in_cents as string, enc)),
 			})),
 		);
 		timesheetResults = await Promise.all(
 			timesheetResults.map(async (r) => ({
 				...r,
 				description: r.description
-					? await decrypt(r.description as string, c.env)
+					? await decrypt(r.description as string, enc)
 					: r.description,
 			})),
 		);
 		entryResults = await Promise.all(
 			entryResults.map(async (r) => ({
 				...r,
-				description: await decrypt(r.description as string, c.env),
-				amount: Number(await decrypt(r.amount as string, c.env)),
+				description: await decrypt(r.description as string, enc),
+				amount: Number(await decrypt(r.amount as string, enc)),
 			})),
 		);
 		customerResults = await Promise.all(
 			customerResults.map(async (r) => ({
 				...r,
-				name: await decrypt(r.name as string, c.env),
-				email: await decrypt(r.email as string, c.env),
-				address: r.address ? await decrypt(r.address as string, c.env) : null,
+				name: await decrypt(r.name as string, enc),
+				email: await decrypt(r.email as string, enc),
+				address: r.address ? await decrypt(r.address as string, enc) : null,
 			})),
 		);
 		invoiceResults = await Promise.all(
 			invoiceResults.map(async (r) => ({
 				...r,
-				amount_cents: Number(await decrypt(r.amount_cents as string, c.env)),
+				amount_cents: Number(await decrypt(r.amount_cents as string, enc)),
 				description: r.description
-					? await decrypt(r.description as string, c.env)
+					? await decrypt(r.description as string, enc)
 					: null,
 			})),
 		);
@@ -990,16 +996,16 @@ app.get("/zip", async (c) => {
 			profileResult = {
 				...profileResult,
 				venmoHandle: profileResult.venmoHandle
-					? await decrypt(profileResult.venmoHandle as string, c.env)
+					? await decrypt(profileResult.venmoHandle as string, enc)
 					: null,
 				paypalHandle: profileResult.paypalHandle
-					? await decrypt(profileResult.paypalHandle as string, c.env)
+					? await decrypt(profileResult.paypalHandle as string, enc)
 					: null,
 				businessName: profileResult.businessName
-					? await decrypt(profileResult.businessName as string, c.env)
+					? await decrypt(profileResult.businessName as string, enc)
 					: null,
 				businessAddress: profileResult.businessAddress
-					? await decrypt(profileResult.businessAddress as string, c.env)
+					? await decrypt(profileResult.businessAddress as string, enc)
 					: null,
 			};
 		}
@@ -1055,7 +1061,7 @@ app.get("/zip", async (c) => {
 				if (!object) return;
 
 				const encryptedBytes = await object.arrayBuffer();
-				const decrypted = await decryptBuffer(encryptedBytes, c.env);
+				const decrypted = await decryptBuffer(encryptedBytes, enc);
 
 				const contentType = object.httpMetadata?.contentType ?? "";
 				const extFromContentType = contentTypeToExtension(contentType);
