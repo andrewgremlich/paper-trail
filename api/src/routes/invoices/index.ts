@@ -35,7 +35,7 @@ const ACCESS_TOKEN_TTL_DAYS = 90;
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const customerId = c.req.query("customerId");
 	const status = c.req.query("status") as InvoiceStatus | undefined;
 	const year = c.req.query("year");
@@ -79,7 +79,7 @@ app.get("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const row = await db
 		.prepare(
 			`SELECT id, userId, customerId, timesheetId, number, status,
@@ -100,7 +100,7 @@ app.get("/:id/events", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const invoice = await db
 		.prepare("SELECT id FROM invoices WHERE id = ? AND userId = ?")
@@ -145,7 +145,7 @@ app.get("/:id/preview", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const row = await db
 		.prepare(
@@ -197,7 +197,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const cust = await db
 		.prepare("SELECT id FROM customers WHERE id = ? AND userId = ?")
@@ -315,7 +315,7 @@ app.post("/:id/send", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const row = await db
 		.prepare(
@@ -383,7 +383,7 @@ app.post("/:id/send", async (c) => {
 			500,
 		);
 	}
-	const delivery = await resolveEmailDelivery(user, c.env);
+	const delivery = await resolveEmailDelivery(user, c.env, enc);
 	if ("error" in delivery) {
 		return c.json(
 			{
@@ -499,7 +499,7 @@ app.post("/:id/pay", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	let paidDate: string | null = null;
 	try {
@@ -590,7 +590,7 @@ app.post("/:id/void", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const row = await db
 		.prepare("SELECT status FROM invoices WHERE id = ? AND userId = ?")
 		.bind(id, userId)

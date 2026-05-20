@@ -161,11 +161,13 @@ app.get("/:id", async (c) => {
 	}
 
 	const dek = await loadUserDek(row.userId, c.env);
-	const enc = dek ?? c.env;
+	if (!dek) {
+		return notFound;
+	}
 
 	let snapshot: InvoiceSnapshot | null = null;
 	try {
-		snapshot = JSON.parse(await decrypt(row.snapshot, enc));
+		snapshot = JSON.parse(await decrypt(row.snapshot, dek));
 	} catch {
 		snapshot = null;
 	}
@@ -213,16 +215,20 @@ app.get("/:id/seen", async (c) => {
 		return respondWithBeacon(c);
 	}
 
-	const db = getDb(c.env);
 	const dek = await loadUserDek(row.userId, c.env);
 	const hmacKey = await loadUserHmacKey(row.userId, c.env);
-	const enc = dek ?? c.env;
-	const hmac = hmacKey ?? c.env;
+	if (!dek || !hmacKey) {
+		// Owner has no DEK — skip the audit write rather than 500ing a
+		// transparent-GIF response. The beacon stays silent and a
+		// subsequent migration run will rectify the missing DEK.
+		return respondWithBeacon(c);
+	}
+	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmacKey) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmacKey) : null;
 	await db
 		.prepare(
 			`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
@@ -232,7 +238,7 @@ app.get("/:id/seen", async (c) => {
 			crypto.randomUUID(),
 			row.id,
 			row.userId,
-			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), enc),
+			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), dek),
 		)
 		.run();
 

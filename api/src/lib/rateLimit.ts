@@ -72,9 +72,12 @@ export const assertWithinSendLimit = async (
 	let recipientHash: string | null = null;
 	if (recipientEmail) {
 		const hmacKey = await loadUserHmacKey(userId, env);
+		if (!hmacKey) {
+			throw new Error("User HMAC key unavailable — DEK not provisioned");
+		}
 		recipientHash = await hmacSha256Hex(
 			recipientEmail.trim().toLowerCase(),
-			hmacKey ?? env,
+			hmacKey,
 		);
 		// Distinct recipient addresses this user has emailed in the last
 		// 24h. Counts the current recipient once even if they were already

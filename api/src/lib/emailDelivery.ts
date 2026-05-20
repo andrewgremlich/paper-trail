@@ -27,11 +27,12 @@ export type UserResendConfigRow = {
 export const resolveEmailDelivery = async (
 	row: UserResendConfigRow,
 	env: Env,
+	dek: CryptoKey,
 ): Promise<EmailDelivery | { error: "shared_not_configured" }> => {
 	if (row.resendApiKey && row.resendFromAddress) {
 		return {
-			apiKey: await decrypt(row.resendApiKey, env),
-			fromAddress: await decrypt(row.resendFromAddress, env),
+			apiKey: await decrypt(row.resendApiKey, dek),
+			fromAddress: await decrypt(row.resendFromAddress, dek),
 			usingByo: true,
 		};
 	}

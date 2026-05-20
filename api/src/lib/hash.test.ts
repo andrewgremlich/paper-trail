@@ -7,56 +7,64 @@ import {
 } from "./hash";
 import type { Env } from "./types";
 
-const makeKey = (): string => {
+const makeHmacKey = async (): Promise<CryptoKey> => {
 	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
-	return btoa(String.fromCharCode(...bytes));
+	return crypto.subtle.importKey(
+		"raw",
+		bytes,
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
 };
-
-const envWithKey = (key: string = makeKey()): Env =>
-	({ ENCRYPTION_KEY: key }) as Env;
 
 describe("hmacSha256Hex", () => {
 	it("returns a 64-character lowercase hex string", async () => {
-		const out = await hmacSha256Hex("hello", envWithKey());
+		const key = await makeHmacKey();
+		const out = await hmacSha256Hex("hello", key);
 		expect(out).toMatch(/^[0-9a-f]{64}$/);
 	});
 
 	it("is deterministic for the same key + input", async () => {
-		const env = envWithKey();
-		const a = await hmacSha256Hex("user@example.com", env);
-		const b = await hmacSha256Hex("user@example.com", env);
+		const key = await makeHmacKey();
+		const a = await hmacSha256Hex("user@example.com", key);
+		const b = await hmacSha256Hex("user@example.com", key);
 		expect(a).toBe(b);
 	});
 
 	it("produces different output for different inputs (same key)", async () => {
-		const env = envWithKey();
-		const a = await hmacSha256Hex("a@example.com", env);
-		const b = await hmacSha256Hex("b@example.com", env);
+		const key = await makeHmacKey();
+		const a = await hmacSha256Hex("a@example.com", key);
+		const b = await hmacSha256Hex("b@example.com", key);
 		expect(a).not.toBe(b);
 	});
 
 	it("produces different output for different keys (same input)", async () => {
-		const a = await hmacSha256Hex("same", envWithKey());
-		const b = await hmacSha256Hex("same", envWithKey());
+		const keyA = await makeHmacKey();
+		const keyB = await makeHmacKey();
+		const a = await hmacSha256Hex("same", keyA);
+		const b = await hmacSha256Hex("same", keyB);
 		expect(a).not.toBe(b);
 	});
-
 });
 
 describe("sha256Hex (legacy)", () => {
+	const envWithSalt = (salt: string): Env =>
+		({ ENCRYPTION_KEY: salt }) as Env;
+
 	it("returns a 64-character lowercase hex string", async () => {
-		const out = await sha256Hex("hello", envWithKey());
+		const out = await sha256Hex("hello", envWithSalt("salt"));
 		expect(out).toMatch(/^[0-9a-f]{64}$/);
 	});
 
 	it("is deterministic for the same salt + input", async () => {
-		const env = envWithKey();
+		const env = envWithSalt("salt");
 		expect(await sha256Hex("x", env)).toBe(await sha256Hex("x", env));
 	});
 
 	it("matches the documented H(salt || input) construction", async () => {
-		const env = { ENCRYPTION_KEY: "salt" } as Env;
+		const env = envWithSalt("salt");
 		const out = await sha256Hex("msg", env);
 
 		// Reference: SHA-256 of "salt" + "msg" = "saltmsg"

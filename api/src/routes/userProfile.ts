@@ -68,7 +68,7 @@ const USER_SELECT = `SELECT id, uuid, displayName, email, venmoHandle, paypalHan
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const row = await db.prepare(USER_SELECT).bind(userId).first<DbUserRow>();
 
@@ -91,7 +91,7 @@ app.put("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const encOrNull = async (v: string | null | undefined) =>
 		v && v.length > 0 ? await encrypt(v, enc) : null;

@@ -128,17 +128,27 @@ app.get("/:token", async (c) => {
 	}
 
 	const dek = await loadUserDek(row.userId, c.env);
-	const enc = dek ?? c.env;
+	if (!dek) {
+		return c.html(
+			page(
+				"Link expired",
+				`<h1>This link is no longer valid</h1>
+				 <p>Consent links expire after 30 days or once they've been used.</p>`,
+			),
+			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
 	const db = getDb(c.env);
 	const userRow = await db
 		.prepare("SELECT businessName FROM users WHERE id = ?")
 		.bind(row.userId)
 		.first<{ businessName: string | null }>();
 	const businessName = userRow?.businessName
-		? await decrypt(userRow.businessName, enc)
+		? await decrypt(userRow.businessName, dek)
 		: "The sender";
 
-	const customerEmail = await decrypt(row.email, enc);
+	const customerEmail = await decrypt(row.email, dek);
 
 	const csrf = issueCsrfToken(c, "consent");
 	return c.html(
@@ -191,16 +201,25 @@ app.post("/:token", async (c) => {
 
 	const dek = await loadUserDek(row.userId, c.env);
 	const hmacKey = await loadUserHmacKey(row.userId, c.env);
-	const enc = dek ?? c.env;
-	const hmac = hmacKey ?? c.env;
+	if (!dek || !hmacKey) {
+		return c.html(
+			page(
+				"Link expired",
+				`<h1>This link is no longer valid</h1>
+				 <p>Consent links expire after 30 days or once they've been used.</p>`,
+			),
+			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmacKey) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmacKey) : null;
 	const now = new Date().toISOString();
 
 	if (decision === "agree") {
@@ -230,7 +249,7 @@ app.post("/:token", async (c) => {
 						ipHash,
 						uaHash,
 					}),
-					enc,
+					dek,
 				),
 			)
 			.run();
@@ -265,7 +284,7 @@ app.post("/:token", async (c) => {
 			row.userId,
 			await encrypt(
 				JSON.stringify({ v: 2, ipHash, uaHash }),
-				enc,
+				dek,
 			),
 		)
 		.run();
@@ -322,8 +341,18 @@ app.get("/revoke/:token", async (c) => {
 	}
 
 	const dek = await loadUserDek(row.userId, c.env);
-	const enc = dek ?? c.env;
-	const customerEmail = await decrypt(row.email, enc);
+	if (!dek) {
+		return c.html(
+			page(
+				"Link not found",
+				`<h1>This link is no longer valid</h1>
+				 <p>The revocation link has already been used or doesn't exist.</p>`,
+			),
+			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
+	const customerEmail = await decrypt(row.email, dek);
 	const csrf = issueCsrfToken(c, "revoke");
 
 	return c.html(
@@ -374,16 +403,25 @@ app.post("/revoke/:token", async (c) => {
 
 	const dek = await loadUserDek(row.userId, c.env);
 	const hmacKey = await loadUserHmacKey(row.userId, c.env);
-	const enc = dek ?? c.env;
-	const hmac = hmacKey ?? c.env;
+	if (!dek || !hmacKey) {
+		return c.html(
+			page(
+				"Link not found",
+				`<h1>This link is no longer valid</h1>
+				 <p>The revocation link has already been used or doesn't exist.</p>`,
+			),
+			410,
+			PUBLIC_PAGE_HEADERS,
+		);
+	}
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmacKey) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmacKey) : null;
 	const now = new Date().toISOString();
 
 	await db
@@ -407,7 +445,7 @@ app.post("/revoke/:token", async (c) => {
 			row.userId,
 			await encrypt(
 				JSON.stringify({ v: 2, ipHash, uaHash, at: now }),
-				enc,
+				dek,
 			),
 		)
 		.run();

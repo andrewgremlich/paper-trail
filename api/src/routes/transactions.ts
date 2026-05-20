@@ -52,7 +52,7 @@ async function decryptTransaction(
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const projectId = c.req.query("projectId");
 
 	let results: Record<string, unknown>[];
@@ -88,7 +88,7 @@ app.get("/", async (c) => {
 app.get("/xlsx", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const { results } = await db
 		.prepare(
@@ -137,7 +137,7 @@ app.get("/:id", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const row = await db
 		.prepare(
@@ -171,7 +171,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
@@ -250,7 +250,7 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);

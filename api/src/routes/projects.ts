@@ -47,7 +47,7 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const { results } = await db
 		.prepare(
 			`SELECT id, userId, active, name, customerId, rate_in_cents, description, createdAt, updatedAt
@@ -68,7 +68,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const projectId = c.req.param("id");
 
 	const project = await db
@@ -124,7 +124,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
 		return c.json({ error: "Customer not found" }, 404);
@@ -231,7 +231,7 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
 		return c.json({ error: "Customer not found" }, 404);

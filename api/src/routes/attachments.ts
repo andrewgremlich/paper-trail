@@ -43,7 +43,7 @@ const decryptRow = async (
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	// Hide very-fresh pending uploads — see comment above.
 	const FRESH_PENDING_CUTOFF_MIN = 10;

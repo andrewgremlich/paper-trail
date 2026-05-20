@@ -458,7 +458,7 @@ function requireConfirm(c: { req: { query: (k: string) => string | undefined } }
 app.get("/data", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const [
 		projects,
@@ -639,7 +639,7 @@ app.post("/data", async (c) => {
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const stmts = await buildImportBatch(db, parsed.data, userId, enc);
 
@@ -738,7 +738,7 @@ app.post("/zip", async (c) => {
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const data = parsed.data;
 
 	// Build the old-key → new-UUID remap before constructing the batch so the
@@ -825,7 +825,7 @@ app.post("/zip", async (c) => {
 app.get("/transactions", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const projectId = c.req.query("projectId");
 	const projectName = c.req.query("projectName") ?? "unknown";
 	const format = c.req.query("format") ?? "csv";
@@ -900,7 +900,7 @@ app.get("/transactions", async (c) => {
 app.get("/zip", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const [
 		projects,

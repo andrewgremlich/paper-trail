@@ -45,7 +45,7 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const { results } = await db
 		.prepare(
 			`SELECT id, userId, projectId, name, description, closed, createdAt, updatedAt
@@ -67,7 +67,7 @@ app.get("/", async (c) => {
 app.get("/by-invoice/:invoiceId", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const invoiceId = c.req.param("invoiceId");
 
 	const invoiceLookup = await db
@@ -111,7 +111,7 @@ app.get("/by-invoice/:invoiceId", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const timesheetId = c.req.param("id");
 
 	const header = await db
@@ -178,7 +178,7 @@ app.post("/", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	if (!(await userOwnsProject(c.env, body.projectId, userId))) {
 		return c.json({ error: "Project not found" }, 404);
@@ -229,7 +229,7 @@ app.put("/:id", async (c) => {
 	const body = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const encDescription = body.description
 		? await encrypt(body.description, enc)

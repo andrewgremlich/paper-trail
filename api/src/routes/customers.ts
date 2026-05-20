@@ -56,7 +56,7 @@ const decryptCustomer = async (
 app.get("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const { results } = await db
 		.prepare(
@@ -77,7 +77,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const id = c.req.param("id");
 
 	const row = await db
@@ -105,7 +105,7 @@ app.post("/", async (c) => {
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const id = crypto.randomUUID();
 
 	await db
@@ -138,7 +138,7 @@ app.put("/:id", async (c) => {
 	const { name, email, address } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	await db
 		.prepare(
@@ -205,7 +205,7 @@ app.post("/:id/request-consent", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const customerRow = await db
 		.prepare(
@@ -280,7 +280,7 @@ app.post("/:id/request-consent", async (c) => {
 			500,
 		);
 	}
-	const delivery = await resolveEmailDelivery(userRow, c.env);
+	const delivery = await resolveEmailDelivery(userRow, c.env, enc);
 	if ("error" in delivery) {
 		return c.json(
 			{
@@ -398,7 +398,7 @@ app.post("/:id/revoke-consent", async (c) => {
 	const id = c.req.param("id");
 	const db = getDb(c.env);
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 
 	const row = await db
 		.prepare("SELECT id, userId FROM customers WHERE id = ? AND userId = ?")

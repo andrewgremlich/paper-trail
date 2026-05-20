@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { generateDek, wrapDek } from "./crypto";
 import { assertWithinSendLimit, RateLimitError } from "./rateLimit";
 import type { Env } from "./types";
 
@@ -11,7 +12,7 @@ type Row = {
 	sentAt: string;
 };
 
-const makeFakeDb = (initialRows: Row[] = []) => {
+const makeFakeDb = (initialRows: Row[] = [], wrappedDek?: { wrapped: string; version: number }) => {
 	const rows: Row[] = [...initialRows];
 	let nextId = (rows.at(-1)?.id ?? 0) + 1;
 
@@ -25,6 +26,13 @@ const makeFakeDb = (initialRows: Row[] = []) => {
 				return api;
 			},
 			async first<T = unknown>(): Promise<T | null> {
+				if (trimmed.startsWith("SELECT wrappedDek, kekVersion FROM users")) {
+					if (!wrappedDek) return null;
+					return {
+						wrappedDek: wrappedDek.wrapped,
+						kekVersion: wrappedDek.version,
+					} as T;
+				}
 				if (trimmed.startsWith("SELECT COUNT(*)")) {
 					const [userId, sentAtCutoff] = binds as [number, string];
 					const count = rows.filter(
@@ -98,16 +106,23 @@ const makeKey = (): string => {
 	return btoa(String.fromCharCode(...bytes));
 };
 
-const makeEnv = (db: D1Database): Env =>
-	({ DB: db, ENCRYPTION_KEY: makeKey() }) as unknown as Env;
+const makeEnv = (db: D1Database, kekMaterial: string): Env =>
+	({ DB: db, ENCRYPTION_KEY: kekMaterial }) as unknown as Env;
 
 describe("assertWithinSendLimit", () => {
 	let fake: ReturnType<typeof makeFakeDb>;
 	let env: Env;
 
-	beforeEach(() => {
-		fake = makeFakeDb();
-		env = makeEnv(fake.db);
+	beforeEach(async () => {
+		const kekMaterial = makeKey();
+		// Build an env with a KEK and wrap a freshly minted DEK under it
+		// so the fake DB can hand it back when rateLimit calls
+		// loadUserHmacKey(userId, env).
+		const envForWrap = { ENCRYPTION_KEY: kekMaterial } as Env;
+		const dekBytes = generateDek();
+		const wrapped = await wrapDek(dekBytes, envForWrap);
+		fake = makeFakeDb([], wrapped);
+		env = makeEnv(fake.db, kekMaterial);
 	});
 
 	it("allows a send when the log is empty and records it", async () => {

@@ -71,7 +71,7 @@ const contentDispositionFor = (originalName: string): string => {
 // attachments row. The row is the source of truth from this point on.
 app.post("/upload", async (c) => {
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const formData = await c.req.formData();
 	const file = formData.get("file") as File | null;
 
@@ -169,7 +169,7 @@ app.get("/check-link", async (c) => {
 // filename in Content-Disposition.
 app.get("/:key{.+}", async (c) => {
 	const userId = c.get("userId");
-	const enc = c.get("dek") ?? c.env;
+	const enc = c.get("dek");
 	const key = c.req.param("key");
 
 	if (!isValidKey(key)) {

@@ -13,11 +13,9 @@ export type AuthVariables = {
 	userId: number;
 	userEmail: string;
 	clerkUserId: string;
-	// Set when the user has a DEK provisioned. `null` while the
-	// per-user-DEK rollout is gated off or before the user has been
-	// backfilled — handlers fall through to the legacy single-key
-	// `encrypt(x, env)` path in that case.
-	dek: CryptoKey | null;
+	// The per-user Data Encryption Key. Always set by the time a route
+	// handler runs — middleware provisions one lazily on first sign-in.
+	dek: CryptoKey;
 };
 
 /**
@@ -192,33 +190,27 @@ export async function clerkAuth(
 	c.set("userEmail", user.email);
 	c.set("clerkUserId", clerkUserId);
 
-	// Per-user DEK resolution. Gated by DEK_MIGRATION_ENABLED so the
-	// rollout is incremental: with the flag off, every user appears
-	// un-migrated and handlers use the legacy single-key path. With
-	// the flag on, missing DEKs are minted lazily — but row
-	// ciphertext is *not* rewritten here; that happens via the
-	// dedicated migration worker so request latency stays bounded.
-	let dek: CryptoKey | null = null;
+	// Per-user DEK resolution. Lazily provision on first sign-in; refuse
+	// to serve the request if we can't get one — row encryption is
+	// non-negotiable.
+	let dek: CryptoKey | null;
 	try {
-		if (env.DEK_MIGRATION_ENABLED === "true") {
-			dek = await loadUserDek(user.id, env);
+		dek = await loadUserDek(user.id, env);
+		if (!dek) {
+			dek = await provisionUserDek(user.id, env);
 			if (!dek) {
-				dek = await provisionUserDek(user.id, env);
-				if (!dek) {
-					// Lost the provisioning race with a concurrent request;
-					// fetch the value the winner persisted.
-					dek = await loadUserDek(user.id, env);
-				}
+				// Lost the provisioning race with a concurrent request;
+				// fetch the value the winner persisted.
+				dek = await loadUserDek(user.id, env);
 			}
 		}
-		// When DEK_MIGRATION_ENABLED is false, dek stays null — all handlers
-		// fall through to the legacy single-key path via `c.get("dek") ?? c.env`.
 	} catch (err) {
-		// DEK resolution failure must not 500 the request — fall back
-		// to legacy single-key path. We still log so a misconfigured
-		// KEK rotation is visible.
 		console.error("DEK resolution failed", err);
-		dek = null;
+		return c.json({ error: "Server is misconfigured" }, 500);
+	}
+	if (!dek) {
+		console.error("DEK could not be provisioned for user", user.id);
+		return c.json({ error: "Server is misconfigured" }, 500);
 	}
 	c.set("dek", dek);
 

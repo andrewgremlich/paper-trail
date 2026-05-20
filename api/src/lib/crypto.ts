@@ -159,66 +159,47 @@ const decryptBufferWithKey = async (
 
 /**
  * The second arg to `encrypt`/`decrypt`/`encryptBuffer`/`decryptBuffer`
- * is either:
- *   - a per-user DEK (`CryptoKey`) — used when the request has a
- *     migrated user (auth middleware set `c.get("dek")`);
- *   - the worker `Env` — falls back to the legacy single-key path
- *     against KEK_V1, preserving today's behaviour for un-migrated
- *     users and for the test/bypass paths.
- *   - `null` — equivalent to "no DEK available, use legacy". Lets
- *     handlers write `encrypt(x, c.get("dek") ?? c.env)` without an
- *     extra branch.
+ * is always a per-user DEK (`CryptoKey`). It is set by the auth
+ * middleware (`c.get("dek")`) for authed routes, or loaded explicitly
+ * via `loadUserDek(row.userId, env)` in the public routes.
+ *
+ * The legacy single-key fallback was removed once per-user DEKs were
+ * the only path. If you need to decrypt under the legacy KEK (e.g.
+ * inside the one-shot migration worker), use `getLegacyKey` +
+ * `decryptWithKey` / `decryptBufferWithKey` directly.
  */
-export type EncryptionContext = CryptoKey | Env | null;
-
-const isCryptoKey = (value: EncryptionContext): value is CryptoKey =>
-	value !== null && typeof (value as CryptoKey).algorithm === "object";
-
-const resolveEncryptKey = async (
-	ctx: EncryptionContext,
-): Promise<CryptoKey | null> => {
-	if (ctx === null) return null;
-	if (isCryptoKey(ctx)) return ctx;
-	if (!isEncryptionEnabled(ctx)) return null;
-	return getLegacyKey(ctx);
-};
+export type EncryptionContext = CryptoKey;
 
 export async function encrypt(
 	plaintext: string,
-	ctx: EncryptionContext,
+	key: CryptoKey,
 ): Promise<string> {
-	const key = await resolveEncryptKey(ctx);
-	if (!key) return plaintext;
 	return encryptWithKey(plaintext, key);
 }
 
-export async function decrypt(
-	value: string,
-	ctx: EncryptionContext,
-): Promise<string> {
+export async function decrypt(value: string, key: CryptoKey): Promise<string> {
 	if (!value.startsWith(ENCRYPTED_PREFIX)) return value;
-	const key = await resolveEncryptKey(ctx);
-	if (!key) return value;
 	return decryptWithKey(value, key);
 }
 
 export async function encryptBuffer(
 	data: ArrayBuffer,
-	ctx: EncryptionContext,
+	key: CryptoKey,
 ): Promise<ArrayBuffer> {
-	const key = await resolveEncryptKey(ctx);
-	if (!key) return data;
 	return encryptBufferWithKey(data, key);
 }
 
 export async function decryptBuffer(
 	data: ArrayBuffer,
-	ctx: EncryptionContext,
+	key: CryptoKey,
 ): Promise<ArrayBuffer> {
-	const key = await resolveEncryptKey(ctx);
-	if (!key) return data;
 	return decryptBufferWithKey(data, key);
 }
+
+// Exposed for the migration worker only — it decrypts legacy rows
+// (encrypted under `ENCRYPTION_KEY` / `KEK_V1`) and re-encrypts them
+// under the per-user DEK. Production routes should not touch these.
+export { decryptWithKey, decryptBufferWithKey, getLegacyKey };
 
 export function isEncrypted(value: string): boolean {
 	return value.startsWith(ENCRYPTED_PREFIX);
@@ -335,13 +316,6 @@ const loadUserDekEntry = async (
 	userId: number,
 	env: Env,
 ): Promise<DekEntry | null> => {
-	// Gate: if DEK_MIGRATION_ENABLED is not "true", treat every user as
-	// un-migrated so all handlers fall through to the legacy single-key
-	// path. Without this guard, a user who had a DEK provisioned during
-	// testing would cause decryption failures on existing ciphertext.
-	if (env.DEK_MIGRATION_ENABLED !== "true") {
-		return null;
-	}
 	const db = getDb(env);
 	const row = await db
 		.prepare("SELECT wrappedDek, kekVersion FROM users WHERE id = ?")
@@ -388,7 +362,8 @@ export const loadUserHmacKey = async (
  * the freshly imported `CryptoKey`, or `null` when the user already
  * had a DEK (caller can re-fetch via `loadUserDek`).
  *
- * Only called by the auth middleware when `DEK_MIGRATION_ENABLED=true`.
+ * Called by the auth middleware on every request when the user has no
+ * DEK yet (first sign-in after PR5).
  */
 export const provisionUserDek = async (
 	userId: number,
