@@ -50,6 +50,7 @@ export const InvoiceProfileSection = () => {
 			</P>
 
 			<form
+				key={profile.updatedAt}
 				onSubmit={(evt) => {
 					evt.preventDefault();
 					mutate(new FormData(evt.currentTarget));

@@ -14,6 +14,8 @@ import { ProjectPageTab } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import styles from "./styles.module.css";
 
+const DEV_BYPASS = import.meta.env.VITE_CLERK_BYPASS === "true";
+
 export const Nav = () => {
 	const { changeActiveTab, activeTab } = usePaperTrailStore();
 
@@ -106,9 +108,11 @@ export const Nav = () => {
 					>
 						<Settings size={40} />
 					</Button>
-					<UserButton
-						appearance={{ elements: { avatarBox: styles.userAvatar } }}
-					/>
+					{!DEV_BYPASS && (
+						<UserButton
+							appearance={{ elements: { avatarBox: styles.userAvatar } }}
+						/>
+					)}
 				</Flex>
 			</Flex>
 		</div>

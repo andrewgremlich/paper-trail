@@ -69,6 +69,7 @@ export const EmailDeliverySection = () => {
 			<div className={styles.statusRow}>{status}</div>
 
 			<form
+				key={profile.updatedAt}
 				onSubmit={(evt) => {
 					evt.preventDefault();
 					const formData = new FormData(evt.currentTarget);

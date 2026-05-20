@@ -23,20 +23,12 @@ if (!rootElement) {
 	throw new Error("Could not find root element with id 'root'");
 }
 
-// Vite exposes the publishable key at build time via import.meta.env.
-// It's a public value (designed to be embedded in client bundles) so this
-// is safe; the secret key stays on the Worker side.
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!PUBLISHABLE_KEY) {
-	throw new Error(
-		"VITE_CLERK_PUBLISHABLE_KEY is not set. Add it to .dev.vars (see docs/CLERK_AUTH.md).",
-	);
-}
-
 createRoot(rootElement).render(
 	<StrictMode>
-		<ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+		<ClerkProvider
+			publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+			afterSignOutUrl="/"
+		>
 			<QueryClientProvider client={queryClient}>
 				<ThemeProvider>
 					<ErrorBoundary
