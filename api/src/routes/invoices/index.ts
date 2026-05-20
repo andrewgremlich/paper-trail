@@ -1,22 +1,24 @@
 import { Hono } from "hono";
-import { z } from "zod";
-import { decrypt, encrypt, isEncryptionEnabled } from "../lib/crypto";
-import { getDb } from "../lib/db";
+import { decrypt, encrypt, isEncryptionEnabled } from "../../lib/crypto";
+import { getDb } from "../../lib/db";
 import {
 	renderMinimalInvoiceHtml,
 	resolveEmailDelivery,
-} from "../lib/emailDelivery";
-import { randomHexToken } from "../lib/hash";
-import { renderInvoiceHtml } from "../lib/invoiceHtml";
-import { assertWithinSendLimit, RateLimitError } from "../lib/rateLimit";
-import { ResendError, sendEmail } from "../lib/resend";
-import type {
-	Env,
-	Invoice,
-	InvoiceSnapshot,
-	InvoiceStatus,
-} from "../lib/types";
-import type { AuthVariables } from "../middleware/auth";
+} from "../../lib/emailDelivery";
+import { randomHexToken } from "../../lib/hash";
+import { renderInvoiceHtml } from "../../lib/invoiceHtml";
+import { RateLimitError, assertWithinSendLimit } from "../../lib/rateLimit";
+import { ResendError, sendEmail } from "../../lib/resend";
+import type { Env, InvoiceStatus } from "../../lib/types";
+import type { AuthVariables } from "../../middleware/auth";
+import {
+	addDays,
+	buildSnapshot,
+	decryptInvoice,
+	logEvent,
+	nextInvoiceNumber,
+} from "./helpers";
+import { createInvoiceSchema, type DbInvoiceRow } from "./types";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -26,135 +28,6 @@ const DEFAULT_DAYS_UNTIL_DUE = 30;
 // public route 404s past the expiry; the operator can re-send to mint a
 // fresh token + window.
 const ACCESS_TOKEN_TTL_DAYS = 90;
-
-const createInvoiceSchema = z
-	.object({
-		customerId: z.string().min(1),
-		timesheetId: z.string().min(1).optional(),
-		amountCents: z.number().int().positive().optional(),
-		description: z.string().trim().max(5000).optional(),
-		issuedAt: z
-			.string()
-			.regex(/^\d{4}-\d{2}-\d{2}$/)
-			.optional(),
-		dueDate: z
-			.string()
-			.regex(/^\d{4}-\d{2}-\d{2}$/)
-			.optional(),
-	})
-	.refine(
-		(v) =>
-			v.timesheetId != null || (v.amountCents != null && v.amountCents > 0),
-		{
-			message: "Either timesheetId or amountCents (> 0) is required",
-			path: ["amountCents"],
-		},
-	)
-	.refine((v) => !v.issuedAt || !v.dueDate || v.dueDate >= v.issuedAt, {
-		message: "dueDate must be on or after issuedAt",
-		path: ["dueDate"],
-	});
-
-type DbInvoiceRow = {
-	id: string;
-	userId: number;
-	customerId: string;
-	timesheetId: string | null;
-	number: string;
-	status: InvoiceStatus;
-	amount_cents: string;
-	description: string | null;
-	issuedAt: string;
-	dueDate: string;
-	sentAt: string | null;
-	paidAt: string | null;
-	voidedAt: string | null;
-	archivedAt: string | null;
-	createdAt: string;
-	updatedAt: string;
-};
-
-const decryptInvoice = async (
-	row: DbInvoiceRow,
-	env: Env,
-): Promise<Invoice> => {
-	const amount = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount_cents, env))
-		: Number(row.amount_cents);
-	const description = row.description
-		? await decrypt(row.description, env)
-		: null;
-	return {
-		id: row.id,
-		userId: row.userId,
-		customerId: row.customerId,
-		timesheetId: row.timesheetId,
-		number: row.number,
-		status: row.status,
-		amount_cents: amount,
-		description,
-		issuedAt: row.issuedAt,
-		dueDate: row.dueDate,
-		sentAt: row.sentAt,
-		paidAt: row.paidAt,
-		voidedAt: row.voidedAt,
-		archivedAt: row.archivedAt,
-		createdAt: row.createdAt,
-		updatedAt: row.updatedAt,
-	};
-};
-
-const nextInvoiceNumber = async (
-	userId: number,
-	year: number,
-	env: Env,
-): Promise<string> => {
-	const db = getDb(env);
-	const prefix = `INV-${year}-`;
-	// The highest existing seq for this user/year; lexicographic ordering of
-	// zero-padded suffixes matches numeric ordering.
-	const row = await db
-		.prepare(
-			`SELECT number FROM invoices
-			 WHERE userId = ? AND number LIKE ?
-			 ORDER BY number DESC LIMIT 1`,
-		)
-		.bind(userId, `${prefix}%`)
-		.first<{ number: string }>();
-	let nextSeq = 1;
-	if (row?.number) {
-		const tail = row.number.slice(prefix.length);
-		const n = Number.parseInt(tail, 10);
-		if (Number.isFinite(n)) nextSeq = n + 1;
-	}
-	return `${prefix}${String(nextSeq).padStart(4, "0")}`;
-};
-
-const addDays = (iso: string, days: number): string => {
-	const d = new Date(`${iso}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() + days);
-	return d.toISOString().slice(0, 10);
-};
-
-const logEvent = async (
-	invoiceId: string,
-	userId: number,
-	type: "created" | "sent" | "paid" | "voided" | "viewed",
-	payload: Record<string, unknown> | null,
-	env: Env,
-): Promise<void> => {
-	const db = getDb(env);
-	const encPayload = payload
-		? await encrypt(JSON.stringify(payload), env)
-		: null;
-	await db
-		.prepare(
-			`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
-			 VALUES (?, ?, ?, ?, ?)`,
-		)
-		.bind(crypto.randomUUID(), invoiceId, userId, type, encPayload)
-		.run();
-};
 
 // ============================================================
 // GET /api/v1/invoices
@@ -281,7 +154,7 @@ app.get("/:id/preview", async (c) => {
 		.first<DbInvoiceRow & { snapshot: string | null }>();
 	if (!row) return c.json({ error: "Invoice not found" }, 404);
 
-	let snapshot: InvoiceSnapshot | null = null;
+	let snapshot = null;
 	if (row.snapshot) {
 		try {
 			snapshot = JSON.parse(await decrypt(row.snapshot, c.env));
@@ -321,7 +194,6 @@ app.post("/", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 
-	// Verify customer belongs to user.
 	const cust = await db
 		.prepare("SELECT id FROM customers WHERE id = ? AND userId = ?")
 		.bind(body.customerId, userId)
@@ -432,116 +304,6 @@ app.post("/", async (c) => {
 });
 
 // ============================================================
-// Helper: build the snapshot from current DB state
-// ============================================================
-const buildSnapshot = async (
-	row: DbInvoiceRow,
-	env: Env,
-): Promise<InvoiceSnapshot> => {
-	const db = getDb(env);
-
-	const user = await db
-		.prepare(
-			`SELECT email, venmoHandle, paypalHandle, businessName, businessAddress
-			 FROM users WHERE id = ?`,
-		)
-		.bind(row.userId)
-		.first<{
-			email: string;
-			venmoHandle: string | null;
-			paypalHandle: string | null;
-			businessName: string | null;
-			businessAddress: string | null;
-		}>();
-	if (!user) throw new Error("User not found");
-
-	const customer = await db
-		.prepare(
-			"SELECT name, email, address FROM customers WHERE id = ? AND userId = ?",
-		)
-		.bind(row.customerId, row.userId)
-		.first<{ name: string; email: string; address: string | null }>();
-	if (!customer) throw new Error("Customer not found");
-
-	const businessName = user.businessName
-		? await decrypt(user.businessName, env)
-		: "";
-	const businessAddress = user.businessAddress
-		? await decrypt(user.businessAddress, env)
-		: "";
-	const venmoHandle = user.venmoHandle
-		? await decrypt(user.venmoHandle, env)
-		: null;
-	const paypalHandle = user.paypalHandle
-		? await decrypt(user.paypalHandle, env)
-		: null;
-
-	const lineItems: InvoiceSnapshot["lineItems"] = [];
-
-	if (row.timesheetId) {
-		const ts = await db
-			.prepare(
-				`SELECT p.rate_in_cents AS projectRate
-				 FROM timesheets t JOIN projects p ON p.id = t.projectId
-				 WHERE t.id = ? AND t.userId = ?`,
-			)
-			.bind(row.timesheetId, row.userId)
-			.first<{ projectRate: string | number | null }>();
-		const rate = ts
-			? isEncryptionEnabled(env)
-				? Number(await decrypt(String(ts.projectRate), env))
-				: Number(ts.projectRate ?? 0)
-			: 0;
-		const { results: entries } = await db
-			.prepare(
-				`SELECT date, minutes, description FROM timesheet_entries
-				 WHERE timesheetId = ? AND userId = ? ORDER BY date ASC`,
-			)
-			.bind(row.timesheetId, row.userId)
-			.all<{ date: string; minutes: number; description: string }>();
-		for (const e of entries) {
-			lineItems.push({
-				date: e.date,
-				description: await decrypt(e.description, env),
-				minutes: e.minutes,
-				amountCents: rate ? Math.round((e.minutes * rate) / 60) : 0,
-			});
-		}
-	}
-
-	const amountCents = isEncryptionEnabled(env)
-		? Number(await decrypt(row.amount_cents, env))
-		: Number(row.amount_cents);
-	const description = row.description
-		? await decrypt(row.description, env)
-		: null;
-
-	return {
-		seller: {
-			businessName,
-			businessAddress,
-			email: user.email,
-			venmoHandle,
-			paypalHandle,
-		},
-		buyer: {
-			name: await decrypt(customer.name, env),
-			email: await decrypt(customer.email, env),
-			address: customer.address ? await decrypt(customer.address, env) : null,
-		},
-		invoice: {
-			number: row.number,
-			id: row.id,
-			issuedAt: row.issuedAt,
-			dueDate: row.dueDate,
-			description,
-			amountCents,
-		},
-		lineItems,
-	};
-};
-
-// ============================================================
 // POST /api/v1/invoices/:id/send — freeze snapshot, email via Resend
 // ============================================================
 app.post("/:id/send", async (c) => {
@@ -566,7 +328,6 @@ app.post("/:id/send", async (c) => {
 		);
 	}
 
-	// Preconditions: customer consent + seller business identity + config.
 	const cust = await db
 		.prepare(
 			"SELECT name, email, consentToEmailInvoices FROM customers WHERE id = ? AND userId = ?",
@@ -773,7 +534,6 @@ app.post("/:id/pay", async (c) => {
 		.run();
 	await logEvent(id, userId, "paid", null, c.env);
 
-	// Side-effect: create a transaction row attached to the project we can find.
 	let projectId: string | null = null;
 	if (row.timesheetId) {
 		const ts = await db
