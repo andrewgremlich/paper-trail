@@ -23,21 +23,38 @@ const base64ToBytes = (b64: string): Uint8Array =>
 	Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
 /**
- * Current pseudonymisation primitive — HMAC-SHA-256 keyed by ENCRYPTION_KEY.
- * Use this for all new IP/UA hashes written to audit logs.
+ * Pseudonymisation primitive — HMAC-SHA-256. The `ctx` is either a
+ * per-user HMAC `CryptoKey` (derived from the user's DEK via HKDF; see
+ * `loadUserHmacKey` in crypto.ts) or the worker `Env` (legacy
+ * single-key path, keyed by `ENCRYPTION_KEY`). Use the per-user form
+ * for any new write — it prevents cross-tenant fingerprint correlation
+ * and survives KEK rotation because the DEK doesn't change when its
+ * wrapping does.
  */
-export const hmacSha256Hex = async (
-	input: string,
-	env: Env,
-): Promise<string> => {
-	const keyBytes = env.ENCRYPTION_KEY ? base64ToBytes(env.ENCRYPTION_KEY) : new Uint8Array(0);
-	const key = await crypto.subtle.importKey(
+export type HmacContext = CryptoKey | Env;
+
+const isCryptoKey = (value: HmacContext): value is CryptoKey =>
+	typeof (value as CryptoKey).algorithm === "object";
+
+const resolveHmacKey = async (ctx: HmacContext): Promise<CryptoKey> => {
+	if (isCryptoKey(ctx)) return ctx;
+	const keyBytes = ctx.ENCRYPTION_KEY
+		? base64ToBytes(ctx.ENCRYPTION_KEY)
+		: new Uint8Array(0);
+	return crypto.subtle.importKey(
 		"raw",
 		keyBytes,
 		{ name: "HMAC", hash: "SHA-256" },
 		false,
 		["sign"],
 	);
+};
+
+export const hmacSha256Hex = async (
+	input: string,
+	ctx: HmacContext,
+): Promise<string> => {
+	const key = await resolveHmacKey(ctx);
 	const mac = await crypto.subtle.sign(
 		"HMAC",
 		key,

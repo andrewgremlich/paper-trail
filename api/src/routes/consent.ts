@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { decrypt, encrypt, loadUserDek } from "../lib/crypto";
+import { decrypt, encrypt, loadUserDek, loadUserHmacKey } from "../lib/crypto";
 import {
 	CSRF_FIELD,
 	csrfFormField,
@@ -190,15 +190,17 @@ app.post("/:token", async (c) => {
 	const decision = form.decision === "agree" ? "agree" : "decline";
 
 	const dek = await loadUserDek(row.userId, c.env);
+	const hmacKey = await loadUserHmacKey(row.userId, c.env);
 	const enc = dek ?? c.env;
+	const hmac = hmacKey ?? c.env;
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
 	const now = new Date().toISOString();
 
 	if (decision === "agree") {
@@ -371,15 +373,17 @@ app.post("/revoke/:token", async (c) => {
 	}
 
 	const dek = await loadUserDek(row.userId, c.env);
+	const hmacKey = await loadUserHmacKey(row.userId, c.env);
 	const enc = dek ?? c.env;
+	const hmac = hmacKey ?? c.env;
 	const db = getDb(c.env);
 	const ip =
 		c.req.header("CF-Connecting-IP") ||
 		c.req.header("X-Forwarded-For") ||
 		"";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
 	const now = new Date().toISOString();
 
 	await db

@@ -253,11 +253,11 @@ export const wrapDek = async (
 	return { wrapped: bytesToBase64(combined), version };
 };
 
-export const unwrapDek = async (
+const unwrapDekToBytes = async (
 	wrapped: string,
 	version: number,
 	env: Env,
-): Promise<CryptoKey> => {
+): Promise<Uint8Array> => {
 	const kek = await getKekByVersion(env, version);
 	const combined = base64ToBytes(wrapped);
 	const iv = combined.slice(0, 12);
@@ -267,21 +267,57 @@ export const unwrapDek = async (
 		kek,
 		ciphertext,
 	);
-	return importAesGcmKey(new Uint8Array(dekBytes));
+	return new Uint8Array(dekBytes);
+};
+
+export const unwrapDek = async (
+	wrapped: string,
+	version: number,
+	env: Env,
+): Promise<CryptoKey> => {
+	const dekBytes = await unwrapDekToBytes(wrapped, version, env);
+	return importAesGcmKey(dekBytes);
+};
+
+// HKDF-derived per-user HMAC key, used by hash.ts to pseudonymise
+// IP/UA values in audit logs. Per-tenant salt prevents cross-tenant
+// fingerprint correlation, and the derivation is stable across KEK
+// rotations because the DEK doesn't change when its wrapping does.
+const HMAC_INFO = new TextEncoder().encode("audit-hmac-v1");
+const HKDF_SALT = new Uint8Array(0);
+
+const deriveUserHmacKey = async (dekBytes: Uint8Array): Promise<CryptoKey> => {
+	const hkdfKey = await crypto.subtle.importKey(
+		"raw",
+		dekBytes,
+		"HKDF",
+		false,
+		["deriveKey"],
+	);
+	return crypto.subtle.deriveKey(
+		{ name: "HKDF", hash: "SHA-256", salt: HKDF_SALT, info: HMAC_INFO },
+		hkdfKey,
+		{ name: "HMAC", hash: "SHA-256", length: 256 },
+		false,
+		["sign"],
+	);
 };
 
 // Per-isolate LRU cache for unwrapped DEKs. The CryptoKey is
 // non-extractable, so caching it is safe. Bounded so a hot worker
-// serving many tenants doesn't grow unbounded.
+// serving many tenants doesn't grow unbounded. Each entry holds both
+// the AES-GCM key (row encryption) and the HMAC key (audit-log
+// pseudonymisation) so callers don't pay the unwrap+derive cost twice.
+type DekEntry = { aes: CryptoKey; hmac: CryptoKey };
 const DEK_CACHE_MAX = 64;
-const dekCache = new Map<string, CryptoKey>();
+const dekCache = new Map<string, DekEntry>();
 
 const cacheKey = (userId: number, kekVersion: number, wrapped: string): string =>
 	`${userId}:${kekVersion}:${wrapped}`;
 
-const rememberDek = (key: string, dek: CryptoKey): void => {
+const rememberDek = (key: string, entry: DekEntry): void => {
 	dekCache.delete(key);
-	dekCache.set(key, dek);
+	dekCache.set(key, entry);
 	if (dekCache.size > DEK_CACHE_MAX) {
 		const oldest = dekCache.keys().next().value;
 		if (oldest !== undefined) dekCache.delete(oldest);
@@ -289,19 +325,16 @@ const rememberDek = (key: string, dek: CryptoKey): void => {
 };
 
 /**
- * Resolve the DEK for a given user, or `null` when the user has not
- * been migrated yet. Callers that hit `null` should fall through to
- * the legacy single-key path via `encrypt`/`decrypt(value, env)`.
- *
- * This is the single funnel for DEK retrieval — both the authed
- * `clerkAuth` middleware and the unauthenticated public routes
- * (`/invoice/*`, `/consent/*`) use it after they resolve the owning
- * user id from a row.
+ * Resolve the per-user key entry (AES-GCM for row encryption + HMAC for
+ * audit-log pseudonymisation) or `null` when the user has not been
+ * migrated yet. Single funnel used by both the authed `clerkAuth`
+ * middleware and the public routes (`/invoice/*`, `/consent/*`) after
+ * they resolve the owning user id from a row.
  */
-export const loadUserDek = async (
+const loadUserDekEntry = async (
 	userId: number,
 	env: Env,
-): Promise<CryptoKey | null> => {
+): Promise<DekEntry | null> => {
 	// Gate: if DEK_MIGRATION_ENABLED is not "true", treat every user as
 	// un-migrated so all handlers fall through to the legacy single-key
 	// path. Without this guard, a user who had a DEK provisioned during
@@ -324,9 +357,29 @@ export const loadUserDek = async (
 		dekCache.set(key, cached);
 		return cached;
 	}
-	const dek = await unwrapDek(row.wrappedDek, row.kekVersion, env);
-	rememberDek(key, dek);
-	return dek;
+	const dekBytes = await unwrapDekToBytes(row.wrappedDek, row.kekVersion, env);
+	const entry: DekEntry = {
+		aes: await importAesGcmKey(dekBytes),
+		hmac: await deriveUserHmacKey(dekBytes),
+	};
+	rememberDek(key, entry);
+	return entry;
+};
+
+export const loadUserDek = async (
+	userId: number,
+	env: Env,
+): Promise<CryptoKey | null> => {
+	const entry = await loadUserDekEntry(userId, env);
+	return entry ? entry.aes : null;
+};
+
+export const loadUserHmacKey = async (
+	userId: number,
+	env: Env,
+): Promise<CryptoKey | null> => {
+	const entry = await loadUserDekEntry(userId, env);
+	return entry ? entry.hmac : null;
 };
 
 /**
@@ -355,7 +408,10 @@ export const provisionUserDek = async (
 	if (!result.meta.changes) {
 		return null;
 	}
-	const key = await importAesGcmKey(dekBytes);
-	rememberDek(cacheKey(userId, version, wrapped), key);
-	return key;
+	const entry: DekEntry = {
+		aes: await importAesGcmKey(dekBytes),
+		hmac: await deriveUserHmacKey(dekBytes),
+	};
+	rememberDek(cacheKey(userId, version, wrapped), entry);
+	return entry.aes;
 };

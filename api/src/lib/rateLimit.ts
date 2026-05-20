@@ -1,3 +1,4 @@
+import { loadUserHmacKey } from "./crypto";
 import { hmacSha256Hex } from "./hash";
 import type { Env } from "./types";
 
@@ -70,9 +71,10 @@ export const assertWithinSendLimit = async (
 
 	let recipientHash: string | null = null;
 	if (recipientEmail) {
+		const hmacKey = await loadUserHmacKey(userId, env);
 		recipientHash = await hmacSha256Hex(
 			recipientEmail.trim().toLowerCase(),
-			env,
+			hmacKey ?? env,
 		);
 		// Distinct recipient addresses this user has emailed in the last
 		// 24h. Counts the current recipient once even if they were already

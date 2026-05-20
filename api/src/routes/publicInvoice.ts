@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import { decrypt, encrypt, loadUserDek } from "../lib/crypto";
+import { decrypt, encrypt, loadUserDek, loadUserHmacKey } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
 import { renderInvoiceHtml } from "../lib/invoiceHtml";
@@ -215,12 +215,14 @@ app.get("/:id/seen", async (c) => {
 
 	const db = getDb(c.env);
 	const dek = await loadUserDek(row.userId, c.env);
+	const hmacKey = await loadUserHmacKey(row.userId, c.env);
 	const enc = dek ?? c.env;
+	const hmac = hmacKey ?? c.env;
 	const ip =
 		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 	const ua = c.req.header("User-Agent") ?? "";
-	const ipHash = ip ? await hmacSha256Hex(ip, c.env) : null;
-	const uaHash = ua ? await hmacSha256Hex(ua, c.env) : null;
+	const ipHash = ip ? await hmacSha256Hex(ip, hmac) : null;
+	const uaHash = ua ? await hmacSha256Hex(ua, hmac) : null;
 	await db
 		.prepare(
 			`INSERT INTO invoice_events (id, invoiceId, userId, type, payload)
