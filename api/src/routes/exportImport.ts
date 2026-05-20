@@ -10,10 +10,13 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 //
-// Encrypted exports keep numeric columns as base64 ciphertext strings, while
-// plaintext exports keep them as numbers. The schemas below accept either form
-// — type-checking the row values is the goal, not coercing them. The batch
-// builder chooses whether to encrypt each value based on `data.encrypted`.
+// Exports are always plaintext now (the encrypted-export mode was removed
+// once per-user DEKs landed — encrypted bytes from one user's DEK can't be
+// decrypted with another's). The `encrypted` field is still accepted on
+// input so legacy `encrypted: false` backups validate; an `encrypted: true`
+// payload is rejected at the route boundary. Numeric columns therefore
+// always arrive as numbers, but the schemas still accept string for
+// belt-and-braces with very old exports.
 
 const stringOrNullish = z.union([z.string(), z.null()]).optional();
 const numericOrEncrypted = z.union([z.string(), z.number()]);
@@ -182,17 +185,21 @@ async function buildImportBatch(
 	userId: number,
 	ctx: EncryptionContext,
 ): Promise<D1PreparedStatement[]> {
-	const isDataEncrypted = data.encrypted === true;
-	const maybeEncrypt = async (v: string) => (isDataEncrypted ? v : encrypt(v, ctx));
+	// Encrypted exports were dropped — backups are always plaintext and
+	// imports always re-encrypt under the target user's key. The schema
+	// still accepts an `encrypted` flag so older plaintext backups
+	// (`encrypted: false`) validate; an `encrypted: true` payload would
+	// be rejected at the route boundary before reaching this function.
+	const encryptPlain = async (v: string) => encrypt(v, ctx);
 	const encOrNull = async (v: string | null | undefined): Promise<string | null> =>
-		v == null ? null : await maybeEncrypt(v);
+		v == null ? null : await encryptPlain(v);
 
 	// Pre-encrypt all the values we'll need before constructing any statements.
 	const customers = await Promise.all(
 		(data.customers ?? []).map(async (customer) => ({
 			...customer,
-			name: await maybeEncrypt(customer.name),
-			email: await maybeEncrypt(customer.email),
+			name: await encryptPlain(customer.name),
+			email: await encryptPlain(customer.email),
 			address: await encOrNull(customer.address ?? null),
 		})),
 	);
@@ -200,8 +207,8 @@ async function buildImportBatch(
 	const projects = await Promise.all(
 		data.projects.map(async (project) => ({
 			...project,
-			rate_in_cents: await maybeEncrypt(String(project.rate_in_cents)),
-			description: await maybeEncrypt(project.description ?? ""),
+			rate_in_cents: await encryptPlain(String(project.rate_in_cents)),
+			description: await encryptPlain(project.description ?? ""),
 		})),
 	);
 
@@ -215,23 +222,23 @@ async function buildImportBatch(
 	const entries = await Promise.all(
 		data.timesheetEntries.map(async (entry) => ({
 			...entry,
-			description: await maybeEncrypt(entry.description),
-			amount: await maybeEncrypt(String(entry.amount)),
+			description: await encryptPlain(entry.description),
+			amount: await encryptPlain(String(entry.amount)),
 		})),
 	);
 
 	const transactions = await Promise.all(
 		data.transactions.map(async (tx) => ({
 			...tx,
-			description: await maybeEncrypt(tx.description),
-			amount: await maybeEncrypt(String(tx.amount)),
+			description: await encryptPlain(tx.description),
+			amount: await encryptPlain(String(tx.amount)),
 		})),
 	);
 
 	const invoices = await Promise.all(
 		(data.invoices ?? []).map(async (inv) => ({
 			...inv,
-			amount_cents: await maybeEncrypt(String(inv.amount_cents)),
+			amount_cents: await encryptPlain(String(inv.amount_cents)),
 			description: await encOrNull(inv.description ?? null),
 		})),
 	);
@@ -445,12 +452,13 @@ function requireConfirm(c: { req: { query: (k: string) => string | undefined } }
 	};
 }
 
-// GET /api/export/data?encrypted=true|false - export all data as JSON
+// GET /api/export/data — export all data as plaintext JSON.
+// Always decrypted; the encrypted-backup mode was removed once per-user
+// DEKs landed.
 app.get("/data", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const enc = c.get("dek") ?? c.env;
-	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [
 		projects,
@@ -524,7 +532,7 @@ app.get("/data", async (c) => {
 	let invoiceResults = invoices.results as Record<string, unknown>[];
 	let profileResult = userProfile as Record<string, unknown> | null;
 
-	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
+	if (isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
 			transactionResults.map((r) => decryptTransactionRow(r, enc, c.env)),
 		);
@@ -591,7 +599,7 @@ app.get("/data", async (c) => {
 	const data: ExportData = {
 		version: "2.0.0",
 		exportDate: new Date().toISOString(),
-		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
+		encrypted: false,
 		projects: projectResults as unknown as ExportData["projects"],
 		timesheets: timesheetResults as unknown as ExportData["timesheets"],
 		timesheetEntries:
@@ -615,6 +623,16 @@ app.post("/data", async (c) => {
 	if (!parsed.success) {
 		return c.json(
 			{ error: "Invalid backup file format", issues: parsed.error.issues },
+			400,
+		);
+	}
+	if (parsed.data.encrypted === true) {
+		return c.json(
+			{
+				error:
+					"Encrypted backups are no longer supported. Re-export the data from the source account as a plaintext backup.",
+				code: "ENCRYPTED_BACKUP_UNSUPPORTED",
+			},
 			400,
 		);
 	}
@@ -707,12 +725,21 @@ app.post("/zip", async (c) => {
 			400,
 		);
 	}
+	if (parsed.data.encrypted === true) {
+		return c.json(
+			{
+				error:
+					"Encrypted backups are no longer supported. Re-export the data from the source account as a plaintext backup.",
+				code: "ENCRYPTED_BACKUP_UNSUPPORTED",
+			},
+			400,
+		);
+	}
 
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const enc = c.get("dek") ?? c.env;
 	const data = parsed.data;
-	const isDataEncrypted = data.encrypted === true;
 
 	// Build the old-key → new-UUID remap before constructing the batch so the
 	// transaction inserts transactions with their final filePaths and we don't
@@ -753,11 +780,9 @@ app.post("/zip", async (c) => {
 			const oldKey = path.slice("files/".length);
 			const newKey = fileKeyRemap.get(oldKey);
 			if (!newKey) return;
-			// Encrypted backups store files already encrypted — upload as-is.
-			// Plaintext backups store raw file bytes — encrypt before storing.
-			const toStore = isDataEncrypted
-				? bytes.buffer as ArrayBuffer
-				: await encryptBuffer(bytes.buffer as ArrayBuffer, enc);
+			// Imports are always plaintext: file bytes arrive raw and are
+			// encrypted under the target user's key before going to R2.
+			const toStore = await encryptBuffer(bytes.buffer as ArrayBuffer, enc);
 			await c.env.FILES_BUCKET.put(newKey, toStore, {
 				customMetadata: {
 					originalName: oldKey,
@@ -869,13 +894,13 @@ app.get("/transactions", async (c) => {
 	});
 });
 
-// GET /api/export/zip - export all data + R2 files as a ZIP archive
-// ?encrypted=true keeps DB fields and file bytes in their encrypted form
+// GET /api/export/zip — export all data + R2 files as a plaintext ZIP
+// archive. Always decrypted; the encrypted-backup mode was removed once
+// per-user DEKs landed (cross-account import would need the source DEK).
 app.get("/zip", async (c) => {
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const enc = c.get("dek") ?? c.env;
-	const wantEncrypted = c.req.query("encrypted") === "true";
 
 	const [
 		projects,
@@ -949,7 +974,7 @@ app.get("/zip", async (c) => {
 	let invoiceResults = invoices.results as Record<string, unknown>[];
 	let profileResult = userProfile as Record<string, unknown> | null;
 
-	if (!wantEncrypted && isEncryptionEnabled(c.env)) {
+	if (isEncryptionEnabled(c.env)) {
 		transactionResults = await Promise.all(
 			transactionResults.map((r) => decryptTransactionRow(r, enc, c.env)),
 		);
@@ -1014,7 +1039,7 @@ app.get("/zip", async (c) => {
 	const data: ExportData = {
 		version: "2.0.0",
 		exportDate: new Date().toISOString(),
-		encrypted: wantEncrypted && isEncryptionEnabled(c.env),
+		encrypted: false,
 		projects: projectResults as unknown as ExportData["projects"],
 		timesheets: timesheetResults as unknown as ExportData["timesheets"],
 		timesheetEntries: entryResults as unknown as ExportData["timesheetEntries"],
@@ -1031,74 +1056,61 @@ app.get("/zip", async (c) => {
 		.map((tx) => tx.filePath as string | null | undefined)
 		.filter((p): p is string => !!p && !/^https?:\/\//i.test(p));
 
-	if (wantEncrypted) {
-		// Encrypted export: store R2 file bytes as-is (already encrypted), use UUID keys
-		await Promise.all(
-			filePaths.map(async (key) => {
-				const object = await c.env.FILES_BUCKET.get(key);
-				if (!object) return;
-				const bytes = await object.arrayBuffer();
-				zipEntries[`files/${key}`] = new Uint8Array(bytes);
-			}),
-		);
-	} else {
-		// Plaintext export: decrypt files and use descriptive names
-		const txByFilePath = new Map<string, { description: string; date: string }>();
-		for (const tx of transactionResults) {
-			if (tx.filePath && typeof tx.filePath === "string") {
-				txByFilePath.set(tx.filePath, {
-					description: (tx.description as string) ?? "",
-					date: (tx.date as string) ?? "",
-				});
-			}
+	// Decrypt files and store with descriptive filenames in the archive.
+	const txByFilePath = new Map<string, { description: string; date: string }>();
+	for (const tx of transactionResults) {
+		if (tx.filePath && typeof tx.filePath === "string") {
+			txByFilePath.set(tx.filePath, {
+				description: (tx.description as string) ?? "",
+				date: (tx.date as string) ?? "",
+			});
 		}
-
-		const fileKeyRemap = new Map<string, string>();
-
-		await Promise.all(
-			filePaths.map(async (key) => {
-				const object = await c.env.FILES_BUCKET.get(key);
-				if (!object) return;
-
-				const encryptedBytes = await object.arrayBuffer();
-				const decrypted = await decryptBuffer(encryptedBytes, enc);
-
-				const contentType = object.httpMetadata?.contentType ?? "";
-				const extFromContentType = contentTypeToExtension(contentType);
-				const originalName = object.customMetadata?.originalName ?? "";
-				const extFromName = originalName.includes(".")
-					? originalName.slice(originalName.lastIndexOf("."))
-					: "";
-				const ext = extFromContentType || extFromName;
-				const txMeta = txByFilePath.get(key);
-				const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
-				const date = txMeta?.date ?? "";
-				const newKey = `${sanitizedDesc}_${date}_${key}${ext}`;
-
-				fileKeyRemap.set(key, newKey);
-				zipEntries[`files/${newKey}`] = new Uint8Array(decrypted);
-			}),
-		);
-
-		// Update filePaths in the exported transactions to match the new zip entry names
-		data.transactions = data.transactions.map((tx) => {
-			if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
-				return { ...tx, filePath: fileKeyRemap.get(tx.filePath) as string };
-			}
-			return tx;
-		});
 	}
+
+	const fileKeyRemap = new Map<string, string>();
+
+	await Promise.all(
+		filePaths.map(async (key) => {
+			const object = await c.env.FILES_BUCKET.get(key);
+			if (!object) return;
+
+			const encryptedBytes = await object.arrayBuffer();
+			const decrypted = await decryptBuffer(encryptedBytes, enc);
+
+			const contentType = object.httpMetadata?.contentType ?? "";
+			const extFromContentType = contentTypeToExtension(contentType);
+			const originalName = object.customMetadata?.originalName ?? "";
+			const extFromName = originalName.includes(".")
+				? originalName.slice(originalName.lastIndexOf("."))
+				: "";
+			const ext = extFromContentType || extFromName;
+			const txMeta = txByFilePath.get(key);
+			const sanitizedDesc = sanitizeFilename(txMeta?.description ?? "file");
+			const date = txMeta?.date ?? "";
+			const newKey = `${sanitizedDesc}_${date}_${key}${ext}`;
+
+			fileKeyRemap.set(key, newKey);
+			zipEntries[`files/${newKey}`] = new Uint8Array(decrypted);
+		}),
+	);
+
+	// Update filePaths in the exported transactions to match the new zip entry names
+	data.transactions = data.transactions.map((tx) => {
+		if (tx.filePath && fileKeyRemap.has(tx.filePath)) {
+			return { ...tx, filePath: fileKeyRemap.get(tx.filePath) as string };
+		}
+		return tx;
+	});
 
 	zipEntries["data.json"] = new TextEncoder().encode(JSON.stringify(data, null, 2));
 
 	const zipped = zipSync(zipEntries, { level: 6 });
 
 	const dateStr = new Date().toISOString().split("T")[0];
-	const filenameSuffix = wantEncrypted ? "encrypted" : "backup";
 	return new Response(zipped, {
 		headers: {
 			"Content-Type": "application/zip",
-			"Content-Disposition": `attachment; filename="paper-trail-${filenameSuffix}-${dateStr}.zip"`,
+			"Content-Disposition": `attachment; filename="paper-trail-backup-${dateStr}.zip"`,
 		},
 	});
 });

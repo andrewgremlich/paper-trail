@@ -5,12 +5,11 @@ import {
 	validateImportData,
 } from "../db/exportImport";
 
-export const handleExportData = async (encrypted = false) => {
-	const zipBytes = await exportZipData(encrypted);
+export const handleExportData = async () => {
+	const zipBytes = await exportZipData();
 	const blob = new Blob([zipBytes], { type: "application/zip" });
 	const url = URL.createObjectURL(blob);
-	const suffix = encrypted ? "encrypted" : "backup";
-	const fileName = `paper-trail-${suffix}-${new Date().toISOString().split("T")[0]}.zip`;
+	const fileName = `paper-trail-backup-${new Date().toISOString().split("T")[0]}.zip`;
 
 	const a = document.createElement("a");
 	a.href = url;
