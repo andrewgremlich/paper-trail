@@ -30,7 +30,7 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
 	throw new Error(
-		"VITE_CLERK_PUBLISHABLE_KEY is not set. Add it to .env.local (see docs/CLERK_AUTH.md).",
+		"VITE_CLERK_PUBLISHABLE_KEY is not set. Add it to .dev.vars (see docs/CLERK_AUTH.md).",
 	);
 }
 

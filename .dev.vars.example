@@ -3,12 +3,7 @@ APP_BASE_URL=http://localhost:5173
 ENCRYPTION_KEY=
 
 # --- Clerk auth (production) ---
-# Frontend API URL — e.g. https://clerk.example.com or
-# https://<slug>.clerk.accounts.dev. Found in the Clerk dashboard under
-# "API Keys" → "Show JWT Public Key" (the JWKS URL minus /.well-known/jwks.json).
 CLERK_ISSUER=
-# Backend API secret (sk_live_... or sk_test_...). Only used during the
-# first sign-in to fetch the user's email + display name from Clerk.
 CLERK_SECRET_KEY=
 # (Optional) Public key PEM from the Clerk dashboard. When set, JWT
 # verification is networkless — no JWKS fetch on cold paths.
@@ -24,3 +19,6 @@ CLERK_AUTHORIZED_PARTY=
 CLERK_BYPASS=true
 CLERK_DEV_USER_ID=user_dev_localhost
 CLERK_DEV_EMAIL=dev@localhost.dev
+# Clerk publishable key — injected into the Vite frontend build via vite.config.ts
+# so .env.local is not needed. Get this from the Clerk dashboard.
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...

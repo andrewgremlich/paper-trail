@@ -1,8 +1,7 @@
 # Paper Trail — TODO
 
-Open work tracked here. Detailed writeups for security items live in
-[`docs/SECURITY_REVIEW_2026_05.md`](docs/SECURITY_REVIEW_2026_05.md);
-this file is the actionable checklist.
+Open work tracked here. Historical security audit docs live in
+`docs/archive/`; this file is the actionable checklist.
 
 ## Security — High (fail-open on misconfiguration)
 
@@ -33,8 +32,7 @@ this file is the actionable checklist.
 - [ ] **L3.** `pickPrimaryEmail` should require a verified address;
   500 if none. `api/src/lib/clerkApi.ts:46-54`.
 - [ ] **L4.** CSP rollout on public pages. Requires dropping or nonce-ing
-  the inline `onclick="window.print()"` in `invoiceHtml.ts:126`. See
-  also `docs/SECURITY_REMAINING.md`.
+  the inline `onclick="window.print()"` in `invoiceHtml.ts:126`.
 - [ ] **L5.** `timesheetImportSchema` uses `active`; the column is
   `closed`. Round-trip imports lose closed state.
   `api/src/routes/exportImport.ts:50`.
