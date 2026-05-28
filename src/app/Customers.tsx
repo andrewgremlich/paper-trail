@@ -126,7 +126,7 @@ export const Customers = () => {
 	const hasCustomers = customers && customers.length > 0;
 
 	return (
-		<Main>
+		<main style={{ padding: "0 2rem 2rem" }}>
 			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
 				<H1 style={{ margin: 0 }}>Customers</H1>
 				{hasCustomers && (
@@ -184,6 +184,6 @@ export const Customers = () => {
 			) : (
 				<CreateCustomer onSubmit={create} />
 			)}
-		</Main>
+		</main>
 	);
 };

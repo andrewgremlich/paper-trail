@@ -146,7 +146,7 @@ export const Transactions = () => {
 	}
 
 	return (
-		<Main>
+		<main style={{ padding: "0 2rem 2rem" }}>
 			<H1 style={{ marginBottom: "1.5rem" }}>Transactions</H1>
 
 			<TransactionForm
@@ -163,6 +163,6 @@ export const Transactions = () => {
 				onDelete={removeTx}
 				onReplaceFile={async (id, newPath) => replaceFile({ id, newPath })}
 			/>
-		</Main>
+		</main>
 	);
 };
