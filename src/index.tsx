@@ -23,7 +23,15 @@ if (!rootElement) {
 	throw new Error("Could not find root element with id 'root'");
 }
 
-createRoot(rootElement).render(
+type RootContainer = HTMLElement & {
+	__reactRoot?: ReturnType<typeof createRoot>;
+};
+
+const container = rootElement as RootContainer;
+const root = container.__reactRoot ?? createRoot(container);
+container.__reactRoot = root;
+
+root.render(
 	<StrictMode>
 		<ClerkProvider
 			publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}

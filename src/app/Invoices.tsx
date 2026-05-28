@@ -54,7 +54,7 @@ export const Invoices = () => {
 	}, [invoices, selectedCustomerId, selectedStatus]);
 
 	return (
-		<Main>
+		<main style={{ padding: "0 2rem 2rem" }}>
 			<Flex justify="between" items="center" style={{ marginBottom: "1.5rem" }}>
 				<H1 style={{ marginBottom: "0px" }}>Invoices</H1>
 				<Button
@@ -132,6 +132,6 @@ export const Invoices = () => {
 					))}
 				</TBody>
 			</Table>
-		</Main>
+		</main>
 	);
 };

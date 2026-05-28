@@ -9,3 +9,9 @@ export const getAttachmentSummary = (): Promise<AttachmentSummary> =>
 
 export const deleteAttachment = (key: string): Promise<void> =>
 	api.delete(`/files/${key}`);
+
+export const renameAttachment = (
+	key: string,
+	name: string,
+): Promise<{ key: string; originalName: string }> =>
+	api.put(`/files/${key}`, { name });
