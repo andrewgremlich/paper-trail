@@ -6,6 +6,7 @@ import { TD, TR } from "@/components/ui/Table";
 import type { Customer } from "@/lib/db/types";
 import { parseAddress } from "../addressHelpers";
 import { CustomerDialog } from "../CustomerDialog";
+import { contactChannelLabel, contactDeepLink } from "../contactHelpers";
 
 type Props = {
 	customer: Customer;
@@ -28,6 +29,7 @@ export const CustomerViewRow = ({
 }: Props) => {
 	const [editing, setEditing] = useState(false);
 	const { road, city, state, zip } = parseAddress(c.address ?? null);
+	const contactHref = contactDeepLink(c);
 
 	return (
 		<>
@@ -37,6 +39,24 @@ export const CustomerViewRow = ({
 				<TD>
 					<div>{road}</div>
 					<div>{[city, state, zip].filter(Boolean).join(", ")}</div>
+				</TD>
+				<TD>
+					{c.contactChannel && c.contactValue ? (
+						<div>
+							<div
+								style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}
+							>
+								{contactChannelLabel(c.contactChannel)}
+							</div>
+							{contactHref ? (
+								<a href={contactHref}>{c.contactValue}</a>
+							) : (
+								<span>{c.contactValue}</span>
+							)}
+						</div>
+					) : (
+						<span style={{ color: "var(--text-secondary)" }}>—</span>
+					)}
 				</TD>
 				<Flex as="td">
 					<Button

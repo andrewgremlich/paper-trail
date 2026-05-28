@@ -111,12 +111,22 @@ export type UserProfile = {
 	updatedAt: string;
 };
 
+export type ContactChannel =
+	| "phone"
+	| "sms"
+	| "whatsapp"
+	| "telegram"
+	| "signal"
+	| "discord";
+
 export type Customer = {
 	id: string;
 	userId: number;
 	name: string;
 	email: string;
 	address: Nullable<string>;
+	contactChannel: Nullable<ContactChannel>;
+	contactValue: Nullable<string>;
 	consentToEmailInvoices: boolean | number;
 	consentedAt: Nullable<string>;
 	consentRequestedAt: Nullable<string>;

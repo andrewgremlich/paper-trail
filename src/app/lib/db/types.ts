@@ -124,12 +124,22 @@ export type UpdateUserProfile = Pick<
 	resendApiKey?: Nullable<string>;
 };
 
+export type ContactChannel =
+	| "phone"
+	| "sms"
+	| "whatsapp"
+	| "telegram"
+	| "signal"
+	| "discord";
+
 export type Customer = {
 	id: string;
 	userId: number;
 	name: string;
 	email: string;
 	address: Nullable<string>;
+	contactChannel: Nullable<ContactChannel>;
+	contactValue: Nullable<string>;
 	consentToEmailInvoices: boolean;
 	consentedAt: Nullable<string>;
 	consentRequestedAt: Nullable<string>;
@@ -137,7 +147,10 @@ export type Customer = {
 	updatedAt: string;
 };
 
-export type SubmitCustomer = Pick<Customer, "name" | "email" | "address">;
+export type SubmitCustomer = Pick<
+	Customer,
+	"name" | "email" | "address" | "contactChannel" | "contactValue"
+>;
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 

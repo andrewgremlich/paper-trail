@@ -17,11 +17,34 @@ const CONSENT_REREQUEST_BACKOFF_MS = 24 * 60 * 60 * 1000;
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-const customerSchema = z.object({
-	name: z.string().trim().min(1).max(200),
-	email: z.string().trim().toLowerCase().email().max(320),
-	address: z.string().trim().max(1000).optional().nullable(),
-});
+const contactChannelSchema = z.enum([
+	"phone",
+	"sms",
+	"whatsapp",
+	"telegram",
+	"signal",
+	"discord",
+]);
+
+const customerSchema = z
+	.object({
+		name: z.string().trim().min(1).max(200),
+		email: z.string().trim().toLowerCase().email().max(320),
+		address: z.string().trim().max(1000).optional().nullable(),
+		contactChannel: contactChannelSchema.optional().nullable(),
+		contactValue: z.string().trim().max(200).optional().nullable(),
+	})
+	.refine(
+		(data) =>
+			// Either both contact fields are set, or both are blank/null. A
+			// channel without a value (or vice versa) is meaningless.
+			(!!data.contactChannel && !!data.contactValue) ||
+			(!data.contactChannel && !data.contactValue),
+		{
+			message: "contactChannel and contactValue must be set together",
+			path: ["contactValue"],
+		},
+	);
 
 type DbCustomerRow = {
 	id: string;
@@ -29,6 +52,8 @@ type DbCustomerRow = {
 	name: string;
 	email: string;
 	address: string | null;
+	contactChannel: string | null;
+	contactValue: string | null;
 	consentToEmailInvoices: number;
 	consentedAt: string | null;
 	consentRequestedAt: string | null;
@@ -45,6 +70,8 @@ const decryptCustomer = async (
 	name: await decrypt(row.name, ctx),
 	email: await decrypt(row.email, ctx),
 	address: row.address ? await decrypt(row.address, ctx) : null,
+	contactChannel: (row.contactChannel as Customer["contactChannel"]) ?? null,
+	contactValue: row.contactValue ? await decrypt(row.contactValue, ctx) : null,
 	consentToEmailInvoices: !!row.consentToEmailInvoices,
 	consentedAt: row.consentedAt,
 	consentRequestedAt: row.consentRequestedAt,
@@ -60,8 +87,9 @@ app.get("/", async (c) => {
 
 	const { results } = await db
 		.prepare(
-			`SELECT id, userId, name, email, address, consentToEmailInvoices,
-			        consentedAt, consentRequestedAt, createdAt, updatedAt
+			`SELECT id, userId, name, email, address, contactChannel, contactValue,
+			        consentToEmailInvoices, consentedAt, consentRequestedAt,
+			        createdAt, updatedAt
 			 FROM customers WHERE userId = ? ORDER BY createdAt ASC`,
 		)
 		.bind(userId)
@@ -82,8 +110,9 @@ app.get("/:id", async (c) => {
 
 	const row = await db
 		.prepare(
-			`SELECT id, userId, name, email, address, consentToEmailInvoices,
-			        consentedAt, consentRequestedAt, createdAt, updatedAt
+			`SELECT id, userId, name, email, address, contactChannel, contactValue,
+			        consentToEmailInvoices, consentedAt, consentRequestedAt,
+			        createdAt, updatedAt
 			 FROM customers WHERE id = ? AND userId = ?`,
 		)
 		.bind(id, userId)
@@ -102,7 +131,7 @@ app.post("/", async (c) => {
 			400,
 		);
 	}
-	const { name, email, address } = parsed.data;
+	const { name, email, address, contactChannel, contactValue } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const enc = c.get("dek");
@@ -110,8 +139,8 @@ app.post("/", async (c) => {
 
 	await db
 		.prepare(
-			`INSERT INTO customers (id, userId, name, email, address)
-			 VALUES (?, ?, ?, ?, ?)`,
+			`INSERT INTO customers (id, userId, name, email, address, contactChannel, contactValue)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		)
 		.bind(
 			id,
@@ -119,6 +148,8 @@ app.post("/", async (c) => {
 			await encrypt(name, enc),
 			await encrypt(email, enc),
 			address ? await encrypt(address, enc) : null,
+			contactChannel ?? null,
+			contactValue ? await encrypt(contactValue, enc) : null,
 		)
 		.run();
 
@@ -135,20 +166,23 @@ app.put("/:id", async (c) => {
 			400,
 		);
 	}
-	const { name, email, address } = parsed.data;
+	const { name, email, address, contactChannel, contactValue } = parsed.data;
 	const db = getDb(c.env);
 	const userId = c.get("userId");
 	const enc = c.get("dek");
 
 	await db
 		.prepare(
-			`UPDATE customers SET name = ?, email = ?, address = ?
+			`UPDATE customers SET name = ?, email = ?, address = ?,
+			        contactChannel = ?, contactValue = ?
 			 WHERE id = ? AND userId = ?`,
 		)
 		.bind(
 			await encrypt(name, enc),
 			await encrypt(email, enc),
 			address ? await encrypt(address, enc) : null,
+			contactChannel ?? null,
+			contactValue ? await encrypt(contactValue, enc) : null,
 			id,
 			userId,
 		)
@@ -209,8 +243,9 @@ app.post("/:id/request-consent", async (c) => {
 
 	const customerRow = await db
 		.prepare(
-			`SELECT id, userId, name, email, address, consentToEmailInvoices,
-			        consentedAt, consentRequestedAt, createdAt, updatedAt
+			`SELECT id, userId, name, email, address, contactChannel, contactValue,
+			        consentToEmailInvoices, consentedAt, consentRequestedAt,
+			        createdAt, updatedAt
 			 FROM customers WHERE id = ? AND userId = ?`,
 		)
 		.bind(id, userId)
@@ -219,10 +254,7 @@ app.post("/:id/request-consent", async (c) => {
 
 	// 24h back-off: if a consent request was already sent and the customer
 	// hasn't acted on it, don't pelt them with another one.
-	if (
-		!customerRow.consentToEmailInvoices &&
-		customerRow.consentRequestedAt
-	) {
+	if (!customerRow.consentToEmailInvoices && customerRow.consentRequestedAt) {
 		const requestedMs = Date.parse(customerRow.consentRequestedAt);
 		if (
 			Number.isFinite(requestedMs) &&

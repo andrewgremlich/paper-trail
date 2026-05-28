@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AddressFields } from "../AddressFields";
 import { composeAddress } from "../addressHelpers";
+import { ContactFields } from "../ContactFields";
 import styles from "./styles.module.css";
 
 type Props = {
@@ -35,6 +36,7 @@ export const CreateCustomer = ({ onSubmit }: Props) => (
 			className={styles.fullWidth}
 		/>
 		<AddressFields />
+		<ContactFields />
 		<Button type="submit" variant="default" leftIcon={<UserPlus size={16} />}>
 			Add Customer
 		</Button>

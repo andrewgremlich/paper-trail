@@ -1,7 +1,14 @@
 import { unzipSync, zipSync } from "fflate";
 import { Hono } from "hono";
 import { z } from "zod";
-import { decrypt, decryptBuffer, encrypt, encryptBuffer, isEncryptionEnabled, type EncryptionContext } from "../lib/crypto";
+import {
+	decrypt,
+	decryptBuffer,
+	type EncryptionContext,
+	encrypt,
+	encryptBuffer,
+	isEncryptionEnabled,
+} from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env, ExportData } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -27,6 +34,10 @@ const customerImportSchema = z.object({
 	name: z.string(),
 	email: z.string(),
 	address: stringOrNullish,
+	contactChannel: z
+		.enum(["phone", "sms", "whatsapp", "telegram", "signal", "discord"])
+		.nullish(),
+	contactValue: stringOrNullish,
 	consentToEmailInvoices: boolOrNumber,
 	consentedAt: stringOrNullish,
 	consentRequestedAt: stringOrNullish,
@@ -143,19 +154,23 @@ function contentTypeToExtension(contentType: string): string {
 		"text/plain": ".txt",
 		"text/csv": ".csv",
 		"application/msword": ".doc",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+			".docx",
 		"application/vnd.ms-excel": ".xls",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+			".xlsx",
 	};
 	return map[type] ?? "";
 }
 
 function sanitizeFilename(name: string): string {
-	return name
-		.replace(/[^a-zA-Z0-9_\-. ]/g, "")
-		.trim()
-		.replace(/\s+/g, "_")
-		.slice(0, 64) || "file";
+	return (
+		name
+			.replace(/[^a-zA-Z0-9_\-. ]/g, "")
+			.trim()
+			.replace(/\s+/g, "_")
+			.slice(0, 64) || "file"
+	);
 }
 
 async function decryptTransactionRow(
@@ -191,8 +206,9 @@ async function buildImportBatch(
 	// (`encrypted: false`) validate; an `encrypted: true` payload would
 	// be rejected at the route boundary before reaching this function.
 	const encryptPlain = async (v: string) => encrypt(v, ctx);
-	const encOrNull = async (v: string | null | undefined): Promise<string | null> =>
-		v == null ? null : await encryptPlain(v);
+	const encOrNull = async (
+		v: string | null | undefined,
+	): Promise<string | null> => (v == null ? null : await encryptPlain(v));
 
 	// Pre-encrypt all the values we'll need before constructing any statements.
 	const customers = await Promise.all(
@@ -201,6 +217,7 @@ async function buildImportBatch(
 			name: await encryptPlain(customer.name),
 			email: await encryptPlain(customer.email),
 			address: await encOrNull(customer.address ?? null),
+			contactValue: await encOrNull(customer.contactValue ?? null),
 		})),
 	);
 
@@ -274,9 +291,10 @@ async function buildImportBatch(
 			db
 				.prepare(
 					`INSERT INTO customers (id, userId, name, email, address,
+					        contactChannel, contactValue,
 					        consentToEmailInvoices, consentedAt, consentRequestedAt,
 					        createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				)
 				.bind(
 					customer.id,
@@ -284,6 +302,8 @@ async function buildImportBatch(
 					customer.name,
 					customer.email,
 					customer.address,
+					customer.contactChannel ?? null,
+					customer.contactValue,
 					customer.consentToEmailInvoices ? 1 : 0,
 					customer.consentedAt ?? null,
 					customer.consentRequestedAt ?? null,
@@ -435,9 +455,9 @@ async function buildImportBatch(
 // `?confirm=true` is required on every destructive import endpoint so a stray
 // frontend call (or a misclick that fires a default-method form) can't wipe
 // the user's data without an explicit go-ahead.
-function requireConfirm(c: { req: { query: (k: string) => string | undefined } }):
-	| { ok: true }
-	| { ok: false; response: Response } {
+function requireConfirm(c: {
+	req: { query: (k: string) => string | undefined };
+}): { ok: true } | { ok: false; response: Response } {
 	if (c.req.query("confirm") === "true") return { ok: true };
 	return {
 		ok: false,
@@ -499,8 +519,9 @@ app.get("/data", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, userId, name, email, address, consentToEmailInvoices,
-				        consentedAt, consentRequestedAt, createdAt, updatedAt
+				`SELECT id, userId, name, email, address, contactChannel, contactValue,
+				        consentToEmailInvoices, consentedAt, consentRequestedAt,
+				        createdAt, updatedAt
 				 FROM customers WHERE userId = ? ORDER BY id ASC`,
 			)
 			.bind(userId)
@@ -540,9 +561,7 @@ app.get("/data", async (c) => {
 			projectResults.map(async (r) => ({
 				...r,
 				description: await decrypt((r.description as string) ?? "", enc),
-				rate_in_cents: Number(
-					await decrypt(r.rate_in_cents as string, enc),
-				),
+				rate_in_cents: Number(await decrypt(r.rate_in_cents as string, enc)),
 			})),
 		);
 		timesheetResults = await Promise.all(
@@ -566,6 +585,9 @@ app.get("/data", async (c) => {
 				name: await decrypt(r.name as string, enc),
 				email: await decrypt(r.email as string, enc),
 				address: r.address ? await decrypt(r.address as string, enc) : null,
+				contactValue: r.contactValue
+					? await decrypt(r.contactValue as string, enc)
+					: null,
 			})),
 		);
 		invoiceResults = await Promise.all(
@@ -602,8 +624,7 @@ app.get("/data", async (c) => {
 		encrypted: false,
 		projects: projectResults as unknown as ExportData["projects"],
 		timesheets: timesheetResults as unknown as ExportData["timesheets"],
-		timesheetEntries:
-			entryResults as unknown as ExportData["timesheetEntries"],
+		timesheetEntries: entryResults as unknown as ExportData["timesheetEntries"],
 		transactions: transactionResults as unknown as ExportData["transactions"],
 		customers: customerResults as unknown as ExportData["customers"],
 		invoices: invoiceResults as unknown as ExportData["invoices"],
@@ -675,10 +696,7 @@ app.post("/zip", async (c) => {
 	const MAX_ENTRIES = 5000;
 
 	if (arrayBuffer.byteLength > MAX_ZIP_BYTES) {
-		return c.json(
-			{ error: "ZIP too large", code: "ZIP_TOO_LARGE" },
-			413,
-		);
+		return c.json({ error: "ZIP too large", code: "ZIP_TOO_LARGE" }, 413);
 	}
 
 	let entries: Record<string, Uint8Array>;
@@ -744,8 +762,8 @@ app.post("/zip", async (c) => {
 	// Build the old-key → new-UUID remap before constructing the batch so the
 	// transaction inserts transactions with their final filePaths and we don't
 	// have to issue a second UPDATE after the batch.
-	const fileEntries = Object.entries(entries).filter(([path]) =>
-		path.startsWith("files/") && path.length > "files/".length,
+	const fileEntries = Object.entries(entries).filter(
+		([path]) => path.startsWith("files/") && path.length > "files/".length,
 	);
 	const fileKeyRemap = new Map<string, string>();
 	for (const [path] of fileEntries) {
@@ -941,8 +959,9 @@ app.get("/zip", async (c) => {
 			.all(),
 		db
 			.prepare(
-				`SELECT id, userId, name, email, address, consentToEmailInvoices,
-				        consentedAt, consentRequestedAt, createdAt, updatedAt
+				`SELECT id, userId, name, email, address, contactChannel, contactValue,
+				        consentToEmailInvoices, consentedAt, consentRequestedAt,
+				        createdAt, updatedAt
 				 FROM customers WHERE userId = ? ORDER BY id ASC`,
 			)
 			.bind(userId)
@@ -1006,6 +1025,9 @@ app.get("/zip", async (c) => {
 				name: await decrypt(r.name as string, enc),
 				email: await decrypt(r.email as string, enc),
 				address: r.address ? await decrypt(r.address as string, enc) : null,
+				contactValue: r.contactValue
+					? await decrypt(r.contactValue as string, enc)
+					: null,
 			})),
 		);
 		invoiceResults = await Promise.all(
@@ -1102,7 +1124,9 @@ app.get("/zip", async (c) => {
 		return tx;
 	});
 
-	zipEntries["data.json"] = new TextEncoder().encode(JSON.stringify(data, null, 2));
+	zipEntries["data.json"] = new TextEncoder().encode(
+		JSON.stringify(data, null, 2),
+	);
 
 	const zipped = zipSync(zipEntries, { level: 6 });
 

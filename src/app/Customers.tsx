@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CreateCustomer } from "./components/features/customers/CreateCustomer";
 import { CustomerDialog } from "./components/features/customers/CustomerDialog";
 import { CustomerViewRow } from "./components/features/customers/CustomerViewRow";
+import { readContactFields } from "./components/features/customers/contactHelpers";
 import { Flex } from "./components/layout/Flex";
 import { H1, Main, P } from "./components/layout/HtmlElements";
 import { Button } from "./components/ui/Button";
@@ -38,10 +39,12 @@ export const Customers = () => {
 			const name = String(formData.get("name") ?? "").trim();
 			const email = String(formData.get("email") ?? "").trim();
 			const address = String(formData.get("address") ?? "").trim();
+			const contact = readContactFields(formData);
 			await createCustomer({
 				name,
 				email,
 				address: address.length > 0 ? address : null,
+				...contact,
 			});
 		},
 		onSuccess: async () => {
@@ -57,10 +60,12 @@ export const Customers = () => {
 			const name = String(formData.get("name") ?? "").trim();
 			const email = String(formData.get("email") ?? "").trim();
 			const address = String(formData.get("address") ?? "").trim();
+			const contact = readContactFields(formData);
 			await updateCustomer(id, {
 				name,
 				email,
 				address: address.length > 0 ? address : null,
+				...contact,
 			});
 		},
 		onSuccess: invalidate,
@@ -154,6 +159,7 @@ export const Customers = () => {
 								<TH>Name</TH>
 								<TH>Email</TH>
 								<TH>Address</TH>
+								<TH>Contact</TH>
 								<TH>Actions</TH>
 							</TR>
 						</THead>

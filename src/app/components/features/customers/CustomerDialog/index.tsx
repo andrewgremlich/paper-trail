@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import type { Customer } from "@/lib/db/types";
 import { AddressFields } from "../AddressFields";
 import { composeAddress, parseAddress } from "../addressHelpers";
+import { ContactFields } from "../ContactFields";
 
 type Props = {
 	isOpen: boolean;
@@ -67,6 +68,12 @@ export const CustomerDialog = ({
 					required
 				/>
 				<AddressFields defaults={addressDefaults} />
+				<ContactFields
+					defaults={{
+						channel: customer?.contactChannel ?? null,
+						value: customer?.contactValue ?? null,
+					}}
+				/>
 				<Button
 					type="submit"
 					variant="default"

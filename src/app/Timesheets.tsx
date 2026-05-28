@@ -3,8 +3,8 @@ import "./globals.css";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { FolderPlus } from "lucide-react";
 import { useState } from "react";
-
 import { CreateCustomer } from "@/components/features/customers/CreateCustomer";
+import { readContactFields } from "@/components/features/customers/contactHelpers";
 import { GenerateProject } from "@/components/features/projects/GenerateProject";
 import { GenerateProjectDialog } from "@/components/features/projects/GenerateProjectDialog";
 import { Flex } from "@/components/layout/Flex";
@@ -35,6 +35,7 @@ export const Timesheets = () => {
 				name: String(formData.get("name") ?? ""),
 				email: String(formData.get("email") ?? ""),
 				address: String(formData.get("address") ?? "") || null,
+				...readContactFields(formData),
 			}),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
 	});
