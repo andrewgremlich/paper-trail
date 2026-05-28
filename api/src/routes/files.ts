@@ -216,6 +216,72 @@ app.get("/:key{.+}", async (c) => {
 	return new Response(decrypted, { headers });
 });
 
+// PUT /api/files/:key - rename an attachment.
+//
+// Updates the encrypted originalName on the attachments row (the
+// download Content-Disposition is built from this row) and re-PUTs the
+// R2 object with the new customMetadata.originalName so export/import
+// (which reads R2 metadata) stays in sync.
+app.put("/:key{.+}", async (c) => {
+	const userId = c.get("userId");
+	const enc = c.get("dek");
+	const key = c.req.param("key");
+
+	if (!isValidKey(key)) {
+		return c.json({ error: "File not found" }, 404);
+	}
+
+	let body: { name?: unknown };
+	try {
+		body = await c.req.json();
+	} catch {
+		return c.json({ error: "Invalid JSON body" }, 400);
+	}
+
+	if (typeof body.name !== "string") {
+		return c.json({ error: "Missing or invalid 'name'" }, 400);
+	}
+
+	const sanitizedName = sanitize(body.name).trim();
+	if (!sanitizedName) {
+		return c.json({ error: "Invalid filename" }, 400);
+	}
+	if (sanitizedName.length > 255) {
+		return c.json({ error: "Filename too long" }, 400);
+	}
+
+	const db = getDb(c.env);
+	const row = await db
+		.prepare("SELECT contentType FROM attachments WHERE id = ? AND userId = ?")
+		.bind(key, userId)
+		.first<{ contentType: string }>();
+
+	if (!row) {
+		return c.json({ error: "File not found" }, 404);
+	}
+
+	await db
+		.prepare(
+			"UPDATE attachments SET originalName = ? WHERE id = ? AND userId = ?",
+		)
+		.bind(await encrypt(sanitizedName, enc), key, userId)
+		.run();
+
+	const object = await c.env.FILES_BUCKET.get(key);
+	if (object) {
+		const bytes = await object.arrayBuffer();
+		await c.env.FILES_BUCKET.put(key, bytes, {
+			httpMetadata: { contentType: row.contentType },
+			customMetadata: {
+				originalName: sanitizedName,
+				ownerUserId: String(userId),
+			},
+		});
+	}
+
+	return c.json({ key, originalName: sanitizedName });
+});
+
 // DELETE /api/files/:key - delete file from R2 and the attachments row.
 //
 // If the attachment is currently linked to a transaction, the link is
