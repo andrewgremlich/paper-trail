@@ -35,7 +35,13 @@ export const addressSchema = z.string().trim().max(1000);
  * external https URL (legacy attachments). Everything else is rejected.
  */
 export const filePathSchema = z
-	.union([uuidSchema, z.string().url().regex(/^https?:\/\//i)])
+	.union([
+		uuidSchema,
+		z
+			.string()
+			.url()
+			.regex(/^https?:\/\//i),
+	])
 	.nullable()
 	.optional();
 

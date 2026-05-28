@@ -58,7 +58,7 @@ describe("userProfile route", () => {
 	it("GET returns the auto-provisioned user, PUT round-trips business fields", async () => {
 		const get = await SELF.fetch(url("/api/v1/user-profile"));
 		expect(get.status).toBe(200);
-		const me = await get.json() as { id: number; email: string };
+		const me = (await get.json()) as { id: number; email: string };
 		expect(me.email).toBe("test@localhost.dev");
 
 		const put = await SELF.fetch(url("/api/v1/user-profile"), {
@@ -74,7 +74,7 @@ describe("userProfile route", () => {
 			}),
 		});
 		expect(put.status).toBe(200);
-		const updated = await put.json() as {
+		const updated = (await put.json()) as {
 			displayName: string;
 			venmoHandle: string;
 			businessName: string;
@@ -103,7 +103,7 @@ describe("customers route", () => {
 
 		const list = await SELF.fetch(url("/api/v1/customers"));
 		expect(list.status).toBe(200);
-		const customers = await list.json() as Array<{
+		const customers = (await list.json()) as Array<{
 			id: string;
 			name: string;
 			email: string;
@@ -131,11 +131,13 @@ describe("projects route", () => {
 			}),
 		});
 		expect(post.status).toBe(201);
-		const created = await post.json() as { project: { id: string; rate_in_cents: number } };
+		const created = (await post.json()) as {
+			project: { id: string; rate_in_cents: number };
+		};
 		expect(created.project.rate_in_cents).toBe(12500);
 
 		const list = await SELF.fetch(url("/api/v1/projects"));
-		const projects = await list.json() as Array<{
+		const projects = (await list.json()) as Array<{
 			name: string;
 			rate_in_cents: number;
 			description: string;
@@ -163,7 +165,8 @@ describe("timesheets route", () => {
 				description: "",
 			}),
 		});
-		const proj = (await projectPost.json() as { project: { id: string } }).project;
+		const proj = ((await projectPost.json()) as { project: { id: string } })
+			.project;
 
 		const post = await SELF.fetch(url("/api/v1/timesheets"), {
 			method: "POST",
@@ -175,11 +178,11 @@ describe("timesheets route", () => {
 			}),
 		});
 		expect(post.status).toBe(201);
-		const sheet = await post.json() as { id: string; name: string };
+		const sheet = (await post.json()) as { id: string; name: string };
 		expect(sheet.name).toBe("Week 1");
 
 		const list = await SELF.fetch(url("/api/v1/timesheets"));
-		const sheets = await list.json() as Array<{ name: string }>;
+		const sheets = (await list.json()) as Array<{ name: string }>;
 		expect(sheets.map((s) => s.name)).toContain("Week 1");
 	});
 });
@@ -192,15 +195,20 @@ describe("timesheetEntries route", () => {
 		const projectPost = await SELF.fetch(url("/api/v1/projects"), {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: "P", rate_in_cents: 10000, description: "" }),
+			body: JSON.stringify({
+				name: "P",
+				rate_in_cents: 10000,
+				description: "",
+			}),
 		});
-		const proj = (await projectPost.json() as { project: { id: string } }).project;
+		const proj = ((await projectPost.json()) as { project: { id: string } })
+			.project;
 		const tsPost = await SELF.fetch(url("/api/v1/timesheets"), {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ projectId: proj.id, name: "TS" }),
 		});
-		const ts = await tsPost.json() as { id: string };
+		const ts = (await tsPost.json()) as { id: string };
 
 		const post = await SELF.fetch(url("/api/v1/timesheet-entries"), {
 			method: "POST",
@@ -214,11 +222,13 @@ describe("timesheetEntries route", () => {
 			}),
 		});
 		expect(post.status).toBe(201);
-		const created = await post.json() as { success: boolean; id: string };
+		const created = (await post.json()) as { success: boolean; id: string };
 		expect(created.success).toBe(true);
 
 		const detail = await SELF.fetch(url(`/api/v1/timesheets/${ts.id}`));
-		const tsDetail = await detail.json() as { entries: Array<{ description: string }> };
+		const tsDetail = (await detail.json()) as {
+			entries: Array<{ description: string }>;
+		};
 		expect(tsDetail.entries).toHaveLength(1);
 		expect(tsDetail.entries[0].description).toBe("Pair on docs");
 	});
@@ -232,9 +242,14 @@ describe("transactions route", () => {
 		const projectPost = await SELF.fetch(url("/api/v1/projects"), {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: "P", rate_in_cents: 10000, description: "" }),
+			body: JSON.stringify({
+				name: "P",
+				rate_in_cents: 10000,
+				description: "",
+			}),
 		});
-		const proj = (await projectPost.json() as { project: { id: string } }).project;
+		const proj = ((await projectPost.json()) as { project: { id: string } })
+			.project;
 
 		const post = await SELF.fetch(url("/api/v1/transactions"), {
 			method: "POST",
@@ -252,7 +267,7 @@ describe("transactions route", () => {
 		const list = await SELF.fetch(
 			url(`/api/v1/transactions?projectId=${proj.id}`),
 		);
-		const txns = await list.json() as Array<{
+		const txns = (await list.json()) as Array<{
 			description: string;
 			amount: number;
 		}>;
@@ -279,7 +294,7 @@ describe("files + attachments routes", () => {
 			body: fd,
 		});
 		expect(upload.status).toBe(201);
-		const { key, originalName } = await upload.json() as {
+		const { key, originalName } = (await upload.json()) as {
 			key: string;
 			originalName: string;
 		};
@@ -291,7 +306,7 @@ describe("files + attachments routes", () => {
 		// Pending uploads under 10 min are hidden from the list, but the
 		// summary counts them.
 		const summary = await SELF.fetch(url("/api/v1/attachments/summary"));
-		const s = await summary.json() as { total: number; pending: number };
+		const s = (await summary.json()) as { total: number; pending: number };
 		expect(s.total).toBe(1);
 		expect(s.pending).toBe(1);
 
@@ -325,7 +340,9 @@ describe("invoices route", () => {
 			}),
 		});
 		expect(custPost.status).toBeLessThan(300);
-		const customers = await (await SELF.fetch(url("/api/v1/customers"))).json() as Array<{ id: string }>;
+		const customers = (await (
+			await SELF.fetch(url("/api/v1/customers"))
+		).json()) as Array<{ id: string }>;
 		const customerId = customers[0].id;
 
 		const post = await SELF.fetch(url("/api/v1/invoices"), {
@@ -340,18 +357,25 @@ describe("invoices route", () => {
 			}),
 		});
 		expect(post.status).toBe(201);
-		const created = await post.json() as { id: string; number: string; success: boolean };
+		const created = (await post.json()) as {
+			id: string;
+			number: string;
+			success: boolean;
+		};
 		expect(created.success).toBe(true);
 		expect(created.number).toMatch(/^INV-\d{4}-\d{4}$/);
 
 		const list = await SELF.fetch(url("/api/v1/invoices"));
-		const invoices = await list.json() as Array<{ id: string; status: string }>;
+		const invoices = (await list.json()) as Array<{
+			id: string;
+			status: string;
+		}>;
 		expect(invoices).toHaveLength(1);
 		expect(invoices[0].status).toBe("draft");
 
 		const single = await SELF.fetch(url(`/api/v1/invoices/${created.id}`));
 		expect(single.status).toBe(200);
-		const inv = await single.json() as {
+		const inv = (await single.json()) as {
 			amount_cents: number;
 			description: string;
 		};
@@ -387,7 +411,7 @@ describe("exportImport route", () => {
 
 		const exp = await SELF.fetch(url("/api/v1/export/data"));
 		expect(exp.status).toBe(200);
-		const data = await exp.json() as {
+		const data = (await exp.json()) as {
 			version: string;
 			projects: unknown[];
 			customers?: unknown[];
@@ -409,7 +433,7 @@ describe("v1 middleware", () => {
 			"max-age=63072000",
 		);
 		expect(res.headers.get("Cache-Control")).toBe("no-store");
-		const body = await res.json() as { status: string; version: string };
+		const body = (await res.json()) as { status: string; version: string };
 		expect(body.status).toBe("ok");
 		expect(body.version).toBe("v1");
 	});
@@ -454,7 +478,14 @@ describe("consent route", () => {
 				  consentRequestedAt, consentToken)
 				 VALUES (?, ?, ?, ?, NULL, 0, ?, ?)`,
 			)
-			.bind(customerId, userId, "Buyer Co", "buyer@example.com", now, consentToken)
+			.bind(
+				customerId,
+				userId,
+				"Buyer Co",
+				"buyer@example.com",
+				now,
+				consentToken,
+			)
 			.run();
 
 		const res = await SELF.fetch(url(`/consent/${consentToken}`));

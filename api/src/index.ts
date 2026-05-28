@@ -9,7 +9,6 @@ import { customerRoutes } from "./routes/customers";
 import { dekMigrationRoutes } from "./routes/dekMigration";
 import { exportImportRoutes } from "./routes/exportImport";
 import { fileRoutes } from "./routes/files";
-import { runAttachmentSweep } from "./scheduled";
 import { invoiceRoutes } from "./routes/invoices";
 import { projectRoutes } from "./routes/projects";
 import { publicInvoiceRoutes } from "./routes/publicInvoice";
@@ -17,6 +16,7 @@ import { timesheetEntryRoutes } from "./routes/timesheetEntries";
 import { timesheetRoutes } from "./routes/timesheets";
 import { transactionRoutes } from "./routes/transactions";
 import { userProfileRoutes } from "./routes/userProfile";
+import { runAttachmentSweep } from "./scheduled";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -51,10 +51,7 @@ v1.use("/*", async (c, next) => {
 	if (!c.res.headers.has("Cache-Control")) {
 		c.header("Cache-Control", "no-store");
 	}
-	c.header(
-		"Strict-Transport-Security",
-		"max-age=63072000; includeSubDomains",
-	);
+	c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
 });
 
 // Apply Clerk auth to all v1 routes
@@ -78,7 +75,11 @@ app.route("/api/v1", v1);
 
 export default {
 	fetch: app.fetch,
-	async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+	async scheduled(
+		_event: ScheduledController,
+		env: Env,
+		ctx: ExecutionContext,
+	) {
 		ctx.waitUntil(
 			runAttachmentSweep(env).then((result) => {
 				console.log("attachment sweep complete", result);

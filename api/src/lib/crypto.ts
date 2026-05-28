@@ -109,7 +109,9 @@ const encryptWithKey = async (
 		key,
 		encoded,
 	);
-	const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+	const combined = new Uint8Array(
+		iv.length + new Uint8Array(ciphertext).length,
+	);
 	combined.set(iv);
 	combined.set(new Uint8Array(ciphertext), iv.length);
 	return ENCRYPTED_PREFIX + bytesToBase64(combined);
@@ -141,7 +143,9 @@ const encryptBufferWithKey = async (
 		key,
 		data,
 	);
-	const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+	const combined = new Uint8Array(
+		iv.length + new Uint8Array(ciphertext).length,
+	);
 	combined.set(iv);
 	combined.set(new Uint8Array(ciphertext), iv.length);
 	return combined.buffer;
@@ -199,7 +203,7 @@ export async function decryptBuffer(
 // Exposed for the migration worker only — it decrypts legacy rows
 // (encrypted under `ENCRYPTION_KEY` / `KEK_V1`) and re-encrypts them
 // under the per-user DEK. Production routes should not touch these.
-export { decryptWithKey, decryptBufferWithKey, getLegacyKey };
+export { decryptBufferWithKey, decryptWithKey, getLegacyKey };
 
 export function isEncrypted(value: string): boolean {
 	return value.startsWith(ENCRYPTED_PREFIX);
@@ -228,7 +232,9 @@ export const wrapDek = async (
 		kek,
 		dek.buffer as ArrayBuffer,
 	);
-	const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+	const combined = new Uint8Array(
+		iv.length + new Uint8Array(ciphertext).length,
+	);
 	combined.set(iv);
 	combined.set(new Uint8Array(ciphertext), iv.length);
 	return { wrapped: bytesToBase64(combined), version };
@@ -293,8 +299,11 @@ type DekEntry = { aes: CryptoKey; hmac: CryptoKey };
 const DEK_CACHE_MAX = 64;
 const dekCache = new Map<string, DekEntry>();
 
-const cacheKey = (userId: number, kekVersion: number, wrapped: string): string =>
-	`${userId}:${kekVersion}:${wrapped}`;
+const cacheKey = (
+	userId: number,
+	kekVersion: number,
+	wrapped: string,
+): string => `${userId}:${kekVersion}:${wrapped}`;
 
 const rememberDek = (key: string, entry: DekEntry): void => {
 	dekCache.delete(key);

@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { z } from "zod";
 // SheetJS (`xlsx`) is pinned to 0.18.5 (no caret) in package.json so a
 // future patch release can't sneak in. SheetJS has historically had
 // parse-time advisories; we only ever *write* xlsx (here and in the
@@ -7,6 +6,7 @@ import { z } from "zod";
 // those CVEs don't currently apply. Re-evaluate before adding a parse
 // path — see docs/SECURITY_REMAINING.md §16.
 import * as XLSX from "xlsx";
+import { z } from "zod";
 import {
 	decrypt,
 	type EncryptionContext,
@@ -267,9 +267,7 @@ app.put("/:id", async (c) => {
 	// enforces it) and there's no concurrent path that mutates filePath
 	// for the same row.
 	const prev = await db
-		.prepare(
-			"SELECT filePath FROM transactions WHERE id = ? AND userId = ?",
-		)
+		.prepare("SELECT filePath FROM transactions WHERE id = ? AND userId = ?")
 		.bind(id, userId)
 		.first<{ filePath: string | null }>();
 
@@ -320,9 +318,7 @@ app.put("/:id", async (c) => {
 			: null;
 	if (prevInternal && prevInternal !== newInternalFilePath) {
 		await db
-			.prepare(
-				"UPDATE attachments SET txId = NULL WHERE id = ? AND userId = ?",
-			)
+			.prepare("UPDATE attachments SET txId = NULL WHERE id = ? AND userId = ?")
 			.bind(prevInternal, userId)
 			.run();
 	}

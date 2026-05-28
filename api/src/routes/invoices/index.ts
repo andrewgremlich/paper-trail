@@ -7,7 +7,7 @@ import {
 } from "../../lib/emailDelivery";
 import { randomHexToken } from "../../lib/hash";
 import { renderInvoiceHtml } from "../../lib/invoiceHtml";
-import { RateLimitError, assertWithinSendLimit } from "../../lib/rateLimit";
+import { assertWithinSendLimit, RateLimitError } from "../../lib/rateLimit";
 import { ResendError, sendEmail } from "../../lib/resend";
 import type { Env, InvoiceStatus } from "../../lib/types";
 import type { AuthVariables } from "../../middleware/auth";

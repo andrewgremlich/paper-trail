@@ -89,12 +89,21 @@ app.post("/", async (c) => {
 	// ── customers ───────────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, name, email, address FROM customers WHERE userId = ?")
+			.prepare(
+				"SELECT id, name, email, address FROM customers WHERE userId = ?",
+			)
 			.bind(userId)
-			.all<{ id: string; name: string; email: string; address: string | null }>();
+			.all<{
+				id: string;
+				name: string;
+				email: string;
+				address: string | null;
+			}>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE customers SET name = ?, email = ?, address = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE customers SET name = ?, email = ?, address = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(
 					await reencrypt(row.name, legacyKey, dek),
 					await reencrypt(row.email, legacyKey, dek),
@@ -110,12 +119,16 @@ app.post("/", async (c) => {
 	// ── customer_events ─────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, payload FROM customer_events WHERE userId = ? AND payload IS NOT NULL")
+			.prepare(
+				"SELECT id, payload FROM customer_events WHERE userId = ? AND payload IS NOT NULL",
+			)
 			.bind(userId)
 			.all<{ id: string; payload: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE customer_events SET payload = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE customer_events SET payload = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(await reencrypt(row.payload, legacyKey, dek), row.id, userId)
 				.run();
 			rowsMigrated++;
@@ -125,12 +138,16 @@ app.post("/", async (c) => {
 	// ── projects ────────────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, rate_in_cents, description FROM projects WHERE userId = ?")
+			.prepare(
+				"SELECT id, rate_in_cents, description FROM projects WHERE userId = ?",
+			)
 			.bind(userId)
 			.all<{ id: string; rate_in_cents: string; description: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE projects SET rate_in_cents = ?, description = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE projects SET rate_in_cents = ?, description = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(
 					await reencrypt(row.rate_in_cents, legacyKey, dek),
 					await reencrypt(row.description, legacyKey, dek),
@@ -145,12 +162,16 @@ app.post("/", async (c) => {
 	// ── timesheets ──────────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, description FROM timesheets WHERE userId = ? AND description IS NOT NULL")
+			.prepare(
+				"SELECT id, description FROM timesheets WHERE userId = ? AND description IS NOT NULL",
+			)
 			.bind(userId)
 			.all<{ id: string; description: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE timesheets SET description = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE timesheets SET description = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(await reencrypt(row.description, legacyKey, dek), row.id, userId)
 				.run();
 			rowsMigrated++;
@@ -160,12 +181,16 @@ app.post("/", async (c) => {
 	// ── timesheet_entries ───────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, description, amount FROM timesheet_entries WHERE userId = ?")
+			.prepare(
+				"SELECT id, description, amount FROM timesheet_entries WHERE userId = ?",
+			)
 			.bind(userId)
 			.all<{ id: string; description: string; amount: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE timesheet_entries SET description = ?, amount = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE timesheet_entries SET description = ?, amount = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(
 					await reencrypt(row.description, legacyKey, dek),
 					await reencrypt(row.amount, legacyKey, dek),
@@ -180,12 +205,16 @@ app.post("/", async (c) => {
 	// ── transactions ────────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, description, amount FROM transactions WHERE userId = ?")
+			.prepare(
+				"SELECT id, description, amount FROM transactions WHERE userId = ?",
+			)
 			.bind(userId)
 			.all<{ id: string; description: string; amount: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE transactions SET description = ?, amount = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE transactions SET description = ?, amount = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(
 					await reencrypt(row.description, legacyKey, dek),
 					await reencrypt(row.amount, legacyKey, dek),
@@ -205,7 +234,9 @@ app.post("/", async (c) => {
 			.all<{ id: string; originalName: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE attachments SET originalName = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE attachments SET originalName = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(await reencrypt(row.originalName, legacyKey, dek), row.id, userId)
 				.run();
 			rowsMigrated++;
@@ -220,10 +251,17 @@ app.post("/", async (c) => {
 				 FROM invoices WHERE userId = ?`,
 			)
 			.bind(userId)
-			.all<{ id: string; amount_cents: string; description: string | null; snapshot: string | null }>();
+			.all<{
+				id: string;
+				amount_cents: string;
+				description: string | null;
+				snapshot: string | null;
+			}>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE invoices SET amount_cents = ?, description = ?, snapshot = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE invoices SET amount_cents = ?, description = ?, snapshot = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(
 					await reencrypt(row.amount_cents, legacyKey, dek),
 					await reencrypt(row.description, legacyKey, dek),
@@ -239,12 +277,16 @@ app.post("/", async (c) => {
 	// ── invoice_events ──────────────────────────────────────────────────────
 	{
 		const { results } = await db
-			.prepare("SELECT id, payload FROM invoice_events WHERE userId = ? AND payload IS NOT NULL")
+			.prepare(
+				"SELECT id, payload FROM invoice_events WHERE userId = ? AND payload IS NOT NULL",
+			)
 			.bind(userId)
 			.all<{ id: string; payload: string }>();
 		for (const row of results) {
 			await db
-				.prepare("UPDATE invoice_events SET payload = ? WHERE id = ? AND userId = ?")
+				.prepare(
+					"UPDATE invoice_events SET payload = ? WHERE id = ? AND userId = ?",
+				)
 				.bind(await reencrypt(row.payload, legacyKey, dek), row.id, userId)
 				.run();
 			rowsMigrated++;

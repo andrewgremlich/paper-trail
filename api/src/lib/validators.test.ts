@@ -13,7 +13,9 @@ import {
 
 describe("uuidSchema", () => {
 	it("accepts a canonical UUID", () => {
-		expect(uuidSchema.safeParse("550e8400-e29b-41d4-a716-446655440000").success).toBe(true);
+		expect(
+			uuidSchema.safeParse("550e8400-e29b-41d4-a716-446655440000").success,
+		).toBe(true);
 	});
 
 	it("rejects non-UUID strings", () => {
@@ -45,7 +47,9 @@ describe("moneyCentsSchema", () => {
 	it("rejects non-integers and non-finite numbers", () => {
 		expect(moneyCentsSchema.safeParse(1.5).success).toBe(false);
 		expect(moneyCentsSchema.safeParse(Number.NaN).success).toBe(false);
-		expect(moneyCentsSchema.safeParse(Number.POSITIVE_INFINITY).success).toBe(false);
+		expect(moneyCentsSchema.safeParse(Number.POSITIVE_INFINITY).success).toBe(
+			false,
+		);
 		expect(moneyCentsSchema.safeParse("100").success).toBe(false);
 	});
 });
@@ -70,7 +74,9 @@ describe("dollarAmountSchema", () => {
 
 	it("rejects non-finite numbers", () => {
 		expect(dollarAmountSchema.safeParse(Number.NaN).success).toBe(false);
-		expect(dollarAmountSchema.safeParse(Number.POSITIVE_INFINITY).success).toBe(false);
+		expect(dollarAmountSchema.safeParse(Number.POSITIVE_INFINITY).success).toBe(
+			false,
+		);
 	});
 });
 
@@ -125,8 +131,12 @@ describe("filePathSchema", () => {
 	});
 
 	it("accepts http(s) URLs", () => {
-		expect(filePathSchema.safeParse("https://example.com/x.pdf").success).toBe(true);
-		expect(filePathSchema.safeParse("http://example.com/x.pdf").success).toBe(true);
+		expect(filePathSchema.safeParse("https://example.com/x.pdf").success).toBe(
+			true,
+		);
+		expect(filePathSchema.safeParse("http://example.com/x.pdf").success).toBe(
+			true,
+		);
 	});
 
 	it("accepts null and undefined", () => {

@@ -43,10 +43,7 @@ export const hmacSha256Hex = async (
  * Kept only so we can recompute hashes for v1 rows (those without `"v": 2` in
  * their payload). Do not use for new writes — prefer `hmacSha256Hex`.
  */
-export const sha256Hex = async (
-	input: string,
-	env: Env,
-): Promise<string> => {
+export const sha256Hex = async (input: string, env: Env): Promise<string> => {
 	const salt = env.ENCRYPTION_KEY ?? "";
 	const data = new TextEncoder().encode(salt + input);
 	const digest = await crypto.subtle.digest("SHA-256", data);

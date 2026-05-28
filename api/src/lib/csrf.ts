@@ -75,4 +75,3 @@ export const validateCsrfToken = (
 	if (typeof formValue !== "string" || formValue.length === 0) return false;
 	return constantTimeEqual(cookieValue, formValue);
 };
-

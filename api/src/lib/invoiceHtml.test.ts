@@ -24,8 +24,18 @@ const baseSnapshot = (): InvoiceSnapshot => ({
 		amountCents: 50000,
 	},
 	lineItems: [
-		{ date: "2026-05-01", description: "Design", minutes: 60, amountCents: 10000 },
-		{ date: "2026-05-02", description: "Build", minutes: 240, amountCents: 40000 },
+		{
+			date: "2026-05-01",
+			description: "Design",
+			minutes: 60,
+			amountCents: 10000,
+		},
+		{
+			date: "2026-05-02",
+			description: "Build",
+			minutes: 240,
+			amountCents: 40000,
+		},
 	],
 });
 
@@ -165,7 +175,7 @@ describe("renderInvoiceHtml", () => {
 		const snap = baseSnapshot();
 		snap.lineItems = [];
 		const html = renderInvoiceHtml(snap);
-		expect(html).not.toContain("<table class=\"lines\">");
+		expect(html).not.toContain('<table class="lines">');
 	});
 
 	it("formats minutes as hours with 2 decimals", () => {

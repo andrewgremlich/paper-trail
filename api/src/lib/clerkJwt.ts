@@ -94,7 +94,7 @@ const base64UrlDecode = (input: string): Uint8Array => {
 	return out;
 };
 
-const decodeJson = <T,>(input: string): T => {
+const decodeJson = <T>(input: string): T => {
 	const decoded = new TextDecoder().decode(base64UrlDecode(input));
 	return JSON.parse(decoded) as T;
 };

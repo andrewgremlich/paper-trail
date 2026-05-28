@@ -214,9 +214,7 @@ app.post("/:token", async (c) => {
 	}
 	const db = getDb(c.env);
 	const ip =
-		c.req.header("CF-Connecting-IP") ||
-		c.req.header("X-Forwarded-For") ||
-		"";
+		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 	const ua = c.req.header("User-Agent") ?? "";
 	const ipHash = ip ? await hmacSha256Hex(ip, hmacKey) : null;
 	const uaHash = ua ? await hmacSha256Hex(ua, hmacKey) : null;
@@ -267,9 +265,7 @@ app.post("/:token", async (c) => {
 
 	// decline
 	await db
-		.prepare(
-			"UPDATE customers SET consentToken = NULL WHERE id = ?",
-		)
+		.prepare("UPDATE customers SET consentToken = NULL WHERE id = ?")
 		.bind(row.id)
 		.run();
 
@@ -282,10 +278,7 @@ app.post("/:token", async (c) => {
 			crypto.randomUUID(),
 			row.id,
 			row.userId,
-			await encrypt(
-				JSON.stringify({ v: 2, ipHash, uaHash }),
-				dek,
-			),
+			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash }), dek),
 		)
 		.run();
 
@@ -416,9 +409,7 @@ app.post("/revoke/:token", async (c) => {
 	}
 	const db = getDb(c.env);
 	const ip =
-		c.req.header("CF-Connecting-IP") ||
-		c.req.header("X-Forwarded-For") ||
-		"";
+		c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "";
 	const ua = c.req.header("User-Agent") ?? "";
 	const ipHash = ip ? await hmacSha256Hex(ip, hmacKey) : null;
 	const uaHash = ua ? await hmacSha256Hex(ua, hmacKey) : null;
@@ -443,10 +434,7 @@ app.post("/revoke/:token", async (c) => {
 			crypto.randomUUID(),
 			row.id,
 			row.userId,
-			await encrypt(
-				JSON.stringify({ v: 2, ipHash, uaHash, at: now }),
-				dek,
-			),
+			await encrypt(JSON.stringify({ v: 2, ipHash, uaHash, at: now }), dek),
 		)
 		.run();
 

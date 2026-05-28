@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	__resetClerkJwksCacheForTests,
 	ClerkJwtError,
@@ -26,7 +19,10 @@ type RsaPair = {
 const b64urlEncode = (bytes: Uint8Array): string => {
 	let bin = "";
 	for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-	return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+	return btoa(bin)
+		.replaceAll("+", "-")
+		.replaceAll("/", "_")
+		.replaceAll("=", "");
 };
 
 const b64urlString = (value: string): string =>
@@ -48,7 +44,10 @@ const generateRsa = async (kid = "test-kid-1"): Promise<RsaPair> => {
 	const jwkPublic = { ...jwk, kid, alg: "RS256", use: "sig" } as JsonWebKey & {
 		kid: string;
 	};
-	const spki = (await crypto.subtle.exportKey("spki", publicKey)) as ArrayBuffer;
+	const spki = (await crypto.subtle.exportKey(
+		"spki",
+		publicKey,
+	)) as ArrayBuffer;
 	const pemBody = (
 		btoa(String.fromCharCode(...new Uint8Array(spki))).match(/.{1,64}/g) ?? []
 	).join("\n");
@@ -67,11 +66,7 @@ const signJwt = async (
 	const h = b64urlString(JSON.stringify(header));
 	const p = b64urlString(JSON.stringify(claims));
 	const data = new TextEncoder().encode(`${h}.${p}`);
-	const sig = await crypto.subtle.sign(
-		"RSASSA-PKCS1-v1_5",
-		privateKey,
-		data,
-	);
+	const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, data);
 	return `${h}.${p}.${b64urlEncode(new Uint8Array(sig))}`;
 };
 
@@ -96,7 +91,10 @@ describe("verifyClerkJwt — PEM (networkless) mode", () => {
 		pair = await generateRsa();
 	});
 
-	const verify = (token: string, extra: Partial<Parameters<typeof verifyClerkJwt>[1]> = {}) =>
+	const verify = (
+		token: string,
+		extra: Partial<Parameters<typeof verifyClerkJwt>[1]> = {},
+	) =>
 		verifyClerkJwt(token, {
 			issuer: "https://clerk.example.com",
 			jwtKey: pair.pemPublic,
@@ -173,7 +171,9 @@ describe("verifyClerkJwt — PEM (networkless) mode", () => {
 			baseClaims(),
 			pair.privateKey,
 		);
-		await expect(verify(token)).resolves.toMatchObject({ sub: "user_test_123" });
+		await expect(verify(token)).resolves.toMatchObject({
+			sub: "user_test_123",
+		});
 	});
 
 	it("rejects when signature was made with a different key", async () => {
@@ -337,20 +337,22 @@ describe("verifyClerkJwt — JWKS mode", () => {
 	});
 
 	const mountJwks = (jwks: { keys: unknown[] }) => {
-		globalThis.fetch = vi.fn(async () =>
-			new Response(JSON.stringify(jwks), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			}),
+		globalThis.fetch = vi.fn(
+			async () =>
+				new Response(JSON.stringify(jwks), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}),
 		) as unknown as typeof fetch;
 	};
 
 	it("verifies via JWKS and caches the response", async () => {
-		const fetchMock = vi.fn(async () =>
-			new Response(JSON.stringify({ keys: [pair.jwkPublic] }), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			}),
+		const fetchMock = vi.fn(
+			async () =>
+				new Response(JSON.stringify({ keys: [pair.jwkPublic] }), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}),
 		);
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -484,7 +486,8 @@ describe("getClerkConfig", () => {
 			env({
 				CLERK_ISSUER: "https://clerk.example.com",
 				CLERK_AUTHORIZED_PARTY: "https://app.example.com",
-				CLERK_JWT_KEY: "-----BEGIN PUBLIC KEY-----\nMIIB\n-----END PUBLIC KEY-----",
+				CLERK_JWT_KEY:
+					"-----BEGIN PUBLIC KEY-----\nMIIB\n-----END PUBLIC KEY-----",
 			}),
 		);
 		expect(cfg?.authorizedParty).toBe("https://app.example.com");

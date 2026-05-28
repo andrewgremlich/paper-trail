@@ -12,7 +12,10 @@ type Row = {
 	sentAt: string;
 };
 
-const makeFakeDb = (initialRows: Row[] = [], wrappedDek?: { wrapped: string; version: number }) => {
+const makeFakeDb = (
+	initialRows: Row[] = [],
+	wrappedDek?: { wrapped: string; version: number },
+) => {
 	const rows: Row[] = [...initialRows];
 	let nextId = (rows.at(-1)?.id ?? 0) + 1;
 
@@ -148,7 +151,12 @@ describe("assertWithinSendLimit", () => {
 		// Fill user 1 to the hourly cap
 		const now = new Date().toISOString();
 		for (let i = 0; i < 30; i++) {
-			fake.rows.push({ id: i + 1, userId: 1, recipientHash: null, sentAt: now });
+			fake.rows.push({
+				id: i + 1,
+				userId: 1,
+				recipientHash: null,
+				sentAt: now,
+			});
 		}
 		// user 2 unaffected
 		await expect(assertWithinSendLimit(2, env)).resolves.toBeUndefined();
@@ -183,7 +191,12 @@ describe("assertWithinSendLimit", () => {
 	it("does not record a new row when rate-limited", async () => {
 		const now = new Date().toISOString();
 		for (let i = 0; i < 30; i++) {
-			fake.rows.push({ id: i + 1, userId: 1, recipientHash: null, sentAt: now });
+			fake.rows.push({
+				id: i + 1,
+				userId: 1,
+				recipientHash: null,
+				sentAt: now,
+			});
 		}
 		const before = fake.rows.length;
 		await expect(assertWithinSendLimit(1, env)).rejects.toBeInstanceOf(
@@ -195,7 +208,12 @@ describe("assertWithinSendLimit", () => {
 	it("prunes rows older than 24h before counting", async () => {
 		const ancient = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 		for (let i = 0; i < 30; i++) {
-			fake.rows.push({ id: i + 1, userId: 1, recipientHash: null, sentAt: ancient });
+			fake.rows.push({
+				id: i + 1,
+				userId: 1,
+				recipientHash: null,
+				sentAt: ancient,
+			});
 		}
 		await assertWithinSendLimit(1, env);
 		// ancient rows pruned + one new row inserted
@@ -205,7 +223,9 @@ describe("assertWithinSendLimit", () => {
 	it("blocks when 50 distinct recipients have been used in the last 24h", async () => {
 		// 50 distinct recipients placed OUTSIDE the hourly window (so the
 		// hourly cap isn't what trips), but INSIDE the 24h window.
-		const olderThanHour = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+		const olderThanHour = new Date(
+			Date.now() - 2 * 60 * 60 * 1000,
+		).toISOString();
 		for (let i = 0; i < 50; i++) {
 			fake.rows.push({
 				id: i + 1,
@@ -222,7 +242,9 @@ describe("assertWithinSendLimit", () => {
 	it("does not count the current recipient against the distinct-recipient cap", async () => {
 		// Stash 49 distinct OTHER recipients OUTSIDE the hourly window
 		// (so they don't trip the per-hour cap of 30) but INSIDE the 24h window.
-		const olderThanHour = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+		const olderThanHour = new Date(
+			Date.now() - 2 * 60 * 60 * 1000,
+		).toISOString();
 		for (let i = 0; i < 49; i++) {
 			fake.rows.push({
 				id: i + 1,

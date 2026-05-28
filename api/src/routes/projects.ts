@@ -126,7 +126,10 @@ app.post("/", async (c) => {
 	const userId = c.get("userId");
 	const enc = c.get("dek");
 
-	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
+	if (
+		body.customerId &&
+		!(await userOwnsCustomer(c.env, body.customerId, userId))
+	) {
 		return c.json({ error: "Customer not found" }, 404);
 	}
 
@@ -233,7 +236,10 @@ app.put("/:id", async (c) => {
 	const userId = c.get("userId");
 	const enc = c.get("dek");
 
-	if (body.customerId && !(await userOwnsCustomer(c.env, body.customerId, userId))) {
+	if (
+		body.customerId &&
+		!(await userOwnsCustomer(c.env, body.customerId, userId))
+	) {
 		return c.json({ error: "Customer not found" }, 404);
 	}
 

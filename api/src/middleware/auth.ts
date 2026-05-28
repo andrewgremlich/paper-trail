@@ -1,10 +1,6 @@
 import type { Context, Next } from "hono";
 import { fetchClerkUser } from "../lib/clerkApi";
-import {
-	ClerkJwtError,
-	getClerkConfig,
-	verifyClerkJwt,
-} from "../lib/clerkJwt";
+import { ClerkJwtError, getClerkConfig, verifyClerkJwt } from "../lib/clerkJwt";
 import { loadUserDek, provisionUserDek } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
@@ -145,10 +141,7 @@ export async function clerkAuth(
 				displayName = fetched.displayName;
 			} catch (err) {
 				console.error("Failed to fetch Clerk user details", err);
-				return c.json(
-					{ error: "Failed to resolve user identity" },
-					500,
-				);
+				return c.json({ error: "Failed to resolve user identity" }, 500);
 			}
 		}
 

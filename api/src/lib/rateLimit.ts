@@ -110,9 +110,7 @@ export const assertWithinSendLimit = async (
 	}
 
 	await db
-		.prepare(
-			"INSERT INTO send_rate_log (userId, recipientHash) VALUES (?, ?)",
-		)
+		.prepare("INSERT INTO send_rate_log (userId, recipientHash) VALUES (?, ?)")
 		.bind(userId, recipientHash)
 		.run();
 };

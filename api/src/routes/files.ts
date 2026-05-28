@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import sanitize from "sanitize-filename";
-import { decrypt, encrypt } from "../lib/crypto";
-import { decryptBuffer, encryptBuffer } from "../lib/crypto";
+import { decrypt, decryptBuffer, encrypt, encryptBuffer } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import type { Env } from "../lib/types";
 import type { AuthVariables } from "../middleware/auth";
@@ -11,7 +10,8 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 // R2 keys are UUIDv4s generated server-side. Refuse anything else so a
 // caller can't probe arbitrary keys, escape with `..`, or smuggle path
 // fragments past the routing layer.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -48,7 +48,9 @@ const userOwnsAttachment = async (
 ): Promise<boolean> => {
 	const db = getDb(env);
 	const row = await db
-		.prepare("SELECT 1 AS ok FROM attachments WHERE id = ? AND userId = ? LIMIT 1")
+		.prepare(
+			"SELECT 1 AS ok FROM attachments WHERE id = ? AND userId = ? LIMIT 1",
+		)
 		.bind(key, userId)
 		.first<{ ok: number }>();
 	return !!row?.ok;

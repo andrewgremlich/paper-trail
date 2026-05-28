@@ -87,12 +87,15 @@ export const fetchClerkUser = async (
 		);
 	}
 
-	const res = await fetch(`${CLERK_API_BASE}/users/${encodeURIComponent(userId)}`, {
-		headers: {
-			Authorization: `Bearer ${secret}`,
-			Accept: "application/json",
+	const res = await fetch(
+		`${CLERK_API_BASE}/users/${encodeURIComponent(userId)}`,
+		{
+			headers: {
+				Authorization: `Bearer ${secret}`,
+				Accept: "application/json",
+			},
 		},
-	});
+	);
 	if (!res.ok) {
 		throw new ClerkApiError(
 			res.status,

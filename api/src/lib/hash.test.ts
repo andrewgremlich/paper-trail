@@ -50,8 +50,7 @@ describe("hmacSha256Hex", () => {
 });
 
 describe("sha256Hex (legacy)", () => {
-	const envWithSalt = (salt: string): Env =>
-		({ ENCRYPTION_KEY: salt }) as Env;
+	const envWithSalt = (salt: string): Env => ({ ENCRYPTION_KEY: salt }) as Env;
 
 	it("returns a 64-character lowercase hex string", async () => {
 		const out = await sha256Hex("hello", envWithSalt("salt"));

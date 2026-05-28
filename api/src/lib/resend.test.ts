@@ -38,7 +38,9 @@ describe("sendEmail", () => {
 		const fetchMock = vi.fn();
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-		await expect(sendEmail({ ...baseInput(), apiKey: "" })).rejects.toMatchObject({
+		await expect(
+			sendEmail({ ...baseInput(), apiKey: "" }),
+		).rejects.toMatchObject({
 			name: "ResendError",
 			code: "api_key_missing",
 			status: 500,
@@ -47,9 +49,7 @@ describe("sendEmail", () => {
 	});
 
 	it("returns the message id on a 200 response", async () => {
-		const fetchMock = vi
-			.fn()
-			.mockResolvedValue(okJson({ id: "msg_abc" }));
+		const fetchMock = vi.fn().mockResolvedValue(okJson({ id: "msg_abc" }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		const result = await sendEmail(baseInput());
@@ -121,9 +121,11 @@ describe("sendEmail", () => {
 	});
 
 	it("handles non-JSON error bodies without throwing during parse", async () => {
-		const fetchMock = vi.fn().mockResolvedValue(
-			new Response("Internal Server Error", { status: 500 }),
-		);
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response("Internal Server Error", { status: 500 }),
+			);
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await expect(sendEmail(baseInput())).rejects.toMatchObject({
@@ -134,12 +136,12 @@ describe("sendEmail", () => {
 	});
 
 	it("never logs or surfaces the API key in error messages", async () => {
-		const errorSpy = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {});
-		const fetchMock = vi.fn().mockResolvedValue(
-			errJson(500, { name: "internal_error", message: "boom" }),
-		);
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				errJson(500, { name: "internal_error", message: "boom" }),
+			);
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		try {

@@ -239,8 +239,8 @@ export const renderInvoiceHtml = (
     ${invoice.description ? `<div class="desc">${nl2br(invoice.description)}</div>` : ""}
 
     ${
-		lineItems.length > 0
-			? `<table class="lines">
+			lineItems.length > 0
+				? `<table class="lines">
             <thead>
               <tr>
                 <th>Date</th>
@@ -251,8 +251,8 @@ export const renderInvoiceHtml = (
             </thead>
             <tbody>${lineItemsHtml}</tbody>
           </table>`
-			: ""
-	}
+				: ""
+		}
 
     <div class="totals">
       <div class="total-row">Total: ${escapeHtml(formatCents(invoice.amountCents))}</div>
