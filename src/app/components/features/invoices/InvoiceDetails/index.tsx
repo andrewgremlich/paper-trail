@@ -30,6 +30,8 @@ const statusLabel = (status: Invoice["status"]): string => {
 			return "Void";
 		case "sent":
 			return "Sent";
+		case "published":
+			return "Published";
 		case "draft":
 			return "Draft";
 	}

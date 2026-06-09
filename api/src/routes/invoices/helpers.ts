@@ -74,7 +74,7 @@ export const addDays = (iso: string, days: number): string => {
 export const logEvent = async (
 	invoiceId: string,
 	userId: number,
-	type: "created" | "sent" | "paid" | "voided" | "viewed",
+	type: "created" | "published" | "sent" | "paid" | "voided" | "viewed",
 	payload: Record<string, unknown> | null,
 	ctx: EncryptionContext,
 	env: Env,
