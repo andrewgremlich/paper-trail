@@ -65,6 +65,13 @@ export type RenderOptions = {
 	/** Show a banner indicating this is a draft preview (used on the hosted page only). */
 	isDraftPreview?: boolean;
 	/**
+	 * Live sidecar status, overlaid on the (immutable) snapshot at render
+	 * time. Drives the PAID / VOID banner on the hosted page so a forwarded
+	 * link reflects current state rather than just the frozen snapshot.
+	 * When 'paid' or 'void', the payment buttons are suppressed.
+	 */
+	status?: "draft" | "published" | "sent" | "paid" | "void";
+	/**
 	 * URL of a 1x1 image that confirms a real browser rendered the page
 	 * (INV4). Email prefetchers only fetch the primary URL, so a view
 	 * event logged from this beacon reflects an actual page render rather
@@ -116,9 +123,18 @@ export const renderInvoiceHtml = (
       </div>
     </div>`;
 
-	const draftBanner = options.isDraftPreview
-		? `<div class="draft-banner">DRAFT PREVIEW — this invoice has not been sent.</div>`
-		: "";
+	// Status overlay (read from the live sidecar, not the frozen snapshot).
+	// 'paid'/'void' take precedence over the draft-preview banner and also
+	// suppress the payment buttons below.
+	const isPaid = options.status === "paid";
+	const isVoid = options.status === "void";
+	const statusBanner = isVoid
+		? `<div class="status-banner status-void">VOID — this invoice has been cancelled and is no longer payable.</div>`
+		: isPaid
+			? `<div class="status-banner status-paid">PAID — this invoice has been paid in full.</div>`
+			: options.isDraftPreview
+				? `<div class="status-banner status-draft">DRAFT PREVIEW — this invoice has not been sent.</div>`
+				: "";
 
 	const hostedLink = options.hostedUrl
 		? `<p class="hosted-link"><a href="${escapeHtml(options.hostedUrl)}">View this invoice online</a></p>`
@@ -157,15 +173,16 @@ export const renderInvoiceHtml = (
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  .draft-banner {
-    background: #fff5d6;
-    color: #5a4500;
+  .status-banner {
     padding: 12px 16px;
     border-radius: 4px;
     margin-bottom: 24px;
     font-weight: 600;
     text-align: center;
   }
+  .status-draft { background: #fff5d6; color: #5a4500; }
+  .status-paid { background: #d8f5dd; color: #14532d; }
+  .status-void { background: #f5d8d8; color: #7a1818; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
   .header h1 { margin: 0; font-size: 28px; letter-spacing: 0.05em; }
   .header .meta { text-align: right; font-size: 14px; line-height: 1.5; }
@@ -202,14 +219,15 @@ export const renderInvoiceHtml = (
   @media print {
     body { background: #fff; padding: 0; }
     .sheet { box-shadow: none; padding: 0; max-width: none; }
-    .pay-btn, .draft-banner, .hosted-link { display: none !important; }
+    .pay-btn, .hosted-link { display: none !important; }
+    .status-paid, .status-void { display: block !important; }
     .pay-section { background: #fff; }
   }
 </style>
 </head>
 <body>
   <div class="sheet">
-    ${draftBanner}
+    ${statusBanner}
     <div class="header">
       <div>
         <h1>INVOICE</h1>
@@ -258,11 +276,15 @@ export const renderInvoiceHtml = (
       <div class="total-row">Total: ${escapeHtml(formatCents(invoice.amountCents))}</div>
     </div>
 
-    <div class="pay-section">
+    ${
+			isPaid || isVoid
+				? ""
+				: `<div class="pay-section">
       <h2>Payment options</h2>
       ${paymentOptions.length > 0 ? paymentOptions.join("") : "<p>Contact the sender for payment instructions.</p>"}
       ${checkBlock}
-    </div>
+    </div>`
+		}
 
     ${hostedLink}
     ${revokeLink}

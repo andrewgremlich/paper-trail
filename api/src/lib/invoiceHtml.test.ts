@@ -129,6 +129,37 @@ describe("renderInvoiceHtml", () => {
 		expect(html).not.toContain("DRAFT PREVIEW");
 	});
 
+	it("shows a PAID banner and suppresses payment buttons when paid", () => {
+		const html = renderInvoiceHtml(baseSnapshot(), { status: "paid" });
+		expect(html).toContain("PAID");
+		expect(html).not.toContain("Payment options");
+		expect(html).not.toContain("with Venmo");
+		expect(html).not.toContain("with PayPal");
+	});
+
+	it("shows a VOID banner and suppresses payment buttons when void", () => {
+		const html = renderInvoiceHtml(baseSnapshot(), { status: "void" });
+		expect(html).toContain("VOID");
+		expect(html).not.toContain("Payment options");
+		expect(html).not.toContain("with Venmo");
+		expect(html).not.toContain("with PayPal");
+	});
+
+	it("keeps payment options for a published invoice", () => {
+		const html = renderInvoiceHtml(baseSnapshot(), { status: "published" });
+		expect(html).toContain("Payment options");
+		expect(html).not.toContain("DRAFT PREVIEW");
+	});
+
+	it("status banner takes precedence over the draft preview banner", () => {
+		const html = renderInvoiceHtml(baseSnapshot(), {
+			isDraftPreview: true,
+			status: "void",
+		});
+		expect(html).toContain("VOID");
+		expect(html).not.toContain("DRAFT PREVIEW");
+	});
+
 	it("includes the hostedUrl link when supplied", () => {
 		const html = renderInvoiceHtml(baseSnapshot(), {
 			hostedUrl: "https://example.com/invoice/abc",

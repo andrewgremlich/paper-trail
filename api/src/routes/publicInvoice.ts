@@ -4,7 +4,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import { decrypt, encrypt, loadUserDek, loadUserHmacKey } from "../lib/crypto";
 import { getDb } from "../lib/db";
 import { constantTimeEqual, hmacSha256Hex } from "../lib/hash";
-import { renderInvoiceHtml } from "../lib/invoiceHtml";
+import { renderInvoiceHtml, type RenderOptions } from "../lib/invoiceHtml";
 import type { Env, InvoiceSnapshot } from "../lib/types";
 
 /**
@@ -116,6 +116,20 @@ app.get("/:id", async (c) => {
 		return notFound;
 	}
 
+	// Only finalized statuses are publicly hostable. A 'draft' has no
+	// snapshot/token so it's already excluded above, but guard explicitly
+	// so a future state with a stale token can't leak a draft. 'void' and
+	// 'paid' still render — with a status banner and no pay buttons — so a
+	// forwarded link reflects current state instead of 404ing silently.
+	if (
+		row.status !== "published" &&
+		row.status !== "sent" &&
+		row.status !== "paid" &&
+		row.status !== "void"
+	) {
+		return notFound;
+	}
+
 	// Stale tokens are treated as missing — past the expiry, the operator
 	// must resend to mint a new token + window.
 	if (
@@ -177,6 +191,7 @@ app.get("/:id", async (c) => {
 
 	const html = renderInvoiceHtml(snapshot, {
 		seenBeaconUrl: `/invoice/${id}/seen`,
+		status: row.status as RenderOptions["status"],
 	});
 	return c.html(html, 200, PUBLIC_PAGE_HEADERS);
 });
@@ -211,7 +226,11 @@ app.get("/:id/seen", async (c) => {
 		return respondWithBeacon(c);
 	}
 
-	if (row.status !== "sent" && row.status !== "paid") {
+	if (
+		row.status !== "published" &&
+		row.status !== "sent" &&
+		row.status !== "paid"
+	) {
 		return respondWithBeacon(c);
 	}
 

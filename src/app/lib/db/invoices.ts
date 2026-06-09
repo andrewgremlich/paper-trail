@@ -73,5 +73,10 @@ export const publishInvoice = (
 ): Promise<{ success: true; hostedUrl: string | null }> =>
 	api.post(`/invoices/${id}/publish`);
 
+export const rotateInvoiceLink = (
+	id: string,
+): Promise<{ success: true; hostedUrl: string | null }> =>
+	api.post(`/invoices/${id}/rotate-link`);
+
 export const voidInvoice = (id: string): Promise<{ success: true }> =>
 	api.post(`/invoices/${id}/void`);
