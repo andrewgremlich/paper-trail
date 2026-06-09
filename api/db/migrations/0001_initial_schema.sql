@@ -1,7 +1,8 @@
--- Migration 0001 — Initial schema (squash of 0001 + 0002)
+-- Migration 0001 — Initial schema (squash of 0001 + 0002 + 0003 + 0004)
 --
 -- Single-source-of-truth for Paper Trail. All migrations have been
--- squashed into this file before any production data existed.
+-- squashed into this file. The previous data was backed up before this
+-- reset.
 --
 -- Conventions:
 -- * users.id stays INTEGER (autoincrement). clerkUserId is the stable
@@ -31,12 +32,19 @@ CREATE TABLE IF NOT EXISTS users (
   paypalHandle TEXT,          -- encrypted, nullable
   businessName TEXT,          -- encrypted, nullable but required to send
   businessAddress TEXT,       -- encrypted, nullable but required to send
-  -- Per-user Resend config (migrations 0003). Both encrypted at rest.
-  -- When both are set, invoice/consent emails are sent via the user's own
-  -- Resend account. When unset, falls back to the shared RESEND_API_KEY env
-  -- var and uses a minimal link-only email body.
+  -- Per-user Resend config. Both encrypted at rest. When both are set,
+  -- invoice/consent emails are sent via the user's own Resend account.
+  -- When unset, falls back to the shared RESEND_API_KEY env var and uses
+  -- a minimal link-only email body.
   resendApiKey TEXT,          -- encrypted, nullable
   resendFromAddress TEXT,     -- encrypted, nullable
+  -- Per-user Data Encryption Keys (DEKs). Envelope-encrypt each user's
+  -- data under a per-user DEK that is itself wrapped by a versioned Key
+  -- Encryption Key (KEK_V<n>). NULL until the DEK is materialised for the
+  -- user; gated at runtime by the DEK_MIGRATION_ENABLED env binding.
+  wrappedDek TEXT,
+  kekVersion INTEGER,
+  dekCreatedAt TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -53,6 +61,26 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 -- =====================
+-- dek_migration  (per-row DEK backfill tracking)
+--
+-- A row appears here once every encrypted column on `(tableName, rowId)`
+-- has been re-encrypted under the owning user's DEK. The presence of the
+-- row is the marker; the backfill worker queries
+-- `LEFT JOIN ... WHERE dek_migration.rowId IS NULL` to find work.
+-- Idempotent: the composite PK makes restarts safe.
+-- =====================
+CREATE TABLE IF NOT EXISTS dek_migration (
+  tableName TEXT NOT NULL,
+  rowId TEXT NOT NULL,
+  userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  migratedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tableName, rowId)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dek_migration_userId
+  ON dek_migration(userId);
+
+-- =====================
 -- customers  (created before projects so projects.customerId can FK)
 -- =====================
 CREATE TABLE IF NOT EXISTS customers (
@@ -61,6 +89,13 @@ CREATE TABLE IF NOT EXISTS customers (
   name TEXT NOT NULL,         -- encrypted
   email TEXT NOT NULL,        -- encrypted
   address TEXT,               -- encrypted, nullable but required to send
+  -- Optional out-of-band contact channel + handle. contactChannel is a
+  -- plain enum used to drive deep links and icons; left unencrypted so
+  -- the UI can render channel-specific links without decrypting first.
+  -- contactValue is the actual handle/number, encrypted at rest.
+  contactChannel TEXT
+    CHECK (contactChannel IN ('phone', 'sms', 'whatsapp', 'telegram', 'signal', 'discord')),
+  contactValue TEXT,          -- encrypted, nullable
   consentToEmailInvoices INTEGER NOT NULL DEFAULT 0 CHECK (consentToEmailInvoices IN (0, 1)),
   consentedAt TEXT,
   consentToken TEXT UNIQUE,
@@ -226,6 +261,14 @@ CREATE INDEX IF NOT EXISTS idx_attachments_orphaned
 
 -- =====================
 -- invoices  (source of truth; the URL on the public hosted page is the id)
+--
+-- status lifecycle:
+--   * draft:     created, editable, not yet finalized
+--   * published: manual no-op finalization of a draft (no snapshot, no
+--                email, no access token). Can still be sent afterwards.
+--   * sent:      snapshot frozen + emailed via Resend; access token minted
+--   * paid:      marked paid out-of-band by the operator
+--   * void:      cancelled
 -- =====================
 CREATE TABLE IF NOT EXISTS invoices (
   id TEXT PRIMARY KEY,
@@ -233,7 +276,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   customerId TEXT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
   timesheetId TEXT REFERENCES timesheets(id) ON DELETE SET NULL,
   number TEXT NOT NULL,                                        -- e.g. INV-2026-0001
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'void')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'sent', 'paid', 'void')),
   amount_cents TEXT NOT NULL,                                  -- encrypted
   description TEXT,                                            -- encrypted, nullable
   issuedAt TEXT NOT NULL,                                      -- ISO date
@@ -272,7 +315,7 @@ CREATE TABLE IF NOT EXISTS invoice_events (
   id TEXT PRIMARY KEY,
   invoiceId TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('created', 'sent', 'paid', 'voided', 'viewed')),
+  type TEXT NOT NULL CHECK (type IN ('created', 'published', 'sent', 'paid', 'voided', 'viewed')),
   payload TEXT,               -- encrypted JSON
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );

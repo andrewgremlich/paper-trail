@@ -102,7 +102,7 @@ const invoiceImportSchema = z.object({
 	customerId: z.string().min(1),
 	timesheetId: stringOrNullish,
 	number: z.string(),
-	status: z.enum(["draft", "sent", "paid", "void"]),
+	status: z.enum(["draft", "published", "sent", "paid", "void"]),
 	amount_cents: numericOrEncrypted,
 	description: stringOrNullish,
 	issuedAt: z.string(),

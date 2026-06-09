@@ -30,13 +30,15 @@ const statusLabel = (status: Invoice["status"]): string => {
 			return "Void";
 		case "sent":
 			return "Sent";
+		case "published":
+			return "Published";
 		case "draft":
 			return "Draft";
 	}
 };
 
 export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
-	const { openModal, closeModal } = usePaperTrailStore();
+	const { openModal } = usePaperTrailStore();
 
 	const { data: invoice, isLoading: invoiceLoading } = useQuery({
 		queryKey: ["invoice-detail", invoiceId],
@@ -60,7 +62,13 @@ export const InvoiceDetails = ({ invoiceId }: InvoiceDetailsProps) => {
 
 	const handleViewTimesheet = () => {
 		if (timesheet) {
-			closeModal();
+			// Switch modals in a single state update. Calling closeModal() first
+			// would flip the invoice dialog's isOpen to false, whose cleanup runs
+			// history.back() — that async popstate then pops the timesheet
+			// dialog's freshly-pushed history entry and closes it right after it
+			// opens. openModal alone replaces activeModal wholesale, so the
+			// invoice modal closes and the timesheet modal opens with one net
+			// history transition.
 			openModal({ type: "timesheet", timesheetId: timesheet.id });
 		}
 	};

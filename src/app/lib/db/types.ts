@@ -152,7 +152,7 @@ export type SubmitCustomer = Pick<
 	"name" | "email" | "address" | "contactChannel" | "contactValue"
 >;
 
-export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+export type InvoiceStatus = "draft" | "published" | "sent" | "paid" | "void";
 
 export type Invoice = {
 	id: string;

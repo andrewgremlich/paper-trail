@@ -171,7 +171,8 @@ app.get("/:id/preview", async (c) => {
 	}
 
 	const html = renderInvoiceHtml(snapshot, {
-		isDraftPreview: !row.snapshot,
+		isDraftPreview: row.status === "draft",
+		status: row.status,
 	});
 	return c.html(html, 200, {
 		"Cache-Control": "no-store",
@@ -581,6 +582,141 @@ app.post("/:id/pay", async (c) => {
 	}
 
 	return c.json({ success: true });
+});
+
+// ============================================================
+// POST /api/v1/invoices/:id/publish — finalize without emailing
+//
+// Flips a draft to 'published'. Like /send, it freezes the snapshot and
+// mints an access token so the public hosted page (/invoice/<id>) renders
+// and "Copy public URL" resolves — but it does NOT email the customer.
+// The operator can still hit /send afterwards to email it (the send guard
+// allows 'published'), which re-freezes the snapshot and rotates the
+// token.
+// ============================================================
+app.post("/:id/publish", async (c) => {
+	const id = c.req.param("id");
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+	const enc = c.get("dek");
+
+	const row = await db
+		.prepare(
+			`SELECT id, userId, customerId, timesheetId, number, status,
+			        amount_cents, description, issuedAt, dueDate, sentAt, paidAt,
+			        voidedAt, archivedAt, createdAt, updatedAt
+			 FROM invoices WHERE id = ? AND userId = ?`,
+		)
+		.bind(id, userId)
+		.first<DbInvoiceRow>();
+	if (!row) return c.json({ error: "Invoice not found" }, 404);
+	if (row.status !== "draft") {
+		return c.json(
+			{
+				error: `Only draft invoices can be published (status is ${row.status})`,
+				code: "INVALID_STATE",
+			},
+			409,
+		);
+	}
+
+	const snapshot = await buildSnapshot(row, enc, c.env);
+	const accessToken = randomHexToken(32);
+	const accessTokenExpiresAt = new Date(
+		Date.now() + ACCESS_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+	).toISOString();
+
+	await db
+		.prepare(
+			`UPDATE invoices
+			 SET status = 'published', snapshot = ?,
+			     accessToken = ?, accessTokenExpiresAt = ?,
+			     updatedAt = datetime('now')
+			 WHERE id = ? AND userId = ?`,
+		)
+		.bind(
+			await encrypt(JSON.stringify(snapshot), enc),
+			accessToken,
+			accessTokenExpiresAt,
+			id,
+			userId,
+		)
+		.run();
+
+	const base = c.env.APP_BASE_URL?.replace(/\/$/, "") ?? "";
+	const hostedUrl = base ? `${base}/invoice/${row.id}?t=${accessToken}` : null;
+	await logEvent(
+		id,
+		userId,
+		"published",
+		hostedUrl ? { hostedUrl } : null,
+		enc,
+		c.env,
+	);
+	return c.json({ success: true, hostedUrl });
+});
+
+// ============================================================
+// POST /api/v1/invoices/:id/rotate-link — mint a fresh access token
+//
+// Rotates the per-invoice access token (and resets its 90-day window)
+// WITHOUT emailing and WITHOUT touching the frozen snapshot. Use when the
+// operator needs a fresh shareable link for an already-published/sent
+// invoice, or wants to invalidate a previously-shared link.
+//
+// Snapshot is deliberately left immutable: it's the tamper-evident record
+// of what was billed, so re-freezing it here could silently change what
+// the customer agreed to. This only refreshes ACCESS to the same invoice.
+//
+// Only invoices that already have a snapshot + token are eligible
+// (published / sent / paid). Drafts have no link yet (use publish/send);
+// void invoices are cancelled and must not have their access extended.
+// ============================================================
+app.post("/:id/rotate-link", async (c) => {
+	const id = c.req.param("id");
+	const db = getDb(c.env);
+	const userId = c.get("userId");
+
+	const row = await db
+		.prepare(
+			"SELECT id, status, snapshot FROM invoices WHERE id = ? AND userId = ?",
+		)
+		.bind(id, userId)
+		.first<{ id: string; status: InvoiceStatus; snapshot: string | null }>();
+	if (!row) return c.json({ error: "Invoice not found" }, 404);
+	if (
+		!row.snapshot ||
+		(row.status !== "published" &&
+			row.status !== "sent" &&
+			row.status !== "paid")
+	) {
+		return c.json(
+			{
+				error: `Only published, sent, or paid invoices can rotate their link (status is ${row.status})`,
+				code: "INVALID_STATE",
+			},
+			409,
+		);
+	}
+
+	const accessToken = randomHexToken(32);
+	const accessTokenExpiresAt = new Date(
+		Date.now() + ACCESS_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+	).toISOString();
+
+	await db
+		.prepare(
+			`UPDATE invoices
+			 SET accessToken = ?, accessTokenExpiresAt = ?,
+			     updatedAt = datetime('now')
+			 WHERE id = ? AND userId = ?`,
+		)
+		.bind(accessToken, accessTokenExpiresAt, id, userId)
+		.run();
+
+	const base = c.env.APP_BASE_URL?.replace(/\/$/, "") ?? "";
+	const hostedUrl = base ? `${base}/invoice/${row.id}?t=${accessToken}` : null;
+	return c.json({ success: true, hostedUrl });
 });
 
 // ============================================================

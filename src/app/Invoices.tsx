@@ -2,7 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import { NotebookPen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Flex } from "@/components/layout/Flex";
-import { H1, Main } from "@/components/layout/HtmlElements";
+import { H1 } from "@/components/layout/HtmlElements";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
@@ -88,6 +88,7 @@ export const Invoices = () => {
 					options={[
 						{ value: "", label: "All statuses" },
 						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
 						{ value: "sent", label: "Sent" },
 						{ value: "paid", label: "Paid" },
 						{ value: "void", label: "Void" },
