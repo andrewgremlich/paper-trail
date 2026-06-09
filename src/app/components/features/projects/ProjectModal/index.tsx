@@ -104,10 +104,12 @@ export const ProjectModal = () => {
 							name={timesheet.name}
 							description={timesheet.description ?? "No description provided"}
 							action={() => {
-								closeModal();
-								setTimeout(() => {
-									openModal({ type: "timesheet", timesheetId: timesheet.id });
-								}, 160);
+								// openModal replaces activeModal wholesale, switching from
+								// the project modal to the timesheet modal in a single state
+								// update. Don't closeModal() first — that flips isOpen false,
+								// whose cleanup runs history.back(), whose async popstate then
+								// closes the timesheet modal right after it opens.
+								openModal({ type: "timesheet", timesheetId: timesheet.id });
 							}}
 						/>
 					))}
